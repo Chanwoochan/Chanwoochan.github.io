@@ -74,6 +74,30 @@
 		</div>
 	</section>
 
+	<!-- Simulation Section (inserted right under HERO) -->
+	<section class="ftco-section" id="simulation-section" style="padding-top: 40px;">
+	<div class="container">
+		<div class="row justify-content-center mb-4">
+		<div class="col-md-10 text-center ftco-animate">
+			<h2 class="mb-2">Simulation</h2>
+			<p class="mb-0">브라우저에서 바로 도는 간단한 물리 시뮬레이션 (드래그로 던질 수 있음)</p>
+		</div>
+		</div>
+
+		<div class="row justify-content-center">
+		<div class="col-md-10 ftco-animate">
+			<div style="background:#111;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+			<canvas id="simCanvas" style="width:100%;height:520px;display:block;"></canvas>
+			</div>
+			<div class="text-center mt-3">
+			<small style="opacity:.8;">Tip: 공을 마우스로 집어서 던져보세요</small>
+			</div>
+		</div>
+		</div>
+	</div>
+	</section>
+
+
 	<section class="ftco-about img ftco-section ftco-no-pt ftco-no-pb" id="about-section">
 		<div class="container">
 			<div class="row d-flex no-gutters">
@@ -92,7 +116,7 @@
 							<h2 class="mb-4">About Me</h2>
 							<p>커피와 노트북만 있다면, 언제 어디서나 즐겁게 일하는 6년차 개발자 정쿠입니다. </p>
 							<ul class="about-info mt-4 px-md-0 px-2">
-								<li class="d-flex"><span>Name:</span> <span></span></li>
+								<li class="d-flex"><span>Name:</span> <span>김찬우</span></li>
 								<li class="d-flex"><span>Address:</span> <span>서울시 성북구 정릉동</span></li>
 								<li class="d-flex"><span>Email:</span> <span>kcwjoma@kookmin.ac.kr</span></li>
 								<li class="d-flex"><span>Phone: </span> <span>+82 10-6392-1883</span></li>
@@ -790,6 +814,87 @@
 	<script src="js/jquery.animateNumber.min.js"></script>
 	<script src="js/scrollax.min.js"></script>
 
+	<!-- Matter.js (2D physics engine) -->
+	<script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
+
+	<script>
+	(function () {
+		const canvas = document.getElementById("simCanvas");
+		if (!canvas || !window.Matter) return;
+
+		const { Engine, Render, Runner, Bodies, Composite, Mouse, MouseConstraint } = Matter;
+
+		const parent = canvas.parentElement;
+
+		const engine = Engine.create();
+		engine.gravity.y = 1;
+
+		const render = Render.create({
+		canvas: canvas,
+		engine: engine,
+		options: {
+			wireframes: false,
+			background: "#111",
+			pixelRatio: window.devicePixelRatio || 1
+		}
+		});
+
+		function resize() {
+		const w = parent.clientWidth;
+		const h = 520;
+
+		// CSS size
+		canvas.style.width = "100%";
+		canvas.style.height = h + "px";
+
+		// real pixel size
+		const dpr = window.devicePixelRatio || 1;
+		canvas.width = Math.floor(w * dpr);
+		canvas.height = Math.floor(h * dpr);
+
+		render.options.width = canvas.width;
+		render.options.height = canvas.height;
+		render.options.pixelRatio = dpr;
+		}
+
+		// world boundaries (static)
+		const ground = Bodies.rectangle(500, 600, 2000, 80, { isStatic: true, render:{ fillStyle:"#444" } });
+		const leftWall = Bodies.rectangle(-50, 300, 100, 800, { isStatic: true, render:{ visible:false } });
+		const rightWall = Bodies.rectangle(1050, 300, 100, 800, { isStatic: true, render:{ visible:false } });
+
+		Composite.add(engine.world, [ground, leftWall, rightWall]);
+
+		// balls
+		for (let i = 0; i < 18; i++) {
+		const ball = Bodies.circle(200 + i * 18, 40 + i * 6, 18, {
+			restitution: 0.88,
+			friction: 0.02,
+			render: { fillStyle: "#F96D00" }
+		});
+		Composite.add(engine.world, ball);
+		}
+
+		// mouse interaction
+		const mouse = Mouse.create(render.canvas);
+		const mouseConstraint = MouseConstraint.create(engine, {
+		mouse,
+		constraint: { stiffness: 0.2, render: { visible: false } }
+		});
+		Composite.add(engine.world, mouseConstraint);
+		render.mouse = mouse;
+
+		// run
+		Render.run(render);
+		Runner.run(Runner.create(), engine);
+
+		// initial + responsive
+		resize();
+		window.addEventListener("resize", () => {
+		resize();
+		});
+	})();
+	</script>
+	
 	<script src="js/main.js"></script>
 
 </body>
