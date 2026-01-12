@@ -13,15 +13,15 @@ const mujoco = await load_mujoco();
 var initialScene = "DARU/meshes/world.xml";
 mujoco.FS.mkdir('/working');
 mujoco.FS.mount(mujoco.MEMFS, { root: '.' }, '/working');
-mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("./assets/scenes/" + initialScene)).text());
+//mujoco.FS.writeFile("/working/" + initialScene, await(await fetch("./assets/scenes/" + initialScene)).text());
 
 export class MuJoCoDemo {
   constructor() {
     this.mujoco = mujoco;
 
     // Load in the state from XML
-    this.model = mujoco.MjModel.loadFromXML("/working/" + initialScene);
-    this.data  = new mujoco.MjData(this.model);
+    //this.model = mujoco.MjModel.loadFromXML("/working/" + initialScene);
+    //this.data  = new mujoco.MjData(this.model);
 
     // Define Random State Variables
     this.params = { scene: initialScene, paused: false, help: false, ctrlnoiserate: 0.0, ctrlnoisestd: 0.0, keyframeNumber: 0 };
