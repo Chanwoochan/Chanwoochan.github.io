@@ -1,0 +1,11 @@
+<mujoco model="R_hand">
+  <asset>
+    <model name="palm" file="palm_simple/meshes/palm_simple.xml"/>
+  </asset>
+
+  <worldbody>
+    <body name="R_hand" pos="0 0 0">
+      <attach model="palm"  prefix="P1_"/>
+    </body>
+  </worldbody>
+</mujoco>

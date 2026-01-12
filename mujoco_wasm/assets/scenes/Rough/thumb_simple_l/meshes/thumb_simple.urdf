@@ -1,0 +1,80 @@
+<robot name="thumb_simple">
+  <link name="Base_Link">
+    <inertial>
+      <origin xyz="-0.00475219 0.00062534 -0.03793806" rpy="0 0 0" />
+      <mass value="0.06536031" />
+      <inertia ixx="0.00003426" ixy="-0.00000016" ixz="-0.00000312" iyy="0.00003493" iyz="-0.00000034" izz="0.00000381" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://thumb_simple/meshes/Base_Link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://thumb_simple/meshes/Base_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="Link_1">
+    <inertial>
+      <origin xyz="-0.00287404 0.00000000 0.01627888" rpy="0 0 0" />
+      <mass value="0.00740117" />
+      <inertia ixx="0.00000103" ixy="0.00000000" ixz="-0.00000003" iyy="0.00000099" iyz="0.00000000" izz="0.00000036" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://thumb_simple/meshes/Link_1.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.894117647058823 0.913725490196078 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://thumb_simple/meshes/Link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Joint_1" type="continuous">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="Base_Link" />
+    <child link="Link_1" />
+    <axis xyz="0 1 0" />
+  </joint>
+  <link name="Link_2">
+    <inertial>
+      <origin xyz="0.00350288 0.00000000 0.01684791" rpy="0 0 0" />
+      <mass value="0.00721927" />
+      <inertia ixx="0.00000068" ixy="0.00000000" ixz="-0.00000007" iyy="0.00000073" iyz="0.00000000" izz="0.00000027" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://thumb_simple/meshes/Link_2.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.894117647058823 0.913725490196078 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://thumb_simple/meshes/Link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Joint_2" type="continuous">
+    <origin xyz="-0.0041184298500794 0 0.0300462372499902" rpy="0 0 0" />
+    <parent link="Link_1" />
+    <child link="Link_2" />
+    <axis xyz="0 1 0" />
+  </joint>
+</robot>

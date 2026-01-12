@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="thumb_simple">
+  <link
+    name="Base_Link">
+    <inertial>
+      <origin
+        xyz="-0.0034807575265137 -3.5561537117812E-09 -0.0292669152834969"
+        rpy="0 0 0" />
+      <mass
+        value="0.0415894029086781" />
+      <inertia
+        ixx="8.04371289768667E-06"
+        ixy="-1.03850232811575E-07"
+        ixz="6.62092263662497E-07"
+        iyy="9.70117382282615E-06"
+        iyz="-2.15114827388765E-08"
+        izz="2.94886443393659E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://thumb_simple/meshes/Base_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://thumb_simple/meshes/Base_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="Link_1">
+    <inertial>
+      <origin
+        xyz="-0.00287406786759663 -1.75120919432281E-08 0.0162788946194045"
+        rpy="0 0 0" />
+      <mass
+        value="0.00740120785902387" />
+      <inertia
+        ixx="8.02552991035506E-07"
+        ixy="8.33548699511222E-13"
+        ixz="6.16523486650534E-08"
+        iyy="8.22745331225217E-07"
+        iyz="-1.09900404210318E-14"
+        izz="2.18449065198177E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://thumb_simple/meshes/Link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.894117647058823 0.913725490196078 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://thumb_simple/meshes/Link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Joint_1"
+    type="fixed">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="Base_Link" />
+    <child
+      link="Link_1" />
+    <axis
+      xyz="-0.476965224633945 -0.804987250358223 -0.352845151944302" />
+  </joint>
+  <link
+    name="Link_2">
+    <inertial>
+      <origin
+        xyz="0.00350290831993645 6.62436533405142E-09 0.016847975150405"
+        rpy="0 0 0" />
+      <mass
+        value="0.00721933297144105" />
+      <inertia
+        ixx="3.58493952344831E-07"
+        ixy="-1.6474805068154E-13"
+        ixz="2.45245540056988E-08"
+        iyy="4.03694235509862E-07"
+        iyz="-4.12081816664802E-13"
+        izz="2.60372927974017E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://thumb_simple/meshes/Link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.894117647058823 0.913725490196078 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://thumb_simple/meshes/Link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Joint_2"
+    type="fixed">
+    <origin
+      xyz="-0.0041184298500794 0 0.0300462372499902"
+      rpy="0 0 0" />
+    <parent
+      link="Link_1" />
+    <child
+      link="Link_2" />
+    <axis
+      xyz="-0.575110408713203 -0.69901140161871 -0.425007150759582" />
+  </joint>
+</robot>

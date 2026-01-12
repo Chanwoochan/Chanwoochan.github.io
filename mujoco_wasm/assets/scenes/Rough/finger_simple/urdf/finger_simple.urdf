@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="finger_simple">
+  <link
+    name="Base_Link">
+    <inertial>
+      <origin
+        xyz="-0.00540055531595463 1.14018744307801E-08 -0.0472939536295909"
+        rpy="0 0 0" />
+      <mass
+        value="0.0379073230567376" />
+      <inertia
+        ixx="1.71489467686952E-05"
+        ixy="-1.58722839108417E-12"
+        ixz="3.71285629314888E-07"
+        iyy="1.69959085627179E-05"
+        iyz="-1.05381885171089E-11"
+        izz="1.19739613396825E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Base_Link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Base_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="Link_1">
+    <inertial>
+      <origin
+        xyz="-0.00267520233935296 2.35347478477874E-08 0.0159413302866395"
+        rpy="0 0 0" />
+      <mass
+        value="0.00740116882112246" />
+      <inertia
+        ixx="7.95722708764709E-07"
+        ixy="-1.00049336907733E-12"
+        ixz="7.77836106330981E-08"
+        iyy="8.2274145135796E-07"
+        iyz="-7.12445751328693E-13"
+        izz="2.25273936219034E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.196078431372549 0.196078431372549 0.196078431372549 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Joint_1"
+    type="continuous">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="Base_Link" />
+    <child
+      link="Link_1" />
+    <axis
+      xyz="0 1 0" />
+    <mimic
+      joint="Motor_Linear_Joint"
+      multiplier="1.5"
+      offset="0" />
+  </joint>
+  <link
+    name="Link_2">
+    <inertial>
+      <origin
+        xyz="0.00120264122104237 -2.07761524337197E-09 0.0145485812463042"
+        rpy="0 0 0" />
+      <mass
+        value="0.00637809648256001" />
+      <inertia
+        ixx="3.94393568439801E-07"
+        ixy="1.28527836215816E-13"
+        ixz="1.91479340462229E-08"
+        iyy="3.81942951815594E-07"
+        iyz="4.01039148559627E-13"
+        izz="2.05567768777208E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.196078431372549 0.196078431372549 0.196078431372549 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Joint_2"
+    type="continuous">
+    <origin
+      xyz="-0.00199999999993171 0 0.0270208058899968"
+      rpy="0 0 0" />
+    <parent
+      link="Link_1" />
+    <child
+      link="Link_2" />
+    <axis
+      xyz="0 1 0" />
+    <mimic
+      joint="Motor_Linear_Joint"
+      multiplier="2"
+      offset="0" />
+  </joint>
+  <link
+    name="Link_3">
+    <inertial>
+      <origin
+        xyz="0.000745764021458219 8.15397396024057E-09 0.0171920394522382"
+        rpy="0 0 0" />
+      <mass
+        value="0.00721926688668683" />
+      <inertia
+        ixx="3.63738815786361E-07"
+        ixy="-5.11924626253722E-13"
+        ixz="7.66987647482155E-09"
+        iyy="4.03688215464812E-07"
+        iyz="5.71478557526402E-13"
+        izz="2.551219014116E-07" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Link_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://finger_simple/meshes/Link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Joint_3"
+    type="continuous">
+    <origin
+      xyz="0 0 0.02332813779"
+      rpy="0 0 0" />
+    <parent
+      link="Link_2" />
+    <child
+      link="Link_3" />
+    <axis
+      xyz="0 1 0" />
+    <mimic
+      joint="Motor_Linear_Joint"
+      multiplier="2.5"
+      offset="0" />
+  </joint>
+</robot>

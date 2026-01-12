@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="palm_simple">
+  <link
+    name="Base">
+    <inertial>
+      <origin
+        xyz=" -0.00225524 -0.00380216 0.04738621"
+        rpy="0 0 0" />
+      <mass
+        value="0.17112843" />
+      <inertia
+        ixx="0.00021357"
+        ixy="0.00000247"
+        ixz="0.00001942"
+        iyy="0.00015811"
+        iyz="-0.00000822"
+        izz="0.00013249" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://palm_simple/meshes/Base.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://palm_simple/meshes/Base.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="Link_1">
+    <inertial>
+      <origin
+        xyz="0.01345591 0.00740936 -0.00938192"
+        rpy="0 0 0" />
+      <mass
+        value="0.00822579" />
+      <inertia
+        ixx="0.00000113"
+        ixy=" -0.00000028"
+        ixz="0.00000021"
+        iyy="0.00000115"
+        iyz="0.00000050"
+        izz="0.00000104" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://palm_simple/meshes/Link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://palm_simple/meshes/Link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Joint_1"
+    type="continuous">
+    <origin
+      xyz="0.018 0.0224999999999999 0.0339999999999999"
+      rpy="0 0 0" />
+    <parent
+      link="Base" />
+    <child
+      link="Link_1" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+</robot>

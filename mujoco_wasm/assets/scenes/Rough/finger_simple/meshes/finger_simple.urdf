@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="finger_simple">
+  <link name="Base_Link">
+    <inertial>
+      <origin xyz="-0.00704727 0.00004379 -0.05727729" rpy="0 0 0" />
+      <mass value="0.06525219" />
+      <inertia ixx="0.00005262000" ixy="-0.00000003000" ixz="0.00000272000" iyy="0.00005340000" iyz="-0.00000044000" izz="0.00000229000" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Base_Link.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.898039215686275 0.917647058823529 0.929411764705882 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Base_Link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="Link_1">
+    <inertial>
+      <origin xyz="-0.00267520 0.00000000 0.01594133" rpy="0 0 0" />
+      <mass value="0.00740117" />
+      <inertia ixx="0.00000100000" ixy="-0.00000000000" ixz="0.00000005000" iyy="0.00000101000" iyz="-0.00000000000" izz="0.00000040000" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Link_1.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.196078431372549 0.196078431372549 0.196078431372549 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Joint_1" type="continuous">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="Base_Link" />
+    <child link="Link_1" />
+    <axis xyz="0 1 0" />
+    <mimic joint="Motor_Linear_Joint" multiplier="1.5" offset="0" />
+  </joint>
+  <link name="Link_2">
+    <inertial>
+      <origin xyz="0.00120264 0.00000000 0.01454858" rpy="0 0 0" />
+      <mass value="0.00637810" />
+      <inertia ixx="0.00000060000" ixy="-0.00000000000" ixz="-0.00000000000" iyy="0.00000055000" iyz="-0.00000000000" izz="0.00000031000" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Link_2.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.196078431372549 0.196078431372549 0.196078431372549 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Joint_2" type="continuous">
+    <origin xyz="-0.00199999999993171 0 0.0270208058899968" rpy="0 0 0" />
+    <parent link="Link_1" />
+    <child link="Link_2" />
+    <axis xyz="0 1 0" />
+    <mimic joint="Motor_Linear_Joint" multiplier="2" offset="0" />
+  </joint>
+  <link name="Link_3">
+    <inertial>
+      <origin xyz="0.00074576 0.00000000 0.01719204" rpy="0 0 0" />
+      <mass value="0.00721927" />
+      <inertia ixx="0.00000069000" ixy="-0.00000000000" ixz="-0.00000000000" iyy="0.00000073000" iyz="-0.00000000000" izz="0.00000026000" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Link_3.STL" />
+      </geometry>
+      <material name="">
+        <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://finger_simple/meshes/Link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="Joint_3" type="continuous">
+    <origin xyz="0 0 0.02332813779" rpy="0 0 0" />
+    <parent link="Link_2" />
+    <child link="Link_3" />
+    <axis xyz="0 1 0" />
+    <mimic joint="Motor_Linear_Joint" multiplier="2.5" offset="0" />
+  </joint>
+</robot>

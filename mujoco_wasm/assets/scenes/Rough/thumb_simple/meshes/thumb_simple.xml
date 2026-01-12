@@ -1,0 +1,47 @@
+<mujoco model="thumb_simple">
+  <compiler angle="radian"/>
+
+  <asset>
+    <mesh name="Base_Link" content_type="model/stl" file="Base_Link.STL"/>
+    <mesh name="Link_1" content_type="model/stl" file="Link_1.STL"/>
+    <mesh name="Link_2" content_type="model/stl" file="Link_2.STL"/>
+    
+    <material name="metal_silver"
+            specular="0.0"    
+            shininess="1.0"   
+            reflectance="0.3" 
+            rgba="0.2 0.2 0.2 1"/> 
+    <material name="metal_white"
+            specular="0.0"    
+            shininess="1.0"   
+            reflectance="0.3" 
+            rgba="0.9 0.9 0.9 1"/> 
+  </asset>
+            
+  <actuator>
+    <position name="LM" joint="Joint_1" ctrlrange="0 1.57"/>
+  </actuator>
+
+  <equality>
+    <joint joint1="Joint_1" joint2="Joint_2" polycoef="0 1 0 0 0" solref="0.001 1" solimp="0.99 0.99 0.001 0.5 2"/>
+  </equality>
+
+
+  <worldbody>
+    <body name="Base">
+      <inertial pos="-0.00475219 0.00062534 -0.03793806" quat="0.999751 0 0.0223266 0" mass="0.06536031" diaginertia="0.00003426 0.00003493 0.00000381"/>
+      <geom type="mesh" material="metal_silver" mesh="Base_Link"/>
+      <body name="Link_1">
+        <inertial pos="-0.00287404 0 0.0162789" quat="0.999751 0 0.0223266 0" mass="0.00740117" diaginertia="1.03134e-06 9.9e-07 3.58659e-07"/>
+        <joint name="Joint_1" pos="0 0 0" axis="0 1 0" damping="0.05" range="0 1.57"/>
+        <geom type="mesh" material="metal_silver" mesh="Link_1"/>
+        <body name="Link_2" pos="-0.00411843 0 0.0300462">
+          <inertial pos="0.00350288 0 0.0168479" quat="0.704716 0.0581027 0.0581027 0.704716" mass="0.00721927" diaginertia="7.3e-07 6.91622e-07 2.58378e-07"/>
+          <joint name="Joint_2" pos="0 0 0" axis="0 1 0" damping="0.01" range="0 1.57"/>
+          <geom type="mesh" material="metal_white" mesh="Link_2"/>
+        </body>
+      </body>
+    </body>
+    
+  </worldbody>
+</mujoco>

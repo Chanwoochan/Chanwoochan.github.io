@@ -1,0 +1,63 @@
+<mujoco model="palm_simple_l">
+  <compiler angle="radian"/>
+
+  <asset>
+    <model name="finger" file="../../finger_simple_l/meshes/finger_simple_l.xml"/>
+    <model name="thumb" file="../../thumb_simple_l/meshes/thumb_simple_l.xml"/>
+    <mesh name="Base" content_type="model/stl" file="Base.STL"/>
+    <mesh name="Link_1" content_type="model/stl" file="Link_1.STL"/>
+    <material name="metal_silver"
+            specular="0.0"    
+            shininess="1.0"   
+            reflectance="0.3" 
+            rgba="0.2 0.2 0.2 1"/> 
+    <material name="metal_white"
+            specular="0.0"    
+            shininess="1.0"   
+            reflectance="0.3" 
+            rgba="0.9 0.9 0.9 1"/> 
+  </asset>
+
+  <actuator>
+    <position name="LM" joint="Joint_1" ctrlrange="0 1.57"/>
+  </actuator>
+
+  <contact>
+    <exclude body1="Base" body2="Link_1"/>
+  </contact>
+
+  <worldbody>
+    <body name="Base" pos="0 0 0">
+      <!-- y 부호 반전 -->
+      <inertial pos="-0.00225524 0.00380216 0.04738621" mass="0.17112843" diaginertia="0.00021357 0.00015811 0.00013249"/>
+      <geom type="mesh" material="metal_silver" mesh="Base"/>
+
+      <body name="Link_1" pos="0.018 -0.0225 0.034">
+        <inertial pos="0.01345590 -0.00740936 -0.00938192"
+                  quat="0.635518 -0.0651905 -0.41216 -0.649608"
+                  mass="0.00822579" diaginertia="1.61083e-06 1.28505e-06 4.24121e-07"/>
+        <joint name="Joint_1" pos="0 0 0" axis="0 0 1" range="0 1.57" damping="0.2" frictionloss="2"/>
+        <geom type="mesh" material="metal_silver" mesh="Link_1"/>
+
+        <body name="thumb" pos="0.01707024 -0.05205049 0.02138757"
+              euler="0.758499 -0.001326 1.572725">
+          <attach model="thumb" prefix="T1_"/>
+        </body>
+      </body>
+
+      <body name="finger1" pos="-0.007 0.03946531 0.09949383" euler="-0.10472 0 0">
+        <attach model="finger" prefix="F1_"/>
+      </body>
+      <body name="finger2" pos="-0.007 0.01614445 0.10624957" euler="-0.05236 0 0">
+        <attach model="finger" prefix="F2_"/>
+      </body>
+      <body name="finger3" pos="-0.007 -0.0075 0.1097" euler="0 0 0">
+        <attach model="finger" prefix="F3_"/>
+      </body>
+      <body name="finger4" pos="-0.007 -0.03114247 0.10921183" euler="0.05236 0 0">
+        <attach model="finger" prefix="F4_"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
+

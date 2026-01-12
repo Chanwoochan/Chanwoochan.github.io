@@ -1,0 +1,1 @@
+io/mujoco_wasm/assets/scenes/DARU/meshes

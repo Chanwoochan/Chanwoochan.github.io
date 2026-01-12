@@ -1,0 +1,53 @@
+<mujoco model="finger_simple">
+  <compiler angle="radian"/>
+
+  <asset>
+    <mesh name="Base_Link" content_type="model/stl" file="Base_Link.STL"/>
+    <mesh name="Link_1" content_type="model/stl" file="Link_1.STL"/>
+    <mesh name="Link_2" content_type="model/stl" file="Link_2.STL"/>
+    <mesh name="Link_3" content_type="model/stl" file="Link_3.STL"/>
+
+    <material name="metal_silver"
+            specular="0.0"    
+            shininess="1.0"   
+            reflectance="0.3" 
+            rgba="0.2 0.2 0.2 1"/> 
+    <material name="metal_white"
+            specular="0.0"    
+            shininess="1.0"   
+            reflectance="0.3" 
+            rgba="0.9 0.9 0.9 1"/> 
+  </asset>
+
+  <actuator>
+    <position name="LM" joint="Joint_1" ctrlrange="0 1.57"/>
+  </actuator>
+
+  <equality>
+    <joint joint1="Joint_1" joint2="Joint_2" polycoef="0 1 0 0 0" solref="0.001 1" solimp="0.99 0.99 0.001 0.5 2"/>
+    <joint joint1="Joint_1" joint2="Joint_3" polycoef="0 1 0 0 0" solref="0.001 1" solimp="0.99 0.99 0.001 0.5 2"/>
+  </equality>
+
+
+  <worldbody>
+    <body name="Base">
+      <inertial pos="-0.00704727 0.00004379 -0.05727729" mass="0.06525219" diaginertia="0.00005262000 0.00005340000 0.00000229000"/>
+      <geom type="mesh" material="metal_silver" mesh="Base_Link"/>
+      <body name="Link_1">
+        <inertial pos="-0.0026752 0 0.0159413" quat="0.706504 -0.0291861 -0.0291861 0.706504" mass="0.00740117" diaginertia="1.01e-06 1.00414e-06 3.95862e-07"/>
+        <joint name="Joint_1" pos="0 0 0" axis="0 1 0" damping="0.05" range="0 1.57"/>
+        <geom type="mesh" material="metal_silver" mesh="Link_1"/>
+        <body name="Link_2" pos="-0.002 0 0.0270208">
+          <inertial pos="0.00120264 0 0.0145486" mass="0.0063781" diaginertia="6e-07 5.5e-07 3.1e-07"/>
+          <joint name="Joint_2" pos="0 0 0" axis="0 1 0" damping="0.01" range="0 1.57"/>
+          <geom type="mesh" material="metal_silver" mesh="Link_2"/>
+          <body name="Link_3" pos="0 0 0.0233281">
+            <inertial pos="0.00074576 0 0.017192" quat="0.707107 0 0 0.707107" mass="0.00721927" diaginertia="7.3e-07 6.9e-07 2.6e-07"/>
+            <joint name="Joint_3" pos="0 0 0" axis="0 1 0" damping="0.001" range="0 1.57"/>
+            <geom type="mesh" material="metal_white" mesh="Link_3"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
