@@ -30879,7 +30879,7 @@ function setupGUI(parentContext) {
   });
   let reload = reloadFunc.bind(parentContext);
   parentContext.gui.add(parentContext.params, "scene", {
-    "DARU": "DARU/meshes/world.xml"
+    "DARU": "humanoid.xml"
     // "Cassie": "agility_cassie/scene.xml",
     // "Hammock": "hammock.xml",
     // "Balloons": "balloons.xml",
@@ -38461,7 +38461,7 @@ var mujoco_wasm_default = loadMujoco;
 
 // src/main.js
 var mujoco = await mujoco_wasm_default();
-var initialScene = "DARU/meshes/world.xml";
+var initialScene = "humanoid.xml";
 mujoco.FS.mkdir("/working");
 mujoco.FS.mount(mujoco.MEMFS, { root: "." }, "/working");
 mujoco.FS.writeFile("/working/" + initialScene, await (await fetch("./assets/scenes/" + initialScene)).text());
