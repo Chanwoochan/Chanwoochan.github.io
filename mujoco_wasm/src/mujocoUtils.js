@@ -27,7 +27,7 @@ export function setupGUI(parentContext) {
   // Add scene selection dropdown.
   let reload = reloadFunc.bind(parentContext);
   parentContext.gui.add(parentContext.params, 'scene', {
-    "Humanoid": "humanoid.xml"
+    "DARU": "DARU/meshes/world.xml"
     // , "Cassie": "agility_cassie/scene.xml",
     // "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
     // "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
@@ -692,6 +692,27 @@ export async function downloadExampleScenesFolder(mujoco) {
     "simple.xml",
     "slider_crank.xml",
     "model_with_tendon.xml",
+    // DARU robot
+    "DARU/meshes/world.xml",
+    "DARU/meshes/DARU_stand.xml",
+    "DARU/meshes/Base.STL",
+    "DARU/meshes/HP_Link.STL",
+    "DARU/meshes/HY_Link.STL",
+    "DARU/meshes/LEP_Link.STL",
+    "DARU/meshes/LEY_Link.STL",
+    "DARU/meshes/LSP_Link.STL",
+    "DARU/meshes/LSR_Link.STL",
+    "DARU/meshes/LSY_Link.STL",
+    "DARU/meshes/LWP_Link.STL",
+    "DARU/meshes/LWR_Link.STL",
+    "DARU/meshes/REP_Link.STL",
+    "DARU/meshes/REY_Link.STL",
+    "DARU/meshes/RSP_Link.STL",
+    "DARU/meshes/RSR_Link.STL",
+    "DARU/meshes/RSY_Link.STL",
+    "DARU/meshes/RWP_Link.STL",
+    "DARU/meshes/RWR_Link.STL",
+    "DARU/meshes/UB_Link.STL",
   ];
 
   let requests = allFiles.map((url) => fetch("./assets/scenes/" + url));
