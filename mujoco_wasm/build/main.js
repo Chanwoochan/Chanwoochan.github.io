@@ -31465,24 +31465,24 @@ async function downloadExampleScenesFolder(mujoco2) {
     // DARU robot
     "DARU/meshes/world.xml",
     "DARU/meshes/DARU_stand.xml",
-    "DARU/meshes/Base.STL",
-    "DARU/meshes/HP_Link.STL",
-    "DARU/meshes/HY_Link.STL",
-    "DARU/meshes/LEP_Link.STL",
-    "DARU/meshes/LEY_Link.STL",
-    "DARU/meshes/LSP_Link.STL",
-    "DARU/meshes/LSR_Link.STL",
-    "DARU/meshes/LSY_Link.STL",
-    "DARU/meshes/LWP_Link.STL",
-    "DARU/meshes/LWR_Link.STL",
-    "DARU/meshes/REP_Link.STL",
-    "DARU/meshes/REY_Link.STL",
-    "DARU/meshes/RSP_Link.STL",
-    "DARU/meshes/RSR_Link.STL",
-    "DARU/meshes/RSY_Link.STL",
-    "DARU/meshes/RWP_Link.STL",
-    "DARU/meshes/RWR_Link.STL",
-    "DARU/meshes/UB_Link.STL"
+    "DARU/meshes/Base.stl",
+    "DARU/meshes/HP_Link.stl",
+    "DARU/meshes/HY_Link.stl",
+    "DARU/meshes/LEP_Link.stl",
+    "DARU/meshes/LEY_Link.stl",
+    "DARU/meshes/LSP_Link.stl",
+    "DARU/meshes/LSR_Link.stl",
+    "DARU/meshes/LSY_Link.stl",
+    "DARU/meshes/LWP_Link.stl",
+    "DARU/meshes/LWR_Link.stl",
+    "DARU/meshes/REP_Link.stl",
+    "DARU/meshes/REY_Link.stl",
+    "DARU/meshes/RSP_Link.stl",
+    "DARU/meshes/RSR_Link.stl",
+    "DARU/meshes/RSY_Link.stl",
+    "DARU/meshes/RWP_Link.stl",
+    "DARU/meshes/RWR_Link.stl",
+    "DARU/meshes/UB_Link.stl"
   ];
   let requests = allFiles.map((url) => fetch("./assets/scenes/" + url));
   let responses = await Promise.all(requests);
@@ -38480,12 +38480,11 @@ var mujoco = await mujoco_wasm_default();
 var initialScene = "DARU/meshes/world.xml";
 mujoco.FS.mkdir("/working");
 mujoco.FS.mount(mujoco.MEMFS, { root: "." }, "/working");
-mujoco.FS.writeFile("/working/" + initialScene, await (await fetch("./assets/scenes/" + initialScene)).text());
 var MuJoCoDemo = class {
   constructor() {
     this.mujoco = mujoco;
-    this.model = mujoco.MjModel.loadFromXML("/working/" + initialScene);
-    this.data = new mujoco.MjData(this.model);
+    this.model = null;
+    this.data = null;
     this.params = { scene: initialScene, paused: false, help: false, ctrlnoiserate: 0, ctrlnoisestd: 0, keyframeNumber: 0 };
     this.mujoco_time = 0;
     this.bodies = {}, this.lights = {};
@@ -38554,6 +38553,7 @@ var MuJoCoDemo = class {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
   render(timeMS) {
+    if (!this.model || !this.data) return;
     this.controls.update();
     if (!this.params["paused"]) {
       let timestep = this.model.opt.timestep;
