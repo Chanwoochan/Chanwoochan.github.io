@@ -126,6 +126,19 @@ export class MuJoCoDemo {
       let timestep = this.model.opt.timestep;
       if (timeMS - this.mujoco_time > 35.0) { this.mujoco_time = timeMS; }
       while (this.mujoco_time < timeMS) {
+        // Drive all actuators with a 1-second period 1-cos trajectory.
+        // 1-cos is in [0, 2], so 0.5*(1-cos) maps to [0, 1].
+        if (this.model.nu > 0) {
+          let phase = 2.0 * Math.PI * this.data.time; // T = 1.0 s
+          let profile01 = 0.5 * (1.0 - Math.cos(phase));
+          let ctrl = this.data.ctrl;
+          let ctrlRange = this.model.actuator_ctrlrange;
+          for (let i = 0; i < this.model.nu; i++) {
+            let min = ctrlRange[2 * i];
+            let max = ctrlRange[2 * i + 1];
+            ctrl[i] = min + profile01 * (max - min);
+          }
+        }
 
         // Jitter the control state with gaussian random noise
         if (this.params["ctrlnoisestd"] > 0.0) {
