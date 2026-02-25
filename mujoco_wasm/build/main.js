@@ -38561,6 +38561,17 @@ var MuJoCoDemo = class {
         this.mujoco_time = timeMS;
       }
       while (this.mujoco_time < timeMS) {
+        if (this.model.nu > 0) {
+          let phase = 2 * Math.PI * this.data.time * 0.1;
+          let profile01 = 0.5 * (1 - Math.cos(phase));
+          let ctrl = this.data.ctrl;
+          let ctrlRange = this.model.actuator_ctrlrange;
+          for (let i2 = 0; i2 < this.model.nu; i2++) {
+            let min = ctrlRange[2 * i2];
+            let max = ctrlRange[2 * i2 + 1];
+            ctrl[i2] = min + profile01 * (max - min);
+          }
+        }
         if (this.params["ctrlnoisestd"] > 0) {
           let rate = Math.exp(-timestep / Math.max(1e-10, this.params["ctrlnoiserate"]));
           let scale = this.params["ctrlnoisestd"] * Math.sqrt(1 - rate * rate);
