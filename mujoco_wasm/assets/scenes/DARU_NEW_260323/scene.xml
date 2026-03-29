@@ -1,0 +1,44 @@
+<!-- DARU_NEW_260323 scene with front desk and overhead light -->
+<mujoco model="DARU_NEW_260323_scene">
+  <compiler angle="radian"/>
+
+  <visual>
+    <headlight ambient="0.18 0.18 0.18" diffuse="0.55 0.55 0.55" specular="0.18 0.18 0.18"/>
+    <rgba haze="0.08 0.10 0.12 1"/>
+    <global azimuth="150" elevation="-18"/>
+  </visual>
+
+  <asset>
+    <model name="DARU_robot" file="DARU_NEW_260323_torque.xml"/>
+    <texture name="scene_checker" type="2d" builtin="checker" rgb1="0.18 0.20 0.22" rgb2="0.12 0.14 0.16"
+             width="512" height="512"/>
+    <material name="floor_mat" texture="scene_checker" texrepeat="6 6" texuniform="true"
+              reflectance="0.08" rgba="1 1 1 1"/>
+    <material name="desk_top_mat" rgba="0.53 0.36 0.23 1" specular="0.18" shininess="0.2"/>
+    <material name="desk_leg_mat" rgba="0.24 0.25 0.28 1" specular="0.10" shininess="0.15"/>
+  </asset>
+
+  <worldbody>
+    <light name="overhead_key" pos="0.55 0 2.45" dir="0 0 -1" directional="true"
+           diffuse="0.95 0.95 0.92" specular="0.20 0.20 0.20" castshadow="true"/>
+
+    <geom name="floor" type="plane" pos="0 0 0" size="4 4 0.1" material="floor_mat" contype="2" conaffinity="2"/>
+
+    <body name="robot_anchor" pos="0 0 1.0">
+      <attach model="DARU_robot" prefix=""/>
+    </body>
+
+    <body name="desk" pos="0.78 0 0">
+      <geom name="desk_top" type="box" pos="0 0 0.97" size="0.48 0.80 0.03"
+            material="desk_top_mat" condim="3" contype="2" conaffinity="2"/>
+      <geom name="desk_leg_fl" type="box" pos="0.41 0.70 0.47" size="0.035 0.035 0.47"
+            material="desk_leg_mat" condim="3" contype="2" conaffinity="2"/>
+      <geom name="desk_leg_fr" type="box" pos="0.41 -0.70 0.47" size="0.035 0.035 0.47"
+            material="desk_leg_mat" condim="3" contype="2" conaffinity="2"/>
+      <geom name="desk_leg_rl" type="box" pos="-0.41 0.70 0.47" size="0.035 0.035 0.47"
+            material="desk_leg_mat" condim="3" contype="2" conaffinity="2"/>
+      <geom name="desk_leg_rr" type="box" pos="-0.41 -0.70 0.47" size="0.035 0.035 0.47"
+            material="desk_leg_mat" condim="3" contype="2" conaffinity="2"/>
+    </body>
+  </worldbody>
+</mujoco>

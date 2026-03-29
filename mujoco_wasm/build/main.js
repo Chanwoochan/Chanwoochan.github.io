@@ -30721,6 +30721,3343 @@ var DragStateManager = class {
   }
 };
 
+// src/ik_rbdl/daru_rbdl_ik.js
+var Module = (() => {
+  var _scriptName = import.meta.url;
+  return (function(moduleArg = {}) {
+    var moduleRtn;
+    var Module2 = moduleArg;
+    var readyPromiseResolve, readyPromiseReject;
+    var readyPromise = new Promise((resolve, reject) => {
+      readyPromiseResolve = resolve;
+      readyPromiseReject = reject;
+    });
+    var ENVIRONMENT_IS_WEB = true;
+    var ENVIRONMENT_IS_WORKER = false;
+    var moduleOverrides = Object.assign({}, Module2);
+    var arguments_ = [];
+    var thisProgram = "./this.program";
+    var quit_ = (status, toThrow) => {
+      throw toThrow;
+    };
+    var scriptDirectory = "";
+    function locateFile(path) {
+      if (Module2["locateFile"]) {
+        return Module2["locateFile"](path, scriptDirectory);
+      }
+      return scriptDirectory + path;
+    }
+    var readAsync, readBinary;
+    if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+      if (ENVIRONMENT_IS_WORKER) {
+        scriptDirectory = self.location.href;
+      } else if (typeof document != "undefined" && document.currentScript) {
+        scriptDirectory = document.currentScript.src;
+      }
+      if (_scriptName) {
+        scriptDirectory = _scriptName;
+      }
+      if (scriptDirectory.startsWith("blob:")) {
+        scriptDirectory = "";
+      } else {
+        scriptDirectory = scriptDirectory.substr(0, scriptDirectory.replace(/[?#].*/, "").lastIndexOf("/") + 1);
+      }
+      {
+        readAsync = (url) => fetch(url, { credentials: "same-origin" }).then((response) => {
+          if (response.ok) {
+            return response.arrayBuffer();
+          }
+          return Promise.reject(new Error(response.status + " : " + response.url));
+        });
+      }
+    } else {
+    }
+    var out = Module2["print"] || console.log.bind(console);
+    var err = Module2["printErr"] || console.error.bind(console);
+    Object.assign(Module2, moduleOverrides);
+    moduleOverrides = null;
+    if (Module2["arguments"]) arguments_ = Module2["arguments"];
+    if (Module2["thisProgram"]) thisProgram = Module2["thisProgram"];
+    if (Module2["quit"]) quit_ = Module2["quit"];
+    var wasmBinary;
+    if (Module2["wasmBinary"]) wasmBinary = Module2["wasmBinary"];
+    var wasmMemory;
+    var ABORT = false;
+    var EXITSTATUS;
+    var HEAP8, HEAPU8, HEAP16, HEAPU16, HEAP32, HEAPU32, HEAPF32, HEAPF64;
+    function updateMemoryViews() {
+      var b = wasmMemory.buffer;
+      Module2["HEAP8"] = HEAP8 = new Int8Array(b);
+      Module2["HEAP16"] = HEAP16 = new Int16Array(b);
+      Module2["HEAPU8"] = HEAPU8 = new Uint8Array(b);
+      Module2["HEAPU16"] = HEAPU16 = new Uint16Array(b);
+      Module2["HEAP32"] = HEAP32 = new Int32Array(b);
+      Module2["HEAPU32"] = HEAPU32 = new Uint32Array(b);
+      Module2["HEAPF32"] = HEAPF32 = new Float32Array(b);
+      Module2["HEAPF64"] = HEAPF64 = new Float64Array(b);
+    }
+    var __ATPRERUN__ = [];
+    var __ATINIT__ = [];
+    var __ATPOSTRUN__ = [];
+    var runtimeInitialized = false;
+    function preRun() {
+      if (Module2["preRun"]) {
+        if (typeof Module2["preRun"] == "function") Module2["preRun"] = [Module2["preRun"]];
+        while (Module2["preRun"].length) {
+          addOnPreRun(Module2["preRun"].shift());
+        }
+      }
+      callRuntimeCallbacks(__ATPRERUN__);
+    }
+    function initRuntime() {
+      runtimeInitialized = true;
+      if (!Module2["noFSInit"] && !FS.init.initialized) FS.init();
+      FS.ignorePermissions = false;
+      TTY.init();
+      callRuntimeCallbacks(__ATINIT__);
+    }
+    function postRun() {
+      if (Module2["postRun"]) {
+        if (typeof Module2["postRun"] == "function") Module2["postRun"] = [Module2["postRun"]];
+        while (Module2["postRun"].length) {
+          addOnPostRun(Module2["postRun"].shift());
+        }
+      }
+      callRuntimeCallbacks(__ATPOSTRUN__);
+    }
+    function addOnPreRun(cb) {
+      __ATPRERUN__.unshift(cb);
+    }
+    function addOnInit(cb) {
+      __ATINIT__.unshift(cb);
+    }
+    function addOnPostRun(cb) {
+      __ATPOSTRUN__.unshift(cb);
+    }
+    var runDependencies = 0;
+    var runDependencyWatcher = null;
+    var dependenciesFulfilled = null;
+    function getUniqueRunDependency(id) {
+      return id;
+    }
+    function addRunDependency(id) {
+      runDependencies++;
+      Module2["monitorRunDependencies"]?.(runDependencies);
+    }
+    function removeRunDependency(id) {
+      runDependencies--;
+      Module2["monitorRunDependencies"]?.(runDependencies);
+      if (runDependencies == 0) {
+        if (runDependencyWatcher !== null) {
+          clearInterval(runDependencyWatcher);
+          runDependencyWatcher = null;
+        }
+        if (dependenciesFulfilled) {
+          var callback = dependenciesFulfilled;
+          dependenciesFulfilled = null;
+          callback();
+        }
+      }
+    }
+    function abort(what) {
+      Module2["onAbort"]?.(what);
+      what = "Aborted(" + what + ")";
+      err(what);
+      ABORT = true;
+      EXITSTATUS = 1;
+      what += ". Build with -sASSERTIONS for more info.";
+      var e2 = new WebAssembly.RuntimeError(what);
+      readyPromiseReject(e2);
+      throw e2;
+    }
+    var dataURIPrefix = "data:application/octet-stream;base64,";
+    var isDataURI = (filename) => filename.startsWith(dataURIPrefix);
+    function findWasmBinary() {
+      if (Module2["locateFile"]) {
+        var f = "daru_rbdl_ik.wasm";
+        if (!isDataURI(f)) {
+          return locateFile(f);
+        }
+        return f;
+      }
+      return new URL("daru_rbdl_ik.wasm", import.meta.url).href;
+    }
+    var wasmBinaryFile;
+    function getBinarySync(file) {
+      if (file == wasmBinaryFile && wasmBinary) {
+        return new Uint8Array(wasmBinary);
+      }
+      if (readBinary) {
+        return readBinary(file);
+      }
+      throw "both async and sync fetching of the wasm failed";
+    }
+    function getBinaryPromise(binaryFile) {
+      if (!wasmBinary) {
+        return readAsync(binaryFile).then((response) => new Uint8Array(response), () => getBinarySync(binaryFile));
+      }
+      return Promise.resolve().then(() => getBinarySync(binaryFile));
+    }
+    function instantiateArrayBuffer(binaryFile, imports, receiver) {
+      return getBinaryPromise(binaryFile).then((binary) => WebAssembly.instantiate(binary, imports)).then(receiver, (reason) => {
+        err(`failed to asynchronously prepare wasm: ${reason}`);
+        abort(reason);
+      });
+    }
+    function instantiateAsync(binary, binaryFile, imports, callback) {
+      if (!binary && typeof WebAssembly.instantiateStreaming == "function" && !isDataURI(binaryFile) && typeof fetch == "function") {
+        return fetch(binaryFile, { credentials: "same-origin" }).then((response) => {
+          var result = WebAssembly.instantiateStreaming(response, imports);
+          return result.then(callback, function(reason) {
+            err(`wasm streaming compile failed: ${reason}`);
+            err("falling back to ArrayBuffer instantiation");
+            return instantiateArrayBuffer(binaryFile, imports, callback);
+          });
+        });
+      }
+      return instantiateArrayBuffer(binaryFile, imports, callback);
+    }
+    function getWasmImports() {
+      return { a: wasmImports };
+    }
+    function createWasm() {
+      var info = getWasmImports();
+      function receiveInstance(instance, module) {
+        wasmExports = instance.exports;
+        wasmMemory = wasmExports["p"];
+        updateMemoryViews();
+        addOnInit(wasmExports["q"]);
+        removeRunDependency("wasm-instantiate");
+        return wasmExports;
+      }
+      addRunDependency("wasm-instantiate");
+      function receiveInstantiationResult(result) {
+        receiveInstance(result["instance"]);
+      }
+      if (Module2["instantiateWasm"]) {
+        try {
+          return Module2["instantiateWasm"](info, receiveInstance);
+        } catch (e2) {
+          err(`Module.instantiateWasm callback failed with error: ${e2}`);
+          readyPromiseReject(e2);
+        }
+      }
+      if (!wasmBinaryFile) wasmBinaryFile = findWasmBinary();
+      instantiateAsync(wasmBinary, wasmBinaryFile, info, receiveInstantiationResult).catch(readyPromiseReject);
+      return {};
+    }
+    var tempDouble;
+    var tempI64;
+    var callRuntimeCallbacks = (callbacks) => {
+      while (callbacks.length > 0) {
+        callbacks.shift()(Module2);
+      }
+    };
+    var noExitRuntime = Module2["noExitRuntime"] || true;
+    var stackRestore = (val) => __emscripten_stack_restore(val);
+    var stackSave = () => _emscripten_stack_get_current();
+    var UTF8Decoder = typeof TextDecoder != "undefined" ? new TextDecoder() : void 0;
+    var UTF8ArrayToString = (heapOrArray, idx, maxBytesToRead) => {
+      var endIdx = idx + maxBytesToRead;
+      var endPtr = idx;
+      while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
+      if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
+        return UTF8Decoder.decode(heapOrArray.subarray(idx, endPtr));
+      }
+      var str = "";
+      while (idx < endPtr) {
+        var u0 = heapOrArray[idx++];
+        if (!(u0 & 128)) {
+          str += String.fromCharCode(u0);
+          continue;
+        }
+        var u1 = heapOrArray[idx++] & 63;
+        if ((u0 & 224) == 192) {
+          str += String.fromCharCode((u0 & 31) << 6 | u1);
+          continue;
+        }
+        var u2 = heapOrArray[idx++] & 63;
+        if ((u0 & 240) == 224) {
+          u0 = (u0 & 15) << 12 | u1 << 6 | u2;
+        } else {
+          u0 = (u0 & 7) << 18 | u1 << 12 | u2 << 6 | heapOrArray[idx++] & 63;
+        }
+        if (u0 < 65536) {
+          str += String.fromCharCode(u0);
+        } else {
+          var ch = u0 - 65536;
+          str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
+        }
+      }
+      return str;
+    };
+    var UTF8ToString = (ptr, maxBytesToRead) => ptr ? UTF8ArrayToString(HEAPU8, ptr, maxBytesToRead) : "";
+    var ___assert_fail = (condition, filename, line, func) => {
+      abort(`Assertion failed: ${UTF8ToString(condition)}, at: ` + [filename ? UTF8ToString(filename) : "unknown filename", line, func ? UTF8ToString(func) : "unknown function"]);
+    };
+    class ExceptionInfo {
+      constructor(excPtr) {
+        this.excPtr = excPtr;
+        this.ptr = excPtr - 24;
+      }
+      set_type(type) {
+        HEAPU32[this.ptr + 4 >> 2] = type;
+      }
+      get_type() {
+        return HEAPU32[this.ptr + 4 >> 2];
+      }
+      set_destructor(destructor) {
+        HEAPU32[this.ptr + 8 >> 2] = destructor;
+      }
+      get_destructor() {
+        return HEAPU32[this.ptr + 8 >> 2];
+      }
+      set_caught(caught) {
+        caught = caught ? 1 : 0;
+        HEAP8[this.ptr + 12] = caught;
+      }
+      get_caught() {
+        return HEAP8[this.ptr + 12] != 0;
+      }
+      set_rethrown(rethrown) {
+        rethrown = rethrown ? 1 : 0;
+        HEAP8[this.ptr + 13] = rethrown;
+      }
+      get_rethrown() {
+        return HEAP8[this.ptr + 13] != 0;
+      }
+      init(type, destructor) {
+        this.set_adjusted_ptr(0);
+        this.set_type(type);
+        this.set_destructor(destructor);
+      }
+      set_adjusted_ptr(adjustedPtr) {
+        HEAPU32[this.ptr + 16 >> 2] = adjustedPtr;
+      }
+      get_adjusted_ptr() {
+        return HEAPU32[this.ptr + 16 >> 2];
+      }
+      get_exception_ptr() {
+        var isPointer = ___cxa_is_pointer_type(this.get_type());
+        if (isPointer) {
+          return HEAPU32[this.excPtr >> 2];
+        }
+        var adjusted = this.get_adjusted_ptr();
+        if (adjusted !== 0) return adjusted;
+        return this.excPtr;
+      }
+    }
+    var exceptionLast = 0;
+    var uncaughtExceptionCount = 0;
+    var ___cxa_throw = (ptr, type, destructor) => {
+      var info = new ExceptionInfo(ptr);
+      info.init(type, destructor);
+      exceptionLast = ptr;
+      uncaughtExceptionCount++;
+      throw exceptionLast;
+    };
+    function syscallGetVarargI() {
+      var ret = HEAP32[+SYSCALLS.varargs >> 2];
+      SYSCALLS.varargs += 4;
+      return ret;
+    }
+    var syscallGetVarargP = syscallGetVarargI;
+    var PATH = { isAbs: (path) => path.charAt(0) === "/", splitPath: (filename) => {
+      var splitPathRe = /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
+      return splitPathRe.exec(filename).slice(1);
+    }, normalizeArray: (parts, allowAboveRoot) => {
+      var up = 0;
+      for (var i2 = parts.length - 1; i2 >= 0; i2--) {
+        var last = parts[i2];
+        if (last === ".") {
+          parts.splice(i2, 1);
+        } else if (last === "..") {
+          parts.splice(i2, 1);
+          up++;
+        } else if (up) {
+          parts.splice(i2, 1);
+          up--;
+        }
+      }
+      if (allowAboveRoot) {
+        for (; up; up--) {
+          parts.unshift("..");
+        }
+      }
+      return parts;
+    }, normalize: (path) => {
+      var isAbsolute = PATH.isAbs(path), trailingSlash = path.substr(-1) === "/";
+      path = PATH.normalizeArray(path.split("/").filter((p2) => !!p2), !isAbsolute).join("/");
+      if (!path && !isAbsolute) {
+        path = ".";
+      }
+      if (path && trailingSlash) {
+        path += "/";
+      }
+      return (isAbsolute ? "/" : "") + path;
+    }, dirname: (path) => {
+      var result = PATH.splitPath(path), root = result[0], dir = result[1];
+      if (!root && !dir) {
+        return ".";
+      }
+      if (dir) {
+        dir = dir.substr(0, dir.length - 1);
+      }
+      return root + dir;
+    }, basename: (path) => {
+      if (path === "/") return "/";
+      path = PATH.normalize(path);
+      path = path.replace(/\/$/, "");
+      var lastSlash = path.lastIndexOf("/");
+      if (lastSlash === -1) return path;
+      return path.substr(lastSlash + 1);
+    }, join: (...paths) => PATH.normalize(paths.join("/")), join2: (l2, r2) => PATH.normalize(l2 + "/" + r2) };
+    var initRandomFill = () => {
+      if (typeof crypto == "object" && typeof crypto["getRandomValues"] == "function") {
+        return (view) => crypto.getRandomValues(view);
+      } else abort("initRandomDevice");
+    };
+    var randomFill = (view) => (randomFill = initRandomFill())(view);
+    var PATH_FS = { resolve: (...args) => {
+      var resolvedPath = "", resolvedAbsolute = false;
+      for (var i2 = args.length - 1; i2 >= -1 && !resolvedAbsolute; i2--) {
+        var path = i2 >= 0 ? args[i2] : FS.cwd();
+        if (typeof path != "string") {
+          throw new TypeError("Arguments to path.resolve must be strings");
+        } else if (!path) {
+          return "";
+        }
+        resolvedPath = path + "/" + resolvedPath;
+        resolvedAbsolute = PATH.isAbs(path);
+      }
+      resolvedPath = PATH.normalizeArray(resolvedPath.split("/").filter((p2) => !!p2), !resolvedAbsolute).join("/");
+      return (resolvedAbsolute ? "/" : "") + resolvedPath || ".";
+    }, relative: (from, to) => {
+      from = PATH_FS.resolve(from).substr(1);
+      to = PATH_FS.resolve(to).substr(1);
+      function trim(arr) {
+        var start = 0;
+        for (; start < arr.length; start++) {
+          if (arr[start] !== "") break;
+        }
+        var end = arr.length - 1;
+        for (; end >= 0; end--) {
+          if (arr[end] !== "") break;
+        }
+        if (start > end) return [];
+        return arr.slice(start, end - start + 1);
+      }
+      var fromParts = trim(from.split("/"));
+      var toParts = trim(to.split("/"));
+      var length = Math.min(fromParts.length, toParts.length);
+      var samePartsLength = length;
+      for (var i2 = 0; i2 < length; i2++) {
+        if (fromParts[i2] !== toParts[i2]) {
+          samePartsLength = i2;
+          break;
+        }
+      }
+      var outputParts = [];
+      for (var i2 = samePartsLength; i2 < fromParts.length; i2++) {
+        outputParts.push("..");
+      }
+      outputParts = outputParts.concat(toParts.slice(samePartsLength));
+      return outputParts.join("/");
+    } };
+    var FS_stdin_getChar_buffer = [];
+    var lengthBytesUTF8 = (str) => {
+      var len = 0;
+      for (var i2 = 0; i2 < str.length; ++i2) {
+        var c2 = str.charCodeAt(i2);
+        if (c2 <= 127) {
+          len++;
+        } else if (c2 <= 2047) {
+          len += 2;
+        } else if (c2 >= 55296 && c2 <= 57343) {
+          len += 4;
+          ++i2;
+        } else {
+          len += 3;
+        }
+      }
+      return len;
+    };
+    var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
+      if (!(maxBytesToWrite > 0)) return 0;
+      var startIdx = outIdx;
+      var endIdx = outIdx + maxBytesToWrite - 1;
+      for (var i2 = 0; i2 < str.length; ++i2) {
+        var u2 = str.charCodeAt(i2);
+        if (u2 >= 55296 && u2 <= 57343) {
+          var u1 = str.charCodeAt(++i2);
+          u2 = 65536 + ((u2 & 1023) << 10) | u1 & 1023;
+        }
+        if (u2 <= 127) {
+          if (outIdx >= endIdx) break;
+          heap[outIdx++] = u2;
+        } else if (u2 <= 2047) {
+          if (outIdx + 1 >= endIdx) break;
+          heap[outIdx++] = 192 | u2 >> 6;
+          heap[outIdx++] = 128 | u2 & 63;
+        } else if (u2 <= 65535) {
+          if (outIdx + 2 >= endIdx) break;
+          heap[outIdx++] = 224 | u2 >> 12;
+          heap[outIdx++] = 128 | u2 >> 6 & 63;
+          heap[outIdx++] = 128 | u2 & 63;
+        } else {
+          if (outIdx + 3 >= endIdx) break;
+          heap[outIdx++] = 240 | u2 >> 18;
+          heap[outIdx++] = 128 | u2 >> 12 & 63;
+          heap[outIdx++] = 128 | u2 >> 6 & 63;
+          heap[outIdx++] = 128 | u2 & 63;
+        }
+      }
+      heap[outIdx] = 0;
+      return outIdx - startIdx;
+    };
+    function intArrayFromString(stringy, dontAddNull, length) {
+      var len = length > 0 ? length : lengthBytesUTF8(stringy) + 1;
+      var u8array = new Array(len);
+      var numBytesWritten = stringToUTF8Array(stringy, u8array, 0, u8array.length);
+      if (dontAddNull) u8array.length = numBytesWritten;
+      return u8array;
+    }
+    var FS_stdin_getChar = () => {
+      if (!FS_stdin_getChar_buffer.length) {
+        var result = null;
+        if (typeof window != "undefined" && typeof window.prompt == "function") {
+          result = window.prompt("Input: ");
+          if (result !== null) {
+            result += "\n";
+          }
+        } else {
+        }
+        if (!result) {
+          return null;
+        }
+        FS_stdin_getChar_buffer = intArrayFromString(result, true);
+      }
+      return FS_stdin_getChar_buffer.shift();
+    };
+    var TTY = { ttys: [], init() {
+    }, shutdown() {
+    }, register(dev, ops) {
+      TTY.ttys[dev] = { input: [], output: [], ops };
+      FS.registerDevice(dev, TTY.stream_ops);
+    }, stream_ops: { open(stream) {
+      var tty = TTY.ttys[stream.node.rdev];
+      if (!tty) {
+        throw new FS.ErrnoError(43);
+      }
+      stream.tty = tty;
+      stream.seekable = false;
+    }, close(stream) {
+      stream.tty.ops.fsync(stream.tty);
+    }, fsync(stream) {
+      stream.tty.ops.fsync(stream.tty);
+    }, read(stream, buffer, offset, length, pos) {
+      if (!stream.tty || !stream.tty.ops.get_char) {
+        throw new FS.ErrnoError(60);
+      }
+      var bytesRead = 0;
+      for (var i2 = 0; i2 < length; i2++) {
+        var result;
+        try {
+          result = stream.tty.ops.get_char(stream.tty);
+        } catch (e2) {
+          throw new FS.ErrnoError(29);
+        }
+        if (result === void 0 && bytesRead === 0) {
+          throw new FS.ErrnoError(6);
+        }
+        if (result === null || result === void 0) break;
+        bytesRead++;
+        buffer[offset + i2] = result;
+      }
+      if (bytesRead) {
+        stream.node.timestamp = Date.now();
+      }
+      return bytesRead;
+    }, write(stream, buffer, offset, length, pos) {
+      if (!stream.tty || !stream.tty.ops.put_char) {
+        throw new FS.ErrnoError(60);
+      }
+      try {
+        for (var i2 = 0; i2 < length; i2++) {
+          stream.tty.ops.put_char(stream.tty, buffer[offset + i2]);
+        }
+      } catch (e2) {
+        throw new FS.ErrnoError(29);
+      }
+      if (length) {
+        stream.node.timestamp = Date.now();
+      }
+      return i2;
+    } }, default_tty_ops: { get_char(tty) {
+      return FS_stdin_getChar();
+    }, put_char(tty, val) {
+      if (val === null || val === 10) {
+        out(UTF8ArrayToString(tty.output, 0));
+        tty.output = [];
+      } else {
+        if (val != 0) tty.output.push(val);
+      }
+    }, fsync(tty) {
+      if (tty.output && tty.output.length > 0) {
+        out(UTF8ArrayToString(tty.output, 0));
+        tty.output = [];
+      }
+    }, ioctl_tcgets(tty) {
+      return { c_iflag: 25856, c_oflag: 5, c_cflag: 191, c_lflag: 35387, c_cc: [3, 28, 127, 21, 4, 0, 1, 0, 17, 19, 26, 0, 18, 15, 23, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
+    }, ioctl_tcsets(tty, optional_actions, data) {
+      return 0;
+    }, ioctl_tiocgwinsz(tty) {
+      return [24, 80];
+    } }, default_tty1_ops: { put_char(tty, val) {
+      if (val === null || val === 10) {
+        err(UTF8ArrayToString(tty.output, 0));
+        tty.output = [];
+      } else {
+        if (val != 0) tty.output.push(val);
+      }
+    }, fsync(tty) {
+      if (tty.output && tty.output.length > 0) {
+        err(UTF8ArrayToString(tty.output, 0));
+        tty.output = [];
+      }
+    } } };
+    var mmapAlloc = (size) => {
+      abort();
+    };
+    var MEMFS = { ops_table: null, mount(mount) {
+      return MEMFS.createNode(null, "/", 16384 | 511, 0);
+    }, createNode(parent, name, mode, dev) {
+      if (FS.isBlkdev(mode) || FS.isFIFO(mode)) {
+        throw new FS.ErrnoError(63);
+      }
+      MEMFS.ops_table ||= { dir: { node: { getattr: MEMFS.node_ops.getattr, setattr: MEMFS.node_ops.setattr, lookup: MEMFS.node_ops.lookup, mknod: MEMFS.node_ops.mknod, rename: MEMFS.node_ops.rename, unlink: MEMFS.node_ops.unlink, rmdir: MEMFS.node_ops.rmdir, readdir: MEMFS.node_ops.readdir, symlink: MEMFS.node_ops.symlink }, stream: { llseek: MEMFS.stream_ops.llseek } }, file: { node: { getattr: MEMFS.node_ops.getattr, setattr: MEMFS.node_ops.setattr }, stream: { llseek: MEMFS.stream_ops.llseek, read: MEMFS.stream_ops.read, write: MEMFS.stream_ops.write, allocate: MEMFS.stream_ops.allocate, mmap: MEMFS.stream_ops.mmap, msync: MEMFS.stream_ops.msync } }, link: { node: { getattr: MEMFS.node_ops.getattr, setattr: MEMFS.node_ops.setattr, readlink: MEMFS.node_ops.readlink }, stream: {} }, chrdev: { node: { getattr: MEMFS.node_ops.getattr, setattr: MEMFS.node_ops.setattr }, stream: FS.chrdev_stream_ops } };
+      var node = FS.createNode(parent, name, mode, dev);
+      if (FS.isDir(node.mode)) {
+        node.node_ops = MEMFS.ops_table.dir.node;
+        node.stream_ops = MEMFS.ops_table.dir.stream;
+        node.contents = {};
+      } else if (FS.isFile(node.mode)) {
+        node.node_ops = MEMFS.ops_table.file.node;
+        node.stream_ops = MEMFS.ops_table.file.stream;
+        node.usedBytes = 0;
+        node.contents = null;
+      } else if (FS.isLink(node.mode)) {
+        node.node_ops = MEMFS.ops_table.link.node;
+        node.stream_ops = MEMFS.ops_table.link.stream;
+      } else if (FS.isChrdev(node.mode)) {
+        node.node_ops = MEMFS.ops_table.chrdev.node;
+        node.stream_ops = MEMFS.ops_table.chrdev.stream;
+      }
+      node.timestamp = Date.now();
+      if (parent) {
+        parent.contents[name] = node;
+        parent.timestamp = node.timestamp;
+      }
+      return node;
+    }, getFileDataAsTypedArray(node) {
+      if (!node.contents) return new Uint8Array(0);
+      if (node.contents.subarray) return node.contents.subarray(0, node.usedBytes);
+      return new Uint8Array(node.contents);
+    }, expandFileStorage(node, newCapacity) {
+      var prevCapacity = node.contents ? node.contents.length : 0;
+      if (prevCapacity >= newCapacity) return;
+      var CAPACITY_DOUBLING_MAX = 1024 * 1024;
+      newCapacity = Math.max(newCapacity, prevCapacity * (prevCapacity < CAPACITY_DOUBLING_MAX ? 2 : 1.125) >>> 0);
+      if (prevCapacity != 0) newCapacity = Math.max(newCapacity, 256);
+      var oldContents = node.contents;
+      node.contents = new Uint8Array(newCapacity);
+      if (node.usedBytes > 0) node.contents.set(oldContents.subarray(0, node.usedBytes), 0);
+    }, resizeFileStorage(node, newSize) {
+      if (node.usedBytes == newSize) return;
+      if (newSize == 0) {
+        node.contents = null;
+        node.usedBytes = 0;
+      } else {
+        var oldContents = node.contents;
+        node.contents = new Uint8Array(newSize);
+        if (oldContents) {
+          node.contents.set(oldContents.subarray(0, Math.min(newSize, node.usedBytes)));
+        }
+        node.usedBytes = newSize;
+      }
+    }, node_ops: { getattr(node) {
+      var attr = {};
+      attr.dev = FS.isChrdev(node.mode) ? node.id : 1;
+      attr.ino = node.id;
+      attr.mode = node.mode;
+      attr.nlink = 1;
+      attr.uid = 0;
+      attr.gid = 0;
+      attr.rdev = node.rdev;
+      if (FS.isDir(node.mode)) {
+        attr.size = 4096;
+      } else if (FS.isFile(node.mode)) {
+        attr.size = node.usedBytes;
+      } else if (FS.isLink(node.mode)) {
+        attr.size = node.link.length;
+      } else {
+        attr.size = 0;
+      }
+      attr.atime = new Date(node.timestamp);
+      attr.mtime = new Date(node.timestamp);
+      attr.ctime = new Date(node.timestamp);
+      attr.blksize = 4096;
+      attr.blocks = Math.ceil(attr.size / attr.blksize);
+      return attr;
+    }, setattr(node, attr) {
+      if (attr.mode !== void 0) {
+        node.mode = attr.mode;
+      }
+      if (attr.timestamp !== void 0) {
+        node.timestamp = attr.timestamp;
+      }
+      if (attr.size !== void 0) {
+        MEMFS.resizeFileStorage(node, attr.size);
+      }
+    }, lookup(parent, name) {
+      throw FS.genericErrors[44];
+    }, mknod(parent, name, mode, dev) {
+      return MEMFS.createNode(parent, name, mode, dev);
+    }, rename(old_node, new_dir, new_name) {
+      if (FS.isDir(old_node.mode)) {
+        var new_node;
+        try {
+          new_node = FS.lookupNode(new_dir, new_name);
+        } catch (e2) {
+        }
+        if (new_node) {
+          for (var i2 in new_node.contents) {
+            throw new FS.ErrnoError(55);
+          }
+        }
+      }
+      delete old_node.parent.contents[old_node.name];
+      old_node.parent.timestamp = Date.now();
+      old_node.name = new_name;
+      new_dir.contents[new_name] = old_node;
+      new_dir.timestamp = old_node.parent.timestamp;
+    }, unlink(parent, name) {
+      delete parent.contents[name];
+      parent.timestamp = Date.now();
+    }, rmdir(parent, name) {
+      var node = FS.lookupNode(parent, name);
+      for (var i2 in node.contents) {
+        throw new FS.ErrnoError(55);
+      }
+      delete parent.contents[name];
+      parent.timestamp = Date.now();
+    }, readdir(node) {
+      var entries = [".", ".."];
+      for (var key of Object.keys(node.contents)) {
+        entries.push(key);
+      }
+      return entries;
+    }, symlink(parent, newname, oldpath) {
+      var node = MEMFS.createNode(parent, newname, 511 | 40960, 0);
+      node.link = oldpath;
+      return node;
+    }, readlink(node) {
+      if (!FS.isLink(node.mode)) {
+        throw new FS.ErrnoError(28);
+      }
+      return node.link;
+    } }, stream_ops: { read(stream, buffer, offset, length, position) {
+      var contents = stream.node.contents;
+      if (position >= stream.node.usedBytes) return 0;
+      var size = Math.min(stream.node.usedBytes - position, length);
+      if (size > 8 && contents.subarray) {
+        buffer.set(contents.subarray(position, position + size), offset);
+      } else {
+        for (var i2 = 0; i2 < size; i2++) buffer[offset + i2] = contents[position + i2];
+      }
+      return size;
+    }, write(stream, buffer, offset, length, position, canOwn) {
+      if (buffer.buffer === HEAP8.buffer) {
+        canOwn = false;
+      }
+      if (!length) return 0;
+      var node = stream.node;
+      node.timestamp = Date.now();
+      if (buffer.subarray && (!node.contents || node.contents.subarray)) {
+        if (canOwn) {
+          node.contents = buffer.subarray(offset, offset + length);
+          node.usedBytes = length;
+          return length;
+        } else if (node.usedBytes === 0 && position === 0) {
+          node.contents = buffer.slice(offset, offset + length);
+          node.usedBytes = length;
+          return length;
+        } else if (position + length <= node.usedBytes) {
+          node.contents.set(buffer.subarray(offset, offset + length), position);
+          return length;
+        }
+      }
+      MEMFS.expandFileStorage(node, position + length);
+      if (node.contents.subarray && buffer.subarray) {
+        node.contents.set(buffer.subarray(offset, offset + length), position);
+      } else {
+        for (var i2 = 0; i2 < length; i2++) {
+          node.contents[position + i2] = buffer[offset + i2];
+        }
+      }
+      node.usedBytes = Math.max(node.usedBytes, position + length);
+      return length;
+    }, llseek(stream, offset, whence) {
+      var position = offset;
+      if (whence === 1) {
+        position += stream.position;
+      } else if (whence === 2) {
+        if (FS.isFile(stream.node.mode)) {
+          position += stream.node.usedBytes;
+        }
+      }
+      if (position < 0) {
+        throw new FS.ErrnoError(28);
+      }
+      return position;
+    }, allocate(stream, offset, length) {
+      MEMFS.expandFileStorage(stream.node, offset + length);
+      stream.node.usedBytes = Math.max(stream.node.usedBytes, offset + length);
+    }, mmap(stream, length, position, prot, flags) {
+      if (!FS.isFile(stream.node.mode)) {
+        throw new FS.ErrnoError(43);
+      }
+      var ptr;
+      var allocated;
+      var contents = stream.node.contents;
+      if (!(flags & 2) && contents.buffer === HEAP8.buffer) {
+        allocated = false;
+        ptr = contents.byteOffset;
+      } else {
+        if (position > 0 || position + length < contents.length) {
+          if (contents.subarray) {
+            contents = contents.subarray(position, position + length);
+          } else {
+            contents = Array.prototype.slice.call(contents, position, position + length);
+          }
+        }
+        allocated = true;
+        ptr = mmapAlloc(length);
+        if (!ptr) {
+          throw new FS.ErrnoError(48);
+        }
+        HEAP8.set(contents, ptr);
+      }
+      return { ptr, allocated };
+    }, msync(stream, buffer, offset, length, mmapFlags) {
+      MEMFS.stream_ops.write(stream, buffer, 0, length, offset, false);
+      return 0;
+    } } };
+    var asyncLoad = (url, onload, onerror, noRunDep) => {
+      var dep = !noRunDep ? getUniqueRunDependency(`al ${url}`) : "";
+      readAsync(url).then((arrayBuffer) => {
+        onload(new Uint8Array(arrayBuffer));
+        if (dep) removeRunDependency(dep);
+      }, (err2) => {
+        if (onerror) {
+          onerror();
+        } else {
+          throw `Loading data file "${url}" failed.`;
+        }
+      });
+      if (dep) addRunDependency(dep);
+    };
+    var FS_createDataFile = (parent, name, fileData, canRead, canWrite, canOwn) => {
+      FS.createDataFile(parent, name, fileData, canRead, canWrite, canOwn);
+    };
+    var preloadPlugins = Module2["preloadPlugins"] || [];
+    var FS_handledByPreloadPlugin = (byteArray, fullname, finish, onerror) => {
+      if (typeof Browser != "undefined") Browser.init();
+      var handled = false;
+      preloadPlugins.forEach((plugin) => {
+        if (handled) return;
+        if (plugin["canHandle"](fullname)) {
+          plugin["handle"](byteArray, fullname, finish, onerror);
+          handled = true;
+        }
+      });
+      return handled;
+    };
+    var FS_createPreloadedFile = (parent, name, url, canRead, canWrite, onload, onerror, dontCreateFile, canOwn, preFinish) => {
+      var fullname = name ? PATH_FS.resolve(PATH.join2(parent, name)) : parent;
+      var dep = getUniqueRunDependency(`cp ${fullname}`);
+      function processData(byteArray) {
+        function finish(byteArray2) {
+          preFinish?.();
+          if (!dontCreateFile) {
+            FS_createDataFile(parent, name, byteArray2, canRead, canWrite, canOwn);
+          }
+          onload?.();
+          removeRunDependency(dep);
+        }
+        if (FS_handledByPreloadPlugin(byteArray, fullname, finish, () => {
+          onerror?.();
+          removeRunDependency(dep);
+        })) {
+          return;
+        }
+        finish(byteArray);
+      }
+      addRunDependency(dep);
+      if (typeof url == "string") {
+        asyncLoad(url, processData, onerror);
+      } else {
+        processData(url);
+      }
+    };
+    var FS_modeStringToFlags = (str) => {
+      var flagModes = { r: 0, "r+": 2, w: 512 | 64 | 1, "w+": 512 | 64 | 2, a: 1024 | 64 | 1, "a+": 1024 | 64 | 2 };
+      var flags = flagModes[str];
+      if (typeof flags == "undefined") {
+        throw new Error(`Unknown file open mode: ${str}`);
+      }
+      return flags;
+    };
+    var FS_getMode = (canRead, canWrite) => {
+      var mode = 0;
+      if (canRead) mode |= 292 | 73;
+      if (canWrite) mode |= 146;
+      return mode;
+    };
+    var FS = { root: null, mounts: [], devices: {}, streams: [], nextInode: 1, nameTable: null, currentPath: "/", initialized: false, ignorePermissions: true, ErrnoError: class {
+      constructor(errno) {
+        this.name = "ErrnoError";
+        this.errno = errno;
+      }
+    }, genericErrors: {}, filesystems: null, syncFSRequests: 0, FSStream: class {
+      constructor() {
+        this.shared = {};
+      }
+      get object() {
+        return this.node;
+      }
+      set object(val) {
+        this.node = val;
+      }
+      get isRead() {
+        return (this.flags & 2097155) !== 1;
+      }
+      get isWrite() {
+        return (this.flags & 2097155) !== 0;
+      }
+      get isAppend() {
+        return this.flags & 1024;
+      }
+      get flags() {
+        return this.shared.flags;
+      }
+      set flags(val) {
+        this.shared.flags = val;
+      }
+      get position() {
+        return this.shared.position;
+      }
+      set position(val) {
+        this.shared.position = val;
+      }
+    }, FSNode: class {
+      constructor(parent, name, mode, rdev) {
+        if (!parent) {
+          parent = this;
+        }
+        this.parent = parent;
+        this.mount = parent.mount;
+        this.mounted = null;
+        this.id = FS.nextInode++;
+        this.name = name;
+        this.mode = mode;
+        this.node_ops = {};
+        this.stream_ops = {};
+        this.rdev = rdev;
+        this.readMode = 292 | 73;
+        this.writeMode = 146;
+      }
+      get read() {
+        return (this.mode & this.readMode) === this.readMode;
+      }
+      set read(val) {
+        val ? this.mode |= this.readMode : this.mode &= ~this.readMode;
+      }
+      get write() {
+        return (this.mode & this.writeMode) === this.writeMode;
+      }
+      set write(val) {
+        val ? this.mode |= this.writeMode : this.mode &= ~this.writeMode;
+      }
+      get isFolder() {
+        return FS.isDir(this.mode);
+      }
+      get isDevice() {
+        return FS.isChrdev(this.mode);
+      }
+    }, lookupPath(path, opts = {}) {
+      path = PATH_FS.resolve(path);
+      if (!path) return { path: "", node: null };
+      var defaults = { follow_mount: true, recurse_count: 0 };
+      opts = Object.assign(defaults, opts);
+      if (opts.recurse_count > 8) {
+        throw new FS.ErrnoError(32);
+      }
+      var parts = path.split("/").filter((p2) => !!p2);
+      var current = FS.root;
+      var current_path = "/";
+      for (var i2 = 0; i2 < parts.length; i2++) {
+        var islast = i2 === parts.length - 1;
+        if (islast && opts.parent) {
+          break;
+        }
+        current = FS.lookupNode(current, parts[i2]);
+        current_path = PATH.join2(current_path, parts[i2]);
+        if (FS.isMountpoint(current)) {
+          if (!islast || islast && opts.follow_mount) {
+            current = current.mounted.root;
+          }
+        }
+        if (!islast || opts.follow) {
+          var count = 0;
+          while (FS.isLink(current.mode)) {
+            var link = FS.readlink(current_path);
+            current_path = PATH_FS.resolve(PATH.dirname(current_path), link);
+            var lookup = FS.lookupPath(current_path, { recurse_count: opts.recurse_count + 1 });
+            current = lookup.node;
+            if (count++ > 40) {
+              throw new FS.ErrnoError(32);
+            }
+          }
+        }
+      }
+      return { path: current_path, node: current };
+    }, getPath(node) {
+      var path;
+      while (true) {
+        if (FS.isRoot(node)) {
+          var mount = node.mount.mountpoint;
+          if (!path) return mount;
+          return mount[mount.length - 1] !== "/" ? `${mount}/${path}` : mount + path;
+        }
+        path = path ? `${node.name}/${path}` : node.name;
+        node = node.parent;
+      }
+    }, hashName(parentid, name) {
+      var hash = 0;
+      for (var i2 = 0; i2 < name.length; i2++) {
+        hash = (hash << 5) - hash + name.charCodeAt(i2) | 0;
+      }
+      return (parentid + hash >>> 0) % FS.nameTable.length;
+    }, hashAddNode(node) {
+      var hash = FS.hashName(node.parent.id, node.name);
+      node.name_next = FS.nameTable[hash];
+      FS.nameTable[hash] = node;
+    }, hashRemoveNode(node) {
+      var hash = FS.hashName(node.parent.id, node.name);
+      if (FS.nameTable[hash] === node) {
+        FS.nameTable[hash] = node.name_next;
+      } else {
+        var current = FS.nameTable[hash];
+        while (current) {
+          if (current.name_next === node) {
+            current.name_next = node.name_next;
+            break;
+          }
+          current = current.name_next;
+        }
+      }
+    }, lookupNode(parent, name) {
+      var errCode = FS.mayLookup(parent);
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      var hash = FS.hashName(parent.id, name);
+      for (var node = FS.nameTable[hash]; node; node = node.name_next) {
+        var nodeName = node.name;
+        if (node.parent.id === parent.id && nodeName === name) {
+          return node;
+        }
+      }
+      return FS.lookup(parent, name);
+    }, createNode(parent, name, mode, rdev) {
+      var node = new FS.FSNode(parent, name, mode, rdev);
+      FS.hashAddNode(node);
+      return node;
+    }, destroyNode(node) {
+      FS.hashRemoveNode(node);
+    }, isRoot(node) {
+      return node === node.parent;
+    }, isMountpoint(node) {
+      return !!node.mounted;
+    }, isFile(mode) {
+      return (mode & 61440) === 32768;
+    }, isDir(mode) {
+      return (mode & 61440) === 16384;
+    }, isLink(mode) {
+      return (mode & 61440) === 40960;
+    }, isChrdev(mode) {
+      return (mode & 61440) === 8192;
+    }, isBlkdev(mode) {
+      return (mode & 61440) === 24576;
+    }, isFIFO(mode) {
+      return (mode & 61440) === 4096;
+    }, isSocket(mode) {
+      return (mode & 49152) === 49152;
+    }, flagsToPermissionString(flag) {
+      var perms = ["r", "w", "rw"][flag & 3];
+      if (flag & 512) {
+        perms += "w";
+      }
+      return perms;
+    }, nodePermissions(node, perms) {
+      if (FS.ignorePermissions) {
+        return 0;
+      }
+      if (perms.includes("r") && !(node.mode & 292)) {
+        return 2;
+      } else if (perms.includes("w") && !(node.mode & 146)) {
+        return 2;
+      } else if (perms.includes("x") && !(node.mode & 73)) {
+        return 2;
+      }
+      return 0;
+    }, mayLookup(dir) {
+      if (!FS.isDir(dir.mode)) return 54;
+      var errCode = FS.nodePermissions(dir, "x");
+      if (errCode) return errCode;
+      if (!dir.node_ops.lookup) return 2;
+      return 0;
+    }, mayCreate(dir, name) {
+      try {
+        var node = FS.lookupNode(dir, name);
+        return 20;
+      } catch (e2) {
+      }
+      return FS.nodePermissions(dir, "wx");
+    }, mayDelete(dir, name, isdir) {
+      var node;
+      try {
+        node = FS.lookupNode(dir, name);
+      } catch (e2) {
+        return e2.errno;
+      }
+      var errCode = FS.nodePermissions(dir, "wx");
+      if (errCode) {
+        return errCode;
+      }
+      if (isdir) {
+        if (!FS.isDir(node.mode)) {
+          return 54;
+        }
+        if (FS.isRoot(node) || FS.getPath(node) === FS.cwd()) {
+          return 10;
+        }
+      } else {
+        if (FS.isDir(node.mode)) {
+          return 31;
+        }
+      }
+      return 0;
+    }, mayOpen(node, flags) {
+      if (!node) {
+        return 44;
+      }
+      if (FS.isLink(node.mode)) {
+        return 32;
+      } else if (FS.isDir(node.mode)) {
+        if (FS.flagsToPermissionString(flags) !== "r" || flags & 512) {
+          return 31;
+        }
+      }
+      return FS.nodePermissions(node, FS.flagsToPermissionString(flags));
+    }, MAX_OPEN_FDS: 4096, nextfd() {
+      for (var fd = 0; fd <= FS.MAX_OPEN_FDS; fd++) {
+        if (!FS.streams[fd]) {
+          return fd;
+        }
+      }
+      throw new FS.ErrnoError(33);
+    }, getStreamChecked(fd) {
+      var stream = FS.getStream(fd);
+      if (!stream) {
+        throw new FS.ErrnoError(8);
+      }
+      return stream;
+    }, getStream: (fd) => FS.streams[fd], createStream(stream, fd = -1) {
+      stream = Object.assign(new FS.FSStream(), stream);
+      if (fd == -1) {
+        fd = FS.nextfd();
+      }
+      stream.fd = fd;
+      FS.streams[fd] = stream;
+      return stream;
+    }, closeStream(fd) {
+      FS.streams[fd] = null;
+    }, dupStream(origStream, fd = -1) {
+      var stream = FS.createStream(origStream, fd);
+      stream.stream_ops?.dup?.(stream);
+      return stream;
+    }, chrdev_stream_ops: { open(stream) {
+      var device = FS.getDevice(stream.node.rdev);
+      stream.stream_ops = device.stream_ops;
+      stream.stream_ops.open?.(stream);
+    }, llseek() {
+      throw new FS.ErrnoError(70);
+    } }, major: (dev) => dev >> 8, minor: (dev) => dev & 255, makedev: (ma, mi) => ma << 8 | mi, registerDevice(dev, ops) {
+      FS.devices[dev] = { stream_ops: ops };
+    }, getDevice: (dev) => FS.devices[dev], getMounts(mount) {
+      var mounts = [];
+      var check = [mount];
+      while (check.length) {
+        var m = check.pop();
+        mounts.push(m);
+        check.push(...m.mounts);
+      }
+      return mounts;
+    }, syncfs(populate, callback) {
+      if (typeof populate == "function") {
+        callback = populate;
+        populate = false;
+      }
+      FS.syncFSRequests++;
+      if (FS.syncFSRequests > 1) {
+        err(`warning: ${FS.syncFSRequests} FS.syncfs operations in flight at once, probably just doing extra work`);
+      }
+      var mounts = FS.getMounts(FS.root.mount);
+      var completed = 0;
+      function doCallback(errCode) {
+        FS.syncFSRequests--;
+        return callback(errCode);
+      }
+      function done(errCode) {
+        if (errCode) {
+          if (!done.errored) {
+            done.errored = true;
+            return doCallback(errCode);
+          }
+          return;
+        }
+        if (++completed >= mounts.length) {
+          doCallback(null);
+        }
+      }
+      mounts.forEach((mount) => {
+        if (!mount.type.syncfs) {
+          return done(null);
+        }
+        mount.type.syncfs(mount, populate, done);
+      });
+    }, mount(type, opts, mountpoint) {
+      var root = mountpoint === "/";
+      var pseudo = !mountpoint;
+      var node;
+      if (root && FS.root) {
+        throw new FS.ErrnoError(10);
+      } else if (!root && !pseudo) {
+        var lookup = FS.lookupPath(mountpoint, { follow_mount: false });
+        mountpoint = lookup.path;
+        node = lookup.node;
+        if (FS.isMountpoint(node)) {
+          throw new FS.ErrnoError(10);
+        }
+        if (!FS.isDir(node.mode)) {
+          throw new FS.ErrnoError(54);
+        }
+      }
+      var mount = { type, opts, mountpoint, mounts: [] };
+      var mountRoot = type.mount(mount);
+      mountRoot.mount = mount;
+      mount.root = mountRoot;
+      if (root) {
+        FS.root = mountRoot;
+      } else if (node) {
+        node.mounted = mount;
+        if (node.mount) {
+          node.mount.mounts.push(mount);
+        }
+      }
+      return mountRoot;
+    }, unmount(mountpoint) {
+      var lookup = FS.lookupPath(mountpoint, { follow_mount: false });
+      if (!FS.isMountpoint(lookup.node)) {
+        throw new FS.ErrnoError(28);
+      }
+      var node = lookup.node;
+      var mount = node.mounted;
+      var mounts = FS.getMounts(mount);
+      Object.keys(FS.nameTable).forEach((hash) => {
+        var current = FS.nameTable[hash];
+        while (current) {
+          var next = current.name_next;
+          if (mounts.includes(current.mount)) {
+            FS.destroyNode(current);
+          }
+          current = next;
+        }
+      });
+      node.mounted = null;
+      var idx = node.mount.mounts.indexOf(mount);
+      node.mount.mounts.splice(idx, 1);
+    }, lookup(parent, name) {
+      return parent.node_ops.lookup(parent, name);
+    }, mknod(path, mode, dev) {
+      var lookup = FS.lookupPath(path, { parent: true });
+      var parent = lookup.node;
+      var name = PATH.basename(path);
+      if (!name || name === "." || name === "..") {
+        throw new FS.ErrnoError(28);
+      }
+      var errCode = FS.mayCreate(parent, name);
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      if (!parent.node_ops.mknod) {
+        throw new FS.ErrnoError(63);
+      }
+      return parent.node_ops.mknod(parent, name, mode, dev);
+    }, create(path, mode) {
+      mode = mode !== void 0 ? mode : 438;
+      mode &= 4095;
+      mode |= 32768;
+      return FS.mknod(path, mode, 0);
+    }, mkdir(path, mode) {
+      mode = mode !== void 0 ? mode : 511;
+      mode &= 511 | 512;
+      mode |= 16384;
+      return FS.mknod(path, mode, 0);
+    }, mkdirTree(path, mode) {
+      var dirs = path.split("/");
+      var d2 = "";
+      for (var i2 = 0; i2 < dirs.length; ++i2) {
+        if (!dirs[i2]) continue;
+        d2 += "/" + dirs[i2];
+        try {
+          FS.mkdir(d2, mode);
+        } catch (e2) {
+          if (e2.errno != 20) throw e2;
+        }
+      }
+    }, mkdev(path, mode, dev) {
+      if (typeof dev == "undefined") {
+        dev = mode;
+        mode = 438;
+      }
+      mode |= 8192;
+      return FS.mknod(path, mode, dev);
+    }, symlink(oldpath, newpath) {
+      if (!PATH_FS.resolve(oldpath)) {
+        throw new FS.ErrnoError(44);
+      }
+      var lookup = FS.lookupPath(newpath, { parent: true });
+      var parent = lookup.node;
+      if (!parent) {
+        throw new FS.ErrnoError(44);
+      }
+      var newname = PATH.basename(newpath);
+      var errCode = FS.mayCreate(parent, newname);
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      if (!parent.node_ops.symlink) {
+        throw new FS.ErrnoError(63);
+      }
+      return parent.node_ops.symlink(parent, newname, oldpath);
+    }, rename(old_path, new_path) {
+      var old_dirname = PATH.dirname(old_path);
+      var new_dirname = PATH.dirname(new_path);
+      var old_name = PATH.basename(old_path);
+      var new_name = PATH.basename(new_path);
+      var lookup, old_dir, new_dir;
+      lookup = FS.lookupPath(old_path, { parent: true });
+      old_dir = lookup.node;
+      lookup = FS.lookupPath(new_path, { parent: true });
+      new_dir = lookup.node;
+      if (!old_dir || !new_dir) throw new FS.ErrnoError(44);
+      if (old_dir.mount !== new_dir.mount) {
+        throw new FS.ErrnoError(75);
+      }
+      var old_node = FS.lookupNode(old_dir, old_name);
+      var relative = PATH_FS.relative(old_path, new_dirname);
+      if (relative.charAt(0) !== ".") {
+        throw new FS.ErrnoError(28);
+      }
+      relative = PATH_FS.relative(new_path, old_dirname);
+      if (relative.charAt(0) !== ".") {
+        throw new FS.ErrnoError(55);
+      }
+      var new_node;
+      try {
+        new_node = FS.lookupNode(new_dir, new_name);
+      } catch (e2) {
+      }
+      if (old_node === new_node) {
+        return;
+      }
+      var isdir = FS.isDir(old_node.mode);
+      var errCode = FS.mayDelete(old_dir, old_name, isdir);
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      errCode = new_node ? FS.mayDelete(new_dir, new_name, isdir) : FS.mayCreate(new_dir, new_name);
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      if (!old_dir.node_ops.rename) {
+        throw new FS.ErrnoError(63);
+      }
+      if (FS.isMountpoint(old_node) || new_node && FS.isMountpoint(new_node)) {
+        throw new FS.ErrnoError(10);
+      }
+      if (new_dir !== old_dir) {
+        errCode = FS.nodePermissions(old_dir, "w");
+        if (errCode) {
+          throw new FS.ErrnoError(errCode);
+        }
+      }
+      FS.hashRemoveNode(old_node);
+      try {
+        old_dir.node_ops.rename(old_node, new_dir, new_name);
+        old_node.parent = new_dir;
+      } catch (e2) {
+        throw e2;
+      } finally {
+        FS.hashAddNode(old_node);
+      }
+    }, rmdir(path) {
+      var lookup = FS.lookupPath(path, { parent: true });
+      var parent = lookup.node;
+      var name = PATH.basename(path);
+      var node = FS.lookupNode(parent, name);
+      var errCode = FS.mayDelete(parent, name, true);
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      if (!parent.node_ops.rmdir) {
+        throw new FS.ErrnoError(63);
+      }
+      if (FS.isMountpoint(node)) {
+        throw new FS.ErrnoError(10);
+      }
+      parent.node_ops.rmdir(parent, name);
+      FS.destroyNode(node);
+    }, readdir(path) {
+      var lookup = FS.lookupPath(path, { follow: true });
+      var node = lookup.node;
+      if (!node.node_ops.readdir) {
+        throw new FS.ErrnoError(54);
+      }
+      return node.node_ops.readdir(node);
+    }, unlink(path) {
+      var lookup = FS.lookupPath(path, { parent: true });
+      var parent = lookup.node;
+      if (!parent) {
+        throw new FS.ErrnoError(44);
+      }
+      var name = PATH.basename(path);
+      var node = FS.lookupNode(parent, name);
+      var errCode = FS.mayDelete(parent, name, false);
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      if (!parent.node_ops.unlink) {
+        throw new FS.ErrnoError(63);
+      }
+      if (FS.isMountpoint(node)) {
+        throw new FS.ErrnoError(10);
+      }
+      parent.node_ops.unlink(parent, name);
+      FS.destroyNode(node);
+    }, readlink(path) {
+      var lookup = FS.lookupPath(path);
+      var link = lookup.node;
+      if (!link) {
+        throw new FS.ErrnoError(44);
+      }
+      if (!link.node_ops.readlink) {
+        throw new FS.ErrnoError(28);
+      }
+      return PATH_FS.resolve(FS.getPath(link.parent), link.node_ops.readlink(link));
+    }, stat(path, dontFollow) {
+      var lookup = FS.lookupPath(path, { follow: !dontFollow });
+      var node = lookup.node;
+      if (!node) {
+        throw new FS.ErrnoError(44);
+      }
+      if (!node.node_ops.getattr) {
+        throw new FS.ErrnoError(63);
+      }
+      return node.node_ops.getattr(node);
+    }, lstat(path) {
+      return FS.stat(path, true);
+    }, chmod(path, mode, dontFollow) {
+      var node;
+      if (typeof path == "string") {
+        var lookup = FS.lookupPath(path, { follow: !dontFollow });
+        node = lookup.node;
+      } else {
+        node = path;
+      }
+      if (!node.node_ops.setattr) {
+        throw new FS.ErrnoError(63);
+      }
+      node.node_ops.setattr(node, { mode: mode & 4095 | node.mode & ~4095, timestamp: Date.now() });
+    }, lchmod(path, mode) {
+      FS.chmod(path, mode, true);
+    }, fchmod(fd, mode) {
+      var stream = FS.getStreamChecked(fd);
+      FS.chmod(stream.node, mode);
+    }, chown(path, uid, gid, dontFollow) {
+      var node;
+      if (typeof path == "string") {
+        var lookup = FS.lookupPath(path, { follow: !dontFollow });
+        node = lookup.node;
+      } else {
+        node = path;
+      }
+      if (!node.node_ops.setattr) {
+        throw new FS.ErrnoError(63);
+      }
+      node.node_ops.setattr(node, { timestamp: Date.now() });
+    }, lchown(path, uid, gid) {
+      FS.chown(path, uid, gid, true);
+    }, fchown(fd, uid, gid) {
+      var stream = FS.getStreamChecked(fd);
+      FS.chown(stream.node, uid, gid);
+    }, truncate(path, len) {
+      if (len < 0) {
+        throw new FS.ErrnoError(28);
+      }
+      var node;
+      if (typeof path == "string") {
+        var lookup = FS.lookupPath(path, { follow: true });
+        node = lookup.node;
+      } else {
+        node = path;
+      }
+      if (!node.node_ops.setattr) {
+        throw new FS.ErrnoError(63);
+      }
+      if (FS.isDir(node.mode)) {
+        throw new FS.ErrnoError(31);
+      }
+      if (!FS.isFile(node.mode)) {
+        throw new FS.ErrnoError(28);
+      }
+      var errCode = FS.nodePermissions(node, "w");
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      node.node_ops.setattr(node, { size: len, timestamp: Date.now() });
+    }, ftruncate(fd, len) {
+      var stream = FS.getStreamChecked(fd);
+      if ((stream.flags & 2097155) === 0) {
+        throw new FS.ErrnoError(28);
+      }
+      FS.truncate(stream.node, len);
+    }, utime(path, atime, mtime) {
+      var lookup = FS.lookupPath(path, { follow: true });
+      var node = lookup.node;
+      node.node_ops.setattr(node, { timestamp: Math.max(atime, mtime) });
+    }, open(path, flags, mode) {
+      if (path === "") {
+        throw new FS.ErrnoError(44);
+      }
+      flags = typeof flags == "string" ? FS_modeStringToFlags(flags) : flags;
+      if (flags & 64) {
+        mode = typeof mode == "undefined" ? 438 : mode;
+        mode = mode & 4095 | 32768;
+      } else {
+        mode = 0;
+      }
+      var node;
+      if (typeof path == "object") {
+        node = path;
+      } else {
+        path = PATH.normalize(path);
+        try {
+          var lookup = FS.lookupPath(path, { follow: !(flags & 131072) });
+          node = lookup.node;
+        } catch (e2) {
+        }
+      }
+      var created = false;
+      if (flags & 64) {
+        if (node) {
+          if (flags & 128) {
+            throw new FS.ErrnoError(20);
+          }
+        } else {
+          node = FS.mknod(path, mode, 0);
+          created = true;
+        }
+      }
+      if (!node) {
+        throw new FS.ErrnoError(44);
+      }
+      if (FS.isChrdev(node.mode)) {
+        flags &= ~512;
+      }
+      if (flags & 65536 && !FS.isDir(node.mode)) {
+        throw new FS.ErrnoError(54);
+      }
+      if (!created) {
+        var errCode = FS.mayOpen(node, flags);
+        if (errCode) {
+          throw new FS.ErrnoError(errCode);
+        }
+      }
+      if (flags & 512 && !created) {
+        FS.truncate(node, 0);
+      }
+      flags &= ~(128 | 512 | 131072);
+      var stream = FS.createStream({ node, path: FS.getPath(node), flags, seekable: true, position: 0, stream_ops: node.stream_ops, ungotten: [], error: false });
+      if (stream.stream_ops.open) {
+        stream.stream_ops.open(stream);
+      }
+      if (Module2["logReadFiles"] && !(flags & 1)) {
+        if (!FS.readFiles) FS.readFiles = {};
+        if (!(path in FS.readFiles)) {
+          FS.readFiles[path] = 1;
+        }
+      }
+      return stream;
+    }, close(stream) {
+      if (FS.isClosed(stream)) {
+        throw new FS.ErrnoError(8);
+      }
+      if (stream.getdents) stream.getdents = null;
+      try {
+        if (stream.stream_ops.close) {
+          stream.stream_ops.close(stream);
+        }
+      } catch (e2) {
+        throw e2;
+      } finally {
+        FS.closeStream(stream.fd);
+      }
+      stream.fd = null;
+    }, isClosed(stream) {
+      return stream.fd === null;
+    }, llseek(stream, offset, whence) {
+      if (FS.isClosed(stream)) {
+        throw new FS.ErrnoError(8);
+      }
+      if (!stream.seekable || !stream.stream_ops.llseek) {
+        throw new FS.ErrnoError(70);
+      }
+      if (whence != 0 && whence != 1 && whence != 2) {
+        throw new FS.ErrnoError(28);
+      }
+      stream.position = stream.stream_ops.llseek(stream, offset, whence);
+      stream.ungotten = [];
+      return stream.position;
+    }, read(stream, buffer, offset, length, position) {
+      if (length < 0 || position < 0) {
+        throw new FS.ErrnoError(28);
+      }
+      if (FS.isClosed(stream)) {
+        throw new FS.ErrnoError(8);
+      }
+      if ((stream.flags & 2097155) === 1) {
+        throw new FS.ErrnoError(8);
+      }
+      if (FS.isDir(stream.node.mode)) {
+        throw new FS.ErrnoError(31);
+      }
+      if (!stream.stream_ops.read) {
+        throw new FS.ErrnoError(28);
+      }
+      var seeking = typeof position != "undefined";
+      if (!seeking) {
+        position = stream.position;
+      } else if (!stream.seekable) {
+        throw new FS.ErrnoError(70);
+      }
+      var bytesRead = stream.stream_ops.read(stream, buffer, offset, length, position);
+      if (!seeking) stream.position += bytesRead;
+      return bytesRead;
+    }, write(stream, buffer, offset, length, position, canOwn) {
+      if (length < 0 || position < 0) {
+        throw new FS.ErrnoError(28);
+      }
+      if (FS.isClosed(stream)) {
+        throw new FS.ErrnoError(8);
+      }
+      if ((stream.flags & 2097155) === 0) {
+        throw new FS.ErrnoError(8);
+      }
+      if (FS.isDir(stream.node.mode)) {
+        throw new FS.ErrnoError(31);
+      }
+      if (!stream.stream_ops.write) {
+        throw new FS.ErrnoError(28);
+      }
+      if (stream.seekable && stream.flags & 1024) {
+        FS.llseek(stream, 0, 2);
+      }
+      var seeking = typeof position != "undefined";
+      if (!seeking) {
+        position = stream.position;
+      } else if (!stream.seekable) {
+        throw new FS.ErrnoError(70);
+      }
+      var bytesWritten = stream.stream_ops.write(stream, buffer, offset, length, position, canOwn);
+      if (!seeking) stream.position += bytesWritten;
+      return bytesWritten;
+    }, allocate(stream, offset, length) {
+      if (FS.isClosed(stream)) {
+        throw new FS.ErrnoError(8);
+      }
+      if (offset < 0 || length <= 0) {
+        throw new FS.ErrnoError(28);
+      }
+      if ((stream.flags & 2097155) === 0) {
+        throw new FS.ErrnoError(8);
+      }
+      if (!FS.isFile(stream.node.mode) && !FS.isDir(stream.node.mode)) {
+        throw new FS.ErrnoError(43);
+      }
+      if (!stream.stream_ops.allocate) {
+        throw new FS.ErrnoError(138);
+      }
+      stream.stream_ops.allocate(stream, offset, length);
+    }, mmap(stream, length, position, prot, flags) {
+      if ((prot & 2) !== 0 && (flags & 2) === 0 && (stream.flags & 2097155) !== 2) {
+        throw new FS.ErrnoError(2);
+      }
+      if ((stream.flags & 2097155) === 1) {
+        throw new FS.ErrnoError(2);
+      }
+      if (!stream.stream_ops.mmap) {
+        throw new FS.ErrnoError(43);
+      }
+      return stream.stream_ops.mmap(stream, length, position, prot, flags);
+    }, msync(stream, buffer, offset, length, mmapFlags) {
+      if (!stream.stream_ops.msync) {
+        return 0;
+      }
+      return stream.stream_ops.msync(stream, buffer, offset, length, mmapFlags);
+    }, ioctl(stream, cmd, arg) {
+      if (!stream.stream_ops.ioctl) {
+        throw new FS.ErrnoError(59);
+      }
+      return stream.stream_ops.ioctl(stream, cmd, arg);
+    }, readFile(path, opts = {}) {
+      opts.flags = opts.flags || 0;
+      opts.encoding = opts.encoding || "binary";
+      if (opts.encoding !== "utf8" && opts.encoding !== "binary") {
+        throw new Error(`Invalid encoding type "${opts.encoding}"`);
+      }
+      var ret;
+      var stream = FS.open(path, opts.flags);
+      var stat = FS.stat(path);
+      var length = stat.size;
+      var buf = new Uint8Array(length);
+      FS.read(stream, buf, 0, length, 0);
+      if (opts.encoding === "utf8") {
+        ret = UTF8ArrayToString(buf, 0);
+      } else if (opts.encoding === "binary") {
+        ret = buf;
+      }
+      FS.close(stream);
+      return ret;
+    }, writeFile(path, data, opts = {}) {
+      opts.flags = opts.flags || 577;
+      var stream = FS.open(path, opts.flags, opts.mode);
+      if (typeof data == "string") {
+        var buf = new Uint8Array(lengthBytesUTF8(data) + 1);
+        var actualNumBytes = stringToUTF8Array(data, buf, 0, buf.length);
+        FS.write(stream, buf, 0, actualNumBytes, void 0, opts.canOwn);
+      } else if (ArrayBuffer.isView(data)) {
+        FS.write(stream, data, 0, data.byteLength, void 0, opts.canOwn);
+      } else {
+        throw new Error("Unsupported data type");
+      }
+      FS.close(stream);
+    }, cwd: () => FS.currentPath, chdir(path) {
+      var lookup = FS.lookupPath(path, { follow: true });
+      if (lookup.node === null) {
+        throw new FS.ErrnoError(44);
+      }
+      if (!FS.isDir(lookup.node.mode)) {
+        throw new FS.ErrnoError(54);
+      }
+      var errCode = FS.nodePermissions(lookup.node, "x");
+      if (errCode) {
+        throw new FS.ErrnoError(errCode);
+      }
+      FS.currentPath = lookup.path;
+    }, createDefaultDirectories() {
+      FS.mkdir("/tmp");
+      FS.mkdir("/home");
+      FS.mkdir("/home/web_user");
+    }, createDefaultDevices() {
+      FS.mkdir("/dev");
+      FS.registerDevice(FS.makedev(1, 3), { read: () => 0, write: (stream, buffer, offset, length, pos) => length });
+      FS.mkdev("/dev/null", FS.makedev(1, 3));
+      TTY.register(FS.makedev(5, 0), TTY.default_tty_ops);
+      TTY.register(FS.makedev(6, 0), TTY.default_tty1_ops);
+      FS.mkdev("/dev/tty", FS.makedev(5, 0));
+      FS.mkdev("/dev/tty1", FS.makedev(6, 0));
+      var randomBuffer = new Uint8Array(1024), randomLeft = 0;
+      var randomByte = () => {
+        if (randomLeft === 0) {
+          randomLeft = randomFill(randomBuffer).byteLength;
+        }
+        return randomBuffer[--randomLeft];
+      };
+      FS.createDevice("/dev", "random", randomByte);
+      FS.createDevice("/dev", "urandom", randomByte);
+      FS.mkdir("/dev/shm");
+      FS.mkdir("/dev/shm/tmp");
+    }, createSpecialDirectories() {
+      FS.mkdir("/proc");
+      var proc_self = FS.mkdir("/proc/self");
+      FS.mkdir("/proc/self/fd");
+      FS.mount({ mount() {
+        var node = FS.createNode(proc_self, "fd", 16384 | 511, 73);
+        node.node_ops = { lookup(parent, name) {
+          var fd = +name;
+          var stream = FS.getStreamChecked(fd);
+          var ret = { parent: null, mount: { mountpoint: "fake" }, node_ops: { readlink: () => stream.path } };
+          ret.parent = ret;
+          return ret;
+        } };
+        return node;
+      } }, {}, "/proc/self/fd");
+    }, createStandardStreams() {
+      if (Module2["stdin"]) {
+        FS.createDevice("/dev", "stdin", Module2["stdin"]);
+      } else {
+        FS.symlink("/dev/tty", "/dev/stdin");
+      }
+      if (Module2["stdout"]) {
+        FS.createDevice("/dev", "stdout", null, Module2["stdout"]);
+      } else {
+        FS.symlink("/dev/tty", "/dev/stdout");
+      }
+      if (Module2["stderr"]) {
+        FS.createDevice("/dev", "stderr", null, Module2["stderr"]);
+      } else {
+        FS.symlink("/dev/tty1", "/dev/stderr");
+      }
+      var stdin = FS.open("/dev/stdin", 0);
+      var stdout = FS.open("/dev/stdout", 1);
+      var stderr = FS.open("/dev/stderr", 1);
+    }, staticInit() {
+      [44].forEach((code) => {
+        FS.genericErrors[code] = new FS.ErrnoError(code);
+        FS.genericErrors[code].stack = "<generic error, no stack>";
+      });
+      FS.nameTable = new Array(4096);
+      FS.mount(MEMFS, {}, "/");
+      FS.createDefaultDirectories();
+      FS.createDefaultDevices();
+      FS.createSpecialDirectories();
+      FS.filesystems = { MEMFS };
+    }, init(input, output, error2) {
+      FS.init.initialized = true;
+      Module2["stdin"] = input || Module2["stdin"];
+      Module2["stdout"] = output || Module2["stdout"];
+      Module2["stderr"] = error2 || Module2["stderr"];
+      FS.createStandardStreams();
+    }, quit() {
+      FS.init.initialized = false;
+      for (var i2 = 0; i2 < FS.streams.length; i2++) {
+        var stream = FS.streams[i2];
+        if (!stream) {
+          continue;
+        }
+        FS.close(stream);
+      }
+    }, findObject(path, dontResolveLastLink) {
+      var ret = FS.analyzePath(path, dontResolveLastLink);
+      if (!ret.exists) {
+        return null;
+      }
+      return ret.object;
+    }, analyzePath(path, dontResolveLastLink) {
+      try {
+        var lookup = FS.lookupPath(path, { follow: !dontResolveLastLink });
+        path = lookup.path;
+      } catch (e2) {
+      }
+      var ret = { isRoot: false, exists: false, error: 0, name: null, path: null, object: null, parentExists: false, parentPath: null, parentObject: null };
+      try {
+        var lookup = FS.lookupPath(path, { parent: true });
+        ret.parentExists = true;
+        ret.parentPath = lookup.path;
+        ret.parentObject = lookup.node;
+        ret.name = PATH.basename(path);
+        lookup = FS.lookupPath(path, { follow: !dontResolveLastLink });
+        ret.exists = true;
+        ret.path = lookup.path;
+        ret.object = lookup.node;
+        ret.name = lookup.node.name;
+        ret.isRoot = lookup.path === "/";
+      } catch (e2) {
+        ret.error = e2.errno;
+      }
+      return ret;
+    }, createPath(parent, path, canRead, canWrite) {
+      parent = typeof parent == "string" ? parent : FS.getPath(parent);
+      var parts = path.split("/").reverse();
+      while (parts.length) {
+        var part = parts.pop();
+        if (!part) continue;
+        var current = PATH.join2(parent, part);
+        try {
+          FS.mkdir(current);
+        } catch (e2) {
+        }
+        parent = current;
+      }
+      return current;
+    }, createFile(parent, name, properties, canRead, canWrite) {
+      var path = PATH.join2(typeof parent == "string" ? parent : FS.getPath(parent), name);
+      var mode = FS_getMode(canRead, canWrite);
+      return FS.create(path, mode);
+    }, createDataFile(parent, name, data, canRead, canWrite, canOwn) {
+      var path = name;
+      if (parent) {
+        parent = typeof parent == "string" ? parent : FS.getPath(parent);
+        path = name ? PATH.join2(parent, name) : parent;
+      }
+      var mode = FS_getMode(canRead, canWrite);
+      var node = FS.create(path, mode);
+      if (data) {
+        if (typeof data == "string") {
+          var arr = new Array(data.length);
+          for (var i2 = 0, len = data.length; i2 < len; ++i2) arr[i2] = data.charCodeAt(i2);
+          data = arr;
+        }
+        FS.chmod(node, mode | 146);
+        var stream = FS.open(node, 577);
+        FS.write(stream, data, 0, data.length, 0, canOwn);
+        FS.close(stream);
+        FS.chmod(node, mode);
+      }
+    }, createDevice(parent, name, input, output) {
+      var path = PATH.join2(typeof parent == "string" ? parent : FS.getPath(parent), name);
+      var mode = FS_getMode(!!input, !!output);
+      if (!FS.createDevice.major) FS.createDevice.major = 64;
+      var dev = FS.makedev(FS.createDevice.major++, 0);
+      FS.registerDevice(dev, { open(stream) {
+        stream.seekable = false;
+      }, close(stream) {
+        if (output?.buffer?.length) {
+          output(10);
+        }
+      }, read(stream, buffer, offset, length, pos) {
+        var bytesRead = 0;
+        for (var i2 = 0; i2 < length; i2++) {
+          var result;
+          try {
+            result = input();
+          } catch (e2) {
+            throw new FS.ErrnoError(29);
+          }
+          if (result === void 0 && bytesRead === 0) {
+            throw new FS.ErrnoError(6);
+          }
+          if (result === null || result === void 0) break;
+          bytesRead++;
+          buffer[offset + i2] = result;
+        }
+        if (bytesRead) {
+          stream.node.timestamp = Date.now();
+        }
+        return bytesRead;
+      }, write(stream, buffer, offset, length, pos) {
+        for (var i2 = 0; i2 < length; i2++) {
+          try {
+            output(buffer[offset + i2]);
+          } catch (e2) {
+            throw new FS.ErrnoError(29);
+          }
+        }
+        if (length) {
+          stream.node.timestamp = Date.now();
+        }
+        return i2;
+      } });
+      return FS.mkdev(path, mode, dev);
+    }, forceLoadFile(obj) {
+      if (obj.isDevice || obj.isFolder || obj.link || obj.contents) return true;
+      if (typeof XMLHttpRequest != "undefined") {
+        throw new Error("Lazy loading should have been performed (contents set) in createLazyFile, but it was not. Lazy loading only works in web workers. Use --embed-file or --preload-file in emcc on the main thread.");
+      } else {
+        try {
+          obj.contents = readBinary(obj.url);
+          obj.usedBytes = obj.contents.length;
+        } catch (e2) {
+          throw new FS.ErrnoError(29);
+        }
+      }
+    }, createLazyFile(parent, name, url, canRead, canWrite) {
+      class LazyUint8Array {
+        constructor() {
+          this.lengthKnown = false;
+          this.chunks = [];
+        }
+        get(idx) {
+          if (idx > this.length - 1 || idx < 0) {
+            return void 0;
+          }
+          var chunkOffset = idx % this.chunkSize;
+          var chunkNum = idx / this.chunkSize | 0;
+          return this.getter(chunkNum)[chunkOffset];
+        }
+        setDataGetter(getter) {
+          this.getter = getter;
+        }
+        cacheLength() {
+          var xhr = new XMLHttpRequest();
+          xhr.open("HEAD", url, false);
+          xhr.send(null);
+          if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) throw new Error("Couldn't load " + url + ". Status: " + xhr.status);
+          var datalength = Number(xhr.getResponseHeader("Content-length"));
+          var header;
+          var hasByteServing = (header = xhr.getResponseHeader("Accept-Ranges")) && header === "bytes";
+          var usesGzip = (header = xhr.getResponseHeader("Content-Encoding")) && header === "gzip";
+          var chunkSize = 1024 * 1024;
+          if (!hasByteServing) chunkSize = datalength;
+          var doXHR = (from, to) => {
+            if (from > to) throw new Error("invalid range (" + from + ", " + to + ") or no bytes requested!");
+            if (to > datalength - 1) throw new Error("only " + datalength + " bytes available! programmer error!");
+            var xhr2 = new XMLHttpRequest();
+            xhr2.open("GET", url, false);
+            if (datalength !== chunkSize) xhr2.setRequestHeader("Range", "bytes=" + from + "-" + to);
+            xhr2.responseType = "arraybuffer";
+            if (xhr2.overrideMimeType) {
+              xhr2.overrideMimeType("text/plain; charset=x-user-defined");
+            }
+            xhr2.send(null);
+            if (!(xhr2.status >= 200 && xhr2.status < 300 || xhr2.status === 304)) throw new Error("Couldn't load " + url + ". Status: " + xhr2.status);
+            if (xhr2.response !== void 0) {
+              return new Uint8Array(xhr2.response || []);
+            }
+            return intArrayFromString(xhr2.responseText || "", true);
+          };
+          var lazyArray2 = this;
+          lazyArray2.setDataGetter((chunkNum) => {
+            var start = chunkNum * chunkSize;
+            var end = (chunkNum + 1) * chunkSize - 1;
+            end = Math.min(end, datalength - 1);
+            if (typeof lazyArray2.chunks[chunkNum] == "undefined") {
+              lazyArray2.chunks[chunkNum] = doXHR(start, end);
+            }
+            if (typeof lazyArray2.chunks[chunkNum] == "undefined") throw new Error("doXHR failed!");
+            return lazyArray2.chunks[chunkNum];
+          });
+          if (usesGzip || !datalength) {
+            chunkSize = datalength = 1;
+            datalength = this.getter(0).length;
+            chunkSize = datalength;
+            out("LazyFiles on gzip forces download of the whole file when length is accessed");
+          }
+          this._length = datalength;
+          this._chunkSize = chunkSize;
+          this.lengthKnown = true;
+        }
+        get length() {
+          if (!this.lengthKnown) {
+            this.cacheLength();
+          }
+          return this._length;
+        }
+        get chunkSize() {
+          if (!this.lengthKnown) {
+            this.cacheLength();
+          }
+          return this._chunkSize;
+        }
+      }
+      if (typeof XMLHttpRequest != "undefined") {
+        if (!ENVIRONMENT_IS_WORKER) throw "Cannot do synchronous binary XHRs outside webworkers in modern browsers. Use --embed-file or --preload-file in emcc";
+        var lazyArray = new LazyUint8Array();
+        var properties = { isDevice: false, contents: lazyArray };
+      } else {
+        var properties = { isDevice: false, url };
+      }
+      var node = FS.createFile(parent, name, properties, canRead, canWrite);
+      if (properties.contents) {
+        node.contents = properties.contents;
+      } else if (properties.url) {
+        node.contents = null;
+        node.url = properties.url;
+      }
+      Object.defineProperties(node, { usedBytes: { get: function() {
+        return this.contents.length;
+      } } });
+      var stream_ops = {};
+      var keys = Object.keys(node.stream_ops);
+      keys.forEach((key) => {
+        var fn = node.stream_ops[key];
+        stream_ops[key] = (...args) => {
+          FS.forceLoadFile(node);
+          return fn(...args);
+        };
+      });
+      function writeChunks(stream, buffer, offset, length, position) {
+        var contents = stream.node.contents;
+        if (position >= contents.length) return 0;
+        var size = Math.min(contents.length - position, length);
+        if (contents.slice) {
+          for (var i2 = 0; i2 < size; i2++) {
+            buffer[offset + i2] = contents[position + i2];
+          }
+        } else {
+          for (var i2 = 0; i2 < size; i2++) {
+            buffer[offset + i2] = contents.get(position + i2);
+          }
+        }
+        return size;
+      }
+      stream_ops.read = (stream, buffer, offset, length, position) => {
+        FS.forceLoadFile(node);
+        return writeChunks(stream, buffer, offset, length, position);
+      };
+      stream_ops.mmap = (stream, length, position, prot, flags) => {
+        FS.forceLoadFile(node);
+        var ptr = mmapAlloc(length);
+        if (!ptr) {
+          throw new FS.ErrnoError(48);
+        }
+        writeChunks(stream, HEAP8, ptr, length, position);
+        return { ptr, allocated: true };
+      };
+      node.stream_ops = stream_ops;
+      return node;
+    } };
+    var SYSCALLS = { DEFAULT_POLLMASK: 5, calculateAt(dirfd, path, allowEmpty) {
+      if (PATH.isAbs(path)) {
+        return path;
+      }
+      var dir;
+      if (dirfd === -100) {
+        dir = FS.cwd();
+      } else {
+        var dirstream = SYSCALLS.getStreamFromFD(dirfd);
+        dir = dirstream.path;
+      }
+      if (path.length == 0) {
+        if (!allowEmpty) {
+          throw new FS.ErrnoError(44);
+        }
+        return dir;
+      }
+      return PATH.join2(dir, path);
+    }, doStat(func, path, buf) {
+      var stat = func(path);
+      HEAP32[buf >> 2] = stat.dev;
+      HEAP32[buf + 4 >> 2] = stat.mode;
+      HEAPU32[buf + 8 >> 2] = stat.nlink;
+      HEAP32[buf + 12 >> 2] = stat.uid;
+      HEAP32[buf + 16 >> 2] = stat.gid;
+      HEAP32[buf + 20 >> 2] = stat.rdev;
+      tempI64 = [stat.size >>> 0, (tempDouble = stat.size, +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[buf + 24 >> 2] = tempI64[0], HEAP32[buf + 28 >> 2] = tempI64[1];
+      HEAP32[buf + 32 >> 2] = 4096;
+      HEAP32[buf + 36 >> 2] = stat.blocks;
+      var atime = stat.atime.getTime();
+      var mtime = stat.mtime.getTime();
+      var ctime = stat.ctime.getTime();
+      tempI64 = [Math.floor(atime / 1e3) >>> 0, (tempDouble = Math.floor(atime / 1e3), +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[buf + 40 >> 2] = tempI64[0], HEAP32[buf + 44 >> 2] = tempI64[1];
+      HEAPU32[buf + 48 >> 2] = atime % 1e3 * 1e3;
+      tempI64 = [Math.floor(mtime / 1e3) >>> 0, (tempDouble = Math.floor(mtime / 1e3), +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[buf + 56 >> 2] = tempI64[0], HEAP32[buf + 60 >> 2] = tempI64[1];
+      HEAPU32[buf + 64 >> 2] = mtime % 1e3 * 1e3;
+      tempI64 = [Math.floor(ctime / 1e3) >>> 0, (tempDouble = Math.floor(ctime / 1e3), +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[buf + 72 >> 2] = tempI64[0], HEAP32[buf + 76 >> 2] = tempI64[1];
+      HEAPU32[buf + 80 >> 2] = ctime % 1e3 * 1e3;
+      tempI64 = [stat.ino >>> 0, (tempDouble = stat.ino, +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[buf + 88 >> 2] = tempI64[0], HEAP32[buf + 92 >> 2] = tempI64[1];
+      return 0;
+    }, doMsync(addr, stream, len, flags, offset) {
+      if (!FS.isFile(stream.node.mode)) {
+        throw new FS.ErrnoError(43);
+      }
+      if (flags & 2) {
+        return 0;
+      }
+      var buffer = HEAPU8.slice(addr, addr + len);
+      FS.msync(stream, buffer, offset, len, flags);
+    }, getStreamFromFD(fd) {
+      var stream = FS.getStreamChecked(fd);
+      return stream;
+    }, varargs: void 0, getStr(ptr) {
+      var ret = UTF8ToString(ptr);
+      return ret;
+    } };
+    function ___syscall_fcntl64(fd, cmd, varargs) {
+      SYSCALLS.varargs = varargs;
+      try {
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        switch (cmd) {
+          case 0: {
+            var arg = syscallGetVarargI();
+            if (arg < 0) {
+              return -28;
+            }
+            while (FS.streams[arg]) {
+              arg++;
+            }
+            var newStream;
+            newStream = FS.dupStream(stream, arg);
+            return newStream.fd;
+          }
+          case 1:
+          case 2:
+            return 0;
+          case 3:
+            return stream.flags;
+          case 4: {
+            var arg = syscallGetVarargI();
+            stream.flags |= arg;
+            return 0;
+          }
+          case 12: {
+            var arg = syscallGetVarargP();
+            var offset = 0;
+            HEAP16[arg + offset >> 1] = 2;
+            return 0;
+          }
+          case 13:
+          case 14:
+            return 0;
+        }
+        return -28;
+      } catch (e2) {
+        if (typeof FS == "undefined" || !(e2.name === "ErrnoError")) throw e2;
+        return -e2.errno;
+      }
+    }
+    function ___syscall_ioctl(fd, op, varargs) {
+      SYSCALLS.varargs = varargs;
+      try {
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        switch (op) {
+          case 21509: {
+            if (!stream.tty) return -59;
+            return 0;
+          }
+          case 21505: {
+            if (!stream.tty) return -59;
+            if (stream.tty.ops.ioctl_tcgets) {
+              var termios = stream.tty.ops.ioctl_tcgets(stream);
+              var argp = syscallGetVarargP();
+              HEAP32[argp >> 2] = termios.c_iflag || 0;
+              HEAP32[argp + 4 >> 2] = termios.c_oflag || 0;
+              HEAP32[argp + 8 >> 2] = termios.c_cflag || 0;
+              HEAP32[argp + 12 >> 2] = termios.c_lflag || 0;
+              for (var i2 = 0; i2 < 32; i2++) {
+                HEAP8[argp + i2 + 17] = termios.c_cc[i2] || 0;
+              }
+              return 0;
+            }
+            return 0;
+          }
+          case 21510:
+          case 21511:
+          case 21512: {
+            if (!stream.tty) return -59;
+            return 0;
+          }
+          case 21506:
+          case 21507:
+          case 21508: {
+            if (!stream.tty) return -59;
+            if (stream.tty.ops.ioctl_tcsets) {
+              var argp = syscallGetVarargP();
+              var c_iflag = HEAP32[argp >> 2];
+              var c_oflag = HEAP32[argp + 4 >> 2];
+              var c_cflag = HEAP32[argp + 8 >> 2];
+              var c_lflag = HEAP32[argp + 12 >> 2];
+              var c_cc = [];
+              for (var i2 = 0; i2 < 32; i2++) {
+                c_cc.push(HEAP8[argp + i2 + 17]);
+              }
+              return stream.tty.ops.ioctl_tcsets(stream.tty, op, { c_iflag, c_oflag, c_cflag, c_lflag, c_cc });
+            }
+            return 0;
+          }
+          case 21519: {
+            if (!stream.tty) return -59;
+            var argp = syscallGetVarargP();
+            HEAP32[argp >> 2] = 0;
+            return 0;
+          }
+          case 21520: {
+            if (!stream.tty) return -59;
+            return -28;
+          }
+          case 21531: {
+            var argp = syscallGetVarargP();
+            return FS.ioctl(stream, op, argp);
+          }
+          case 21523: {
+            if (!stream.tty) return -59;
+            if (stream.tty.ops.ioctl_tiocgwinsz) {
+              var winsize = stream.tty.ops.ioctl_tiocgwinsz(stream.tty);
+              var argp = syscallGetVarargP();
+              HEAP16[argp >> 1] = winsize[0];
+              HEAP16[argp + 2 >> 1] = winsize[1];
+            }
+            return 0;
+          }
+          case 21524: {
+            if (!stream.tty) return -59;
+            return 0;
+          }
+          case 21515: {
+            if (!stream.tty) return -59;
+            return 0;
+          }
+          default:
+            return -28;
+        }
+      } catch (e2) {
+        if (typeof FS == "undefined" || !(e2.name === "ErrnoError")) throw e2;
+        return -e2.errno;
+      }
+    }
+    function ___syscall_openat(dirfd, path, flags, varargs) {
+      SYSCALLS.varargs = varargs;
+      try {
+        path = SYSCALLS.getStr(path);
+        path = SYSCALLS.calculateAt(dirfd, path);
+        var mode = varargs ? syscallGetVarargI() : 0;
+        return FS.open(path, flags, mode).fd;
+      } catch (e2) {
+        if (typeof FS == "undefined" || !(e2.name === "ErrnoError")) throw e2;
+        return -e2.errno;
+      }
+    }
+    var __abort_js = () => {
+      abort("");
+    };
+    var __emscripten_memcpy_js = (dest, src, num) => HEAPU8.copyWithin(dest, src, src + num);
+    var stringToUTF8 = (str, outPtr, maxBytesToWrite) => stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
+    var __tzset_js = (timezone, daylight, std_name, dst_name) => {
+      var currentYear = (/* @__PURE__ */ new Date()).getFullYear();
+      var winter = new Date(currentYear, 0, 1);
+      var summer = new Date(currentYear, 6, 1);
+      var winterOffset = winter.getTimezoneOffset();
+      var summerOffset = summer.getTimezoneOffset();
+      var stdTimezoneOffset = Math.max(winterOffset, summerOffset);
+      HEAPU32[timezone >> 2] = stdTimezoneOffset * 60;
+      HEAP32[daylight >> 2] = Number(winterOffset != summerOffset);
+      var extractZone = (timezoneOffset) => {
+        var sign = timezoneOffset >= 0 ? "-" : "+";
+        var absOffset = Math.abs(timezoneOffset);
+        var hours = String(Math.floor(absOffset / 60)).padStart(2, "0");
+        var minutes = String(absOffset % 60).padStart(2, "0");
+        return `UTC${sign}${hours}${minutes}`;
+      };
+      var winterName = extractZone(winterOffset);
+      var summerName = extractZone(summerOffset);
+      if (summerOffset < winterOffset) {
+        stringToUTF8(winterName, std_name, 17);
+        stringToUTF8(summerName, dst_name, 17);
+      } else {
+        stringToUTF8(winterName, dst_name, 17);
+        stringToUTF8(summerName, std_name, 17);
+      }
+    };
+    var getHeapMax = () => 2147483648;
+    var growMemory = (size) => {
+      var b = wasmMemory.buffer;
+      var pages = (size - b.byteLength + 65535) / 65536;
+      try {
+        wasmMemory.grow(pages);
+        updateMemoryViews();
+        return 1;
+      } catch (e2) {
+      }
+    };
+    var _emscripten_resize_heap = (requestedSize) => {
+      var oldSize = HEAPU8.length;
+      requestedSize >>>= 0;
+      var maxHeapSize = getHeapMax();
+      if (requestedSize > maxHeapSize) {
+        return false;
+      }
+      var alignUp = (x, multiple) => x + (multiple - x % multiple) % multiple;
+      for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
+        var overGrownHeapSize = oldSize * (1 + 0.2 / cutDown);
+        overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
+        var newSize = Math.min(maxHeapSize, alignUp(Math.max(requestedSize, overGrownHeapSize), 65536));
+        var replacement = growMemory(newSize);
+        if (replacement) {
+          return true;
+        }
+      }
+      return false;
+    };
+    var ENV = {};
+    var getExecutableName = () => thisProgram || "./this.program";
+    var getEnvStrings = () => {
+      if (!getEnvStrings.strings) {
+        var lang = (typeof navigator == "object" && navigator.languages && navigator.languages[0] || "C").replace("-", "_") + ".UTF-8";
+        var env = { USER: "web_user", LOGNAME: "web_user", PATH: "/", PWD: "/", HOME: "/home/web_user", LANG: lang, _: getExecutableName() };
+        for (var x in ENV) {
+          if (ENV[x] === void 0) delete env[x];
+          else env[x] = ENV[x];
+        }
+        var strings = [];
+        for (var x in env) {
+          strings.push(`${x}=${env[x]}`);
+        }
+        getEnvStrings.strings = strings;
+      }
+      return getEnvStrings.strings;
+    };
+    var stringToAscii = (str, buffer) => {
+      for (var i2 = 0; i2 < str.length; ++i2) {
+        HEAP8[buffer++] = str.charCodeAt(i2);
+      }
+      HEAP8[buffer] = 0;
+    };
+    var _environ_get = (__environ, environ_buf) => {
+      var bufSize = 0;
+      getEnvStrings().forEach((string, i2) => {
+        var ptr = environ_buf + bufSize;
+        HEAPU32[__environ + i2 * 4 >> 2] = ptr;
+        stringToAscii(string, ptr);
+        bufSize += string.length + 1;
+      });
+      return 0;
+    };
+    var _environ_sizes_get = (penviron_count, penviron_buf_size) => {
+      var strings = getEnvStrings();
+      HEAPU32[penviron_count >> 2] = strings.length;
+      var bufSize = 0;
+      strings.forEach((string) => bufSize += string.length + 1);
+      HEAPU32[penviron_buf_size >> 2] = bufSize;
+      return 0;
+    };
+    function _fd_close(fd) {
+      try {
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        FS.close(stream);
+        return 0;
+      } catch (e2) {
+        if (typeof FS == "undefined" || !(e2.name === "ErrnoError")) throw e2;
+        return e2.errno;
+      }
+    }
+    var doReadv = (stream, iov, iovcnt, offset) => {
+      var ret = 0;
+      for (var i2 = 0; i2 < iovcnt; i2++) {
+        var ptr = HEAPU32[iov >> 2];
+        var len = HEAPU32[iov + 4 >> 2];
+        iov += 8;
+        var curr = FS.read(stream, HEAP8, ptr, len, offset);
+        if (curr < 0) return -1;
+        ret += curr;
+        if (curr < len) break;
+        if (typeof offset != "undefined") {
+          offset += curr;
+        }
+      }
+      return ret;
+    };
+    function _fd_read(fd, iov, iovcnt, pnum) {
+      try {
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        var num = doReadv(stream, iov, iovcnt);
+        HEAPU32[pnum >> 2] = num;
+        return 0;
+      } catch (e2) {
+        if (typeof FS == "undefined" || !(e2.name === "ErrnoError")) throw e2;
+        return e2.errno;
+      }
+    }
+    var convertI32PairToI53Checked = (lo, hi) => hi + 2097152 >>> 0 < 4194305 - !!lo ? (lo >>> 0) + hi * 4294967296 : NaN;
+    function _fd_seek(fd, offset_low, offset_high, whence, newOffset) {
+      var offset = convertI32PairToI53Checked(offset_low, offset_high);
+      try {
+        if (isNaN(offset)) return 61;
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        FS.llseek(stream, offset, whence);
+        tempI64 = [stream.position >>> 0, (tempDouble = stream.position, +Math.abs(tempDouble) >= 1 ? tempDouble > 0 ? +Math.floor(tempDouble / 4294967296) >>> 0 : ~~+Math.ceil((tempDouble - +(~~tempDouble >>> 0)) / 4294967296) >>> 0 : 0)], HEAP32[newOffset >> 2] = tempI64[0], HEAP32[newOffset + 4 >> 2] = tempI64[1];
+        if (stream.getdents && offset === 0 && whence === 0) stream.getdents = null;
+        return 0;
+      } catch (e2) {
+        if (typeof FS == "undefined" || !(e2.name === "ErrnoError")) throw e2;
+        return e2.errno;
+      }
+    }
+    var doWritev = (stream, iov, iovcnt, offset) => {
+      var ret = 0;
+      for (var i2 = 0; i2 < iovcnt; i2++) {
+        var ptr = HEAPU32[iov >> 2];
+        var len = HEAPU32[iov + 4 >> 2];
+        iov += 8;
+        var curr = FS.write(stream, HEAP8, ptr, len, offset);
+        if (curr < 0) return -1;
+        ret += curr;
+        if (typeof offset != "undefined") {
+          offset += curr;
+        }
+      }
+      return ret;
+    };
+    function _fd_write(fd, iov, iovcnt, pnum) {
+      try {
+        var stream = SYSCALLS.getStreamFromFD(fd);
+        var num = doWritev(stream, iov, iovcnt);
+        HEAPU32[pnum >> 2] = num;
+        return 0;
+      } catch (e2) {
+        if (typeof FS == "undefined" || !(e2.name === "ErrnoError")) throw e2;
+        return e2.errno;
+      }
+    }
+    var getCFunc = (ident) => {
+      var func = Module2["_" + ident];
+      return func;
+    };
+    var writeArrayToMemory = (array, buffer) => {
+      HEAP8.set(array, buffer);
+    };
+    var stackAlloc = (sz) => __emscripten_stack_alloc(sz);
+    var stringToUTF8OnStack = (str) => {
+      var size = lengthBytesUTF8(str) + 1;
+      var ret = stackAlloc(size);
+      stringToUTF8(str, ret, size);
+      return ret;
+    };
+    var ccall = (ident, returnType, argTypes, args, opts) => {
+      var toC = { string: (str) => {
+        var ret2 = 0;
+        if (str !== null && str !== void 0 && str !== 0) {
+          ret2 = stringToUTF8OnStack(str);
+        }
+        return ret2;
+      }, array: (arr) => {
+        var ret2 = stackAlloc(arr.length);
+        writeArrayToMemory(arr, ret2);
+        return ret2;
+      } };
+      function convertReturnValue(ret2) {
+        if (returnType === "string") {
+          return UTF8ToString(ret2);
+        }
+        if (returnType === "boolean") return Boolean(ret2);
+        return ret2;
+      }
+      var func = getCFunc(ident);
+      var cArgs = [];
+      var stack = 0;
+      if (args) {
+        for (var i2 = 0; i2 < args.length; i2++) {
+          var converter = toC[argTypes[i2]];
+          if (converter) {
+            if (stack === 0) stack = stackSave();
+            cArgs[i2] = converter(args[i2]);
+          } else {
+            cArgs[i2] = args[i2];
+          }
+        }
+      }
+      var ret = func(...cArgs);
+      function onDone(ret2) {
+        if (stack !== 0) stackRestore(stack);
+        return convertReturnValue(ret2);
+      }
+      ret = onDone(ret);
+      return ret;
+    };
+    var cwrap = (ident, returnType, argTypes, opts) => {
+      var numericArgs = !argTypes || argTypes.every((type) => type === "number" || type === "boolean");
+      var numericRet = returnType !== "string";
+      if (numericRet && numericArgs && !opts) {
+        return getCFunc(ident);
+      }
+      return (...args) => ccall(ident, returnType, argTypes, args, opts);
+    };
+    var FS_createPath = FS.createPath;
+    var FS_unlink = (path) => FS.unlink(path);
+    var FS_createLazyFile = FS.createLazyFile;
+    var FS_createDevice = FS.createDevice;
+    FS.createPreloadedFile = FS_createPreloadedFile;
+    FS.staticInit();
+    Module2["FS_createPath"] = FS.createPath;
+    Module2["FS_createDataFile"] = FS.createDataFile;
+    Module2["FS_createPreloadedFile"] = FS.createPreloadedFile;
+    Module2["FS_unlink"] = FS.unlink;
+    Module2["FS_createLazyFile"] = FS.createLazyFile;
+    Module2["FS_createDevice"] = FS.createDevice;
+    var wasmImports = { a: ___assert_fail, b: ___cxa_throw, e: ___syscall_fcntl64, g: ___syscall_ioctl, h: ___syscall_openat, j: __abort_js, i: __emscripten_memcpy_js, l: __tzset_js, o: _emscripten_resize_heap, m: _environ_get, n: _environ_sizes_get, c: _fd_close, f: _fd_read, k: _fd_seek, d: _fd_write };
+    var wasmExports = createWasm();
+    var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports["q"])();
+    var _free = Module2["_free"] = (a0) => (_free = Module2["_free"] = wasmExports["r"])(a0);
+    var _malloc = Module2["_malloc"] = (a0) => (_malloc = Module2["_malloc"] = wasmExports["s"])(a0);
+    var _daru_ik_init = Module2["_daru_ik_init"] = (a0) => (_daru_ik_init = Module2["_daru_ik_init"] = wasmExports["u"])(a0);
+    var _daru_ik_init_from_xml = Module2["_daru_ik_init_from_xml"] = (a0) => (_daru_ik_init_from_xml = Module2["_daru_ik_init_from_xml"] = wasmExports["v"])(a0);
+    var _daru_ik_reset_ref = Module2["_daru_ik_reset_ref"] = (a0) => (_daru_ik_reset_ref = Module2["_daru_ik_reset_ref"] = wasmExports["w"])(a0);
+    var _daru_cg_from_state = Module2["_daru_cg_from_state"] = (a0, a1, a2) => (_daru_cg_from_state = Module2["_daru_cg_from_state"] = wasmExports["x"])(a0, a1, a2);
+    var _daru_ik_step = Module2["_daru_ik_step"] = (a0, a1, a2, a3, a4, a5) => (_daru_ik_step = Module2["_daru_ik_step"] = wasmExports["y"])(a0, a1, a2, a3, a4, a5);
+    var __emscripten_stack_restore = (a0) => (__emscripten_stack_restore = wasmExports["z"])(a0);
+    var __emscripten_stack_alloc = (a0) => (__emscripten_stack_alloc = wasmExports["A"])(a0);
+    var _emscripten_stack_get_current = () => (_emscripten_stack_get_current = wasmExports["B"])();
+    var ___cxa_is_pointer_type = (a0) => (___cxa_is_pointer_type = wasmExports["C"])(a0);
+    Module2["addRunDependency"] = addRunDependency;
+    Module2["removeRunDependency"] = removeRunDependency;
+    Module2["ccall"] = ccall;
+    Module2["cwrap"] = cwrap;
+    Module2["FS_createPreloadedFile"] = FS_createPreloadedFile;
+    Module2["FS_unlink"] = FS_unlink;
+    Module2["FS_createPath"] = FS_createPath;
+    Module2["FS_createDevice"] = FS_createDevice;
+    Module2["FS"] = FS;
+    Module2["FS_createDataFile"] = FS_createDataFile;
+    Module2["FS_createLazyFile"] = FS_createLazyFile;
+    var calledRun;
+    dependenciesFulfilled = function runCaller() {
+      if (!calledRun) run();
+      if (!calledRun) dependenciesFulfilled = runCaller;
+    };
+    function run() {
+      if (runDependencies > 0) {
+        return;
+      }
+      preRun();
+      if (runDependencies > 0) {
+        return;
+      }
+      function doRun() {
+        if (calledRun) return;
+        calledRun = true;
+        Module2["calledRun"] = true;
+        if (ABORT) return;
+        initRuntime();
+        readyPromiseResolve(Module2);
+        Module2["onRuntimeInitialized"]?.();
+        postRun();
+      }
+      if (Module2["setStatus"]) {
+        Module2["setStatus"]("Running...");
+        setTimeout(function() {
+          setTimeout(function() {
+            Module2["setStatus"]("");
+          }, 1);
+          doRun();
+        }, 1);
+      } else {
+        doRun();
+      }
+    }
+    if (Module2["preInit"]) {
+      if (typeof Module2["preInit"] == "function") Module2["preInit"] = [Module2["preInit"]];
+      while (Module2["preInit"].length > 0) {
+        Module2["preInit"].pop()();
+      }
+    }
+    run();
+    moduleRtn = readyPromise;
+    return moduleRtn;
+  });
+})();
+var daru_rbdl_ik_default = Module;
+
+// src/controllers/DaruV4TorqueController.js
+var DARU_TORQUE_SCENE = "DARU_NEW_260323/scene.xml";
+var DARU_RBDL_URDF_ASSET = "DARU_V4/DARU_V4.urdf";
+var ARM_JOINT_NAMES = [
+  "Waist_Joint",
+  "LSP_Joint",
+  "LSR_Joint",
+  "LSY_Joint",
+  "LEP_Joint",
+  "LEY_Joint",
+  "LWR_Joint",
+  "LWP_Joint",
+  "RSP_Joint",
+  "RSR_Joint",
+  "RSY_Joint",
+  "REP_Joint",
+  "REY_Joint",
+  "RWR_Joint",
+  "RWP_Joint"
+];
+var HEAD_JOINT_NAMES = ["HY_Joint", "HP_Joint"];
+var HAND_JOINT_NAMES = [
+  "rh_f1_Motor_Linear_Joint",
+  "rh_f2_Motor_Linear_Joint",
+  "rh_f3_Motor_Linear_Joint",
+  "rh_f4_Motor_Linear_Joint",
+  "rh_c_t_Motor_Linear_Joint",
+  "rh_c_Motor_Linear_Joint",
+  "lh_f1_Motor_Linear_Joint",
+  "lh_f2_Motor_Linear_Joint",
+  "lh_f3_Motor_Linear_Joint",
+  "lh_f4_Motor_Linear_Joint",
+  "lh_c_t_Motor_Linear_Joint",
+  "lh_c_Motor_Linear_Joint"
+];
+var ARM_PD_LIMITS = [100, 60, 60, 60, 60, 10, 10, 10, 60, 60, 60, 60, 10, 10, 10];
+var CG_COMPENSATION_SCALE = 1.2;
+var HOME_MODE_END_COUNT = 6e3;
+var DEFAULT_LEFT_POS = new Float64Array([0.293, 0.225, 0.0725]);
+var DEFAULT_RIGHT_POS = new Float64Array([0.293, -0.225, 0.0725]);
+var DEFAULT_LEFT_QUAT_WXYZ = new Float64Array([0.707, 0, -0.707, 0]);
+var DEFAULT_RIGHT_QUAT_WXYZ = new Float64Array([0.707, 0, -0.707, 0]);
+var EE_LOCAL_OFFSET = new Float64Array([0, 0, -0.0825]);
+var ARM_INDEX = Object.freeze({
+  WAIST: 0,
+  LSP: 1,
+  LSR: 2,
+  LSY: 3,
+  LEP: 4,
+  LEY: 5,
+  LWR: 6,
+  LWP: 7,
+  RSP: 8,
+  RSR: 9,
+  RSY: 10,
+  REP: 11,
+  REY: 12,
+  RWR: 13,
+  RWP: 14
+});
+var HEAD_INDEX = Object.freeze({
+  HY: 0,
+  HP: 1
+});
+var rbdlModulePromise = null;
+function clamp2(value, lower, upper) {
+  return Math.min(upper, Math.max(lower, value));
+}
+function cosineBlend(phaseCount, durationCount) {
+  const normalized = clamp2(phaseCount / durationCount, 0, 1);
+  return 0.5 * (1 - Math.cos(Math.PI * normalized));
+}
+function rotateVectorByQuatWxyz(quat, vector) {
+  const w = quat[0];
+  const x = quat[1];
+  const y = quat[2];
+  const z = quat[3];
+  const vx = vector[0];
+  const vy = vector[1];
+  const vz = vector[2];
+  const tx = 2 * (y * vz - z * vy);
+  const ty = 2 * (z * vx - x * vz);
+  const tz = 2 * (x * vy - y * vx);
+  return [
+    vx + w * tx + (y * tz - z * ty),
+    vy + w * ty + (z * tx - x * tz),
+    vz + w * tz + (x * ty - y * tx)
+  ];
+}
+function writeIkTargetQuatWithNegatedW(targetView, sourceQuatWxyz) {
+  targetView[0] = -sourceQuatWxyz[0];
+  targetView[1] = sourceQuatWxyz[1];
+  targetView[2] = sourceQuatWxyz[2];
+  targetView[3] = sourceQuatWxyz[3];
+}
+function multiplyQuatWxyz(lhs, rhs, out) {
+  const lw = lhs[0];
+  const lx = lhs[1];
+  const ly = lhs[2];
+  const lz = lhs[3];
+  const rw = rhs[0];
+  const rx = rhs[1];
+  const ry = rhs[2];
+  const rz = rhs[3];
+  out[0] = lw * rw - lx * rx - ly * ry - lz * rz;
+  out[1] = lw * rx + lx * rw + ly * rz - lz * ry;
+  out[2] = lw * ry - lx * rz + ly * rw + lz * rx;
+  out[3] = lw * rz + lx * ry - ly * rx + lz * rw;
+}
+function normalizeQuatWxyz(quat) {
+  const norm = Math.hypot(quat[0], quat[1], quat[2], quat[3]);
+  if (norm <= 1e-12) {
+    quat[0] = 1;
+    quat[1] = 0;
+    quat[2] = 0;
+    quat[3] = 0;
+    return;
+  }
+  quat[0] /= norm;
+  quat[1] /= norm;
+  quat[2] /= norm;
+  quat[3] /= norm;
+}
+function writeAxisAngleQuatWxyz(axisX, axisY, axisZ, angle, out) {
+  const halfAngle = 0.5 * angle;
+  const sinHalfAngle = Math.sin(halfAngle);
+  const axisNorm = Math.hypot(axisX, axisY, axisZ);
+  if (axisNorm <= 1e-12) {
+    out[0] = 1;
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 0;
+    return;
+  }
+  out[0] = Math.cos(halfAngle);
+  out[1] = axisX / axisNorm * sinHalfAngle;
+  out[2] = axisY / axisNorm * sinHalfAngle;
+  out[3] = axisZ / axisNorm * sinHalfAngle;
+}
+async function getRbdlModule(debugCallback) {
+  const reportDebug = (message) => {
+    if (typeof debugCallback === "function") {
+      debugCallback(message);
+    }
+  };
+  const resolveRbdlAssetUrl = (path) => {
+    if (typeof window !== "undefined" && window.location) {
+      return new URL(`src/ik_rbdl/${path}`, window.location.href).href;
+    }
+    return new URL(`../ik_rbdl/${path}`, import.meta.url).href;
+  };
+  if (!rbdlModulePromise) {
+    rbdlModulePromise = daru_rbdl_ik_default({
+      locateFile: (path) => {
+        const url = resolveRbdlAssetUrl(path);
+        reportDebug(`locateFile ${path}`);
+        return url;
+      },
+      setStatus: (text) => {
+        if (text) {
+          reportDebug(`status ${text}`);
+        }
+      },
+      monitorRunDependencies: (count) => {
+        reportDebug(`deps ${count}`);
+      },
+      printErr: (...args) => {
+        console.error(...args);
+        reportDebug(`printErr ${args.join(" ")}`);
+      },
+      onAbort: (what) => {
+        reportDebug(`abort ${what}`);
+      }
+    });
+  }
+  const module = await rbdlModulePromise;
+  reportDebug("ready");
+  return module;
+}
+async function fetchRbdlUrdf(debugCallback) {
+  const reportDebug = (message) => {
+    if (typeof debugCallback === "function") {
+      debugCallback(message);
+    }
+  };
+  reportDebug("fetch urdf");
+  const response = await fetch(`./assets/scenes/${DARU_RBDL_URDF_ASSET}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${DARU_RBDL_URDF_ASSET}: ${response.status}`);
+  }
+  const urdfXml = await response.text();
+  reportDebug(`urdf fetched ${urdfXml.length}`);
+  return urdfXml;
+}
+function findActuatorForJoint(model, jointId) {
+  for (let actuatorId = 0; actuatorId < model.nu; actuatorId += 1) {
+    if (model.actuator_trnid[2 * actuatorId] === jointId) {
+      return actuatorId;
+    }
+  }
+  return -1;
+}
+function clampActuatorCommand(model, actuatorId, fallbackLimit, command) {
+  let lower = -fallbackLimit;
+  let upper = fallbackLimit;
+  if (actuatorId >= 0 && model.actuator_ctrllimited[actuatorId]) {
+    lower = model.actuator_ctrlrange[2 * actuatorId + 0];
+    upper = model.actuator_ctrlrange[2 * actuatorId + 1];
+  }
+  return clamp2(command, lower, upper);
+}
+function jointRangeOrFallback(model, jointId) {
+  if (jointId >= 0) {
+    const lower = model.jnt_range[2 * jointId + 0];
+    const upper = model.jnt_range[2 * jointId + 1];
+    if (Number.isFinite(lower) && Number.isFinite(upper) && lower < upper) {
+      return [lower, upper];
+    }
+  }
+  return [-Infinity, Infinity];
+}
+var DaruV4TorqueController = class _DaruV4TorqueController {
+  static async create(mujoco2, model, data, debugCallback) {
+    const rbdl = await getRbdlModule(debugCallback);
+    const urdfXml = await fetchRbdlUrdf(debugCallback);
+    const initialized = rbdl.ccall("daru_ik_init_from_xml", "number", ["string"], [urdfXml]);
+    if (!initialized) {
+      throw new Error("Failed to initialize RBDL IK from URDF xml");
+    }
+    if (typeof debugCallback === "function") {
+      debugCallback("ik init ok");
+    }
+    return new _DaruV4TorqueController(mujoco2, model, data, rbdl);
+  }
+  constructor(mujoco2, model, data, rbdl) {
+    this.mujoco = mujoco2;
+    this.model = model;
+    this.data = data;
+    this.rbdl = rbdl;
+    this.armJointIds = new Int32Array(ARM_JOINT_NAMES.length);
+    this.armQposIds = new Int32Array(ARM_JOINT_NAMES.length);
+    this.armDofIds = new Int32Array(ARM_JOINT_NAMES.length);
+    this.armActuatorIds = new Int32Array(ARM_JOINT_NAMES.length);
+    this.armLowerLimits = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armUpperLimits = new Float64Array(ARM_JOINT_NAMES.length);
+    this.headJointIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
+    this.headQposIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
+    this.headDofIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
+    this.headActuatorIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
+    this.handJointIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
+    this.handQposIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
+    this.handDofIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
+    this.handActuatorIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
+    this.armPos = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armVel = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armVelOld = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armTau = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armRefPos = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armRefTau = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armDesPos = new Float64Array(ARM_JOINT_NAMES.length);
+    this.armPosInit = new Float64Array(ARM_JOINT_NAMES.length);
+    this.headPos = new Float64Array(HEAD_JOINT_NAMES.length);
+    this.headVel = new Float64Array(HEAD_JOINT_NAMES.length);
+    this.headPosInit = new Float64Array(HEAD_JOINT_NAMES.length);
+    this.headDesPos = new Float64Array(HEAD_JOINT_NAMES.length);
+    this.headCmdTau = new Float64Array(HEAD_JOINT_NAMES.length);
+    this.handPos = new Float64Array(HAND_JOINT_NAMES.length);
+    this.handVel = new Float64Array(HAND_JOINT_NAMES.length);
+    this.handDesPos = new Float64Array(HAND_JOINT_NAMES.length);
+    this.handCmd = new Float64Array(HAND_JOINT_NAMES.length);
+    this.leftPosTarget = new Float64Array(DEFAULT_LEFT_POS);
+    this.rightPosTarget = new Float64Array(DEFAULT_RIGHT_POS);
+    this.leftQuatTargetWxyz = new Float64Array(DEFAULT_LEFT_QUAT_WXYZ);
+    this.rightQuatTargetWxyz = new Float64Array(DEFAULT_RIGHT_QUAT_WXYZ);
+    this.worldCount = 0;
+    this.mode = 0;
+    this.count = 0;
+    this.initialized = false;
+    this.lastUpdateTime = 0;
+    this.dt = this.model.opt.timestep;
+    this.handControlAccumulator = 0;
+    this.qRefBuffer = this.allocateF64(ARM_JOINT_NAMES.length);
+    this.qdotBuffer = this.allocateF64(ARM_JOINT_NAMES.length);
+    this.leftPosBuffer = this.allocateF64(3);
+    this.rightPosBuffer = this.allocateF64(3);
+    this.leftQuatBuffer = this.allocateF64(4);
+    this.rightQuatBuffer = this.allocateF64(4);
+    this.cgBuffer = this.allocateF64(ARM_JOINT_NAMES.length);
+    this.qOutBuffer = this.allocateF64(ARM_JOINT_NAMES.length);
+    this.mapModel();
+    this.initializeRbdl();
+    this.reset();
+  }
+  allocateF64(length) {
+    const pointer = this.rbdl._malloc(length * Float64Array.BYTES_PER_ELEMENT);
+    return {
+      pointer,
+      view: this.rbdl.HEAPF64.subarray(pointer / Float64Array.BYTES_PER_ELEMENT, pointer / Float64Array.BYTES_PER_ELEMENT + length)
+    };
+  }
+  mapModel() {
+    for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
+      const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, ARM_JOINT_NAMES[index]);
+      if (jointId < 0) {
+        throw new Error(`Joint not found: ${ARM_JOINT_NAMES[index]}`);
+      }
+      this.armJointIds[index] = jointId;
+      this.armQposIds[index] = this.model.jnt_qposadr[jointId];
+      this.armDofIds[index] = this.model.jnt_dofadr[jointId];
+      this.armActuatorIds[index] = findActuatorForJoint(this.model, jointId);
+      [this.armLowerLimits[index], this.armUpperLimits[index]] = jointRangeOrFallback(this.model, jointId);
+    }
+    this.leftWristBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "LWP_Link");
+    this.rightWristBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "RWP_Link");
+    for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
+      const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, HEAD_JOINT_NAMES[index]);
+      if (jointId < 0) {
+        continue;
+      }
+      this.headJointIds[index] = jointId;
+      this.headQposIds[index] = this.model.jnt_qposadr[jointId];
+      this.headDofIds[index] = this.model.jnt_dofadr[jointId];
+      this.headActuatorIds[index] = findActuatorForJoint(this.model, jointId);
+    }
+    for (let index = 0; index < HAND_JOINT_NAMES.length; index += 1) {
+      const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, HAND_JOINT_NAMES[index]);
+      if (jointId < 0) {
+        continue;
+      }
+      this.handJointIds[index] = jointId;
+      this.handQposIds[index] = this.model.jnt_qposadr[jointId];
+      this.handDofIds[index] = this.model.jnt_dofadr[jointId];
+      this.handActuatorIds[index] = findActuatorForJoint(this.model, jointId);
+    }
+  }
+  initializeRbdl() {
+  }
+  reset() {
+    this.worldCount = 0;
+    this.count = 0;
+    this.mode = 0;
+    this.initialized = false;
+    this.lastUpdateTime = 0;
+    this.dt = this.model.opt.timestep;
+    this.handControlAccumulator = 0;
+    this.armPos.fill(0);
+    this.armVel.fill(0);
+    this.armVelOld.fill(0);
+    this.armTau.fill(0);
+    this.armRefPos.fill(0);
+    this.armRefTau.fill(0);
+    this.armDesPos.fill(0);
+    this.armPosInit.fill(0);
+    this.headPos.fill(0);
+    this.headVel.fill(0);
+    this.headPosInit.fill(0);
+    this.headDesPos.fill(0);
+    this.headCmdTau.fill(0);
+    this.handPos.fill(0);
+    this.handVel.fill(0);
+    this.handDesPos.fill(0);
+    this.handCmd.fill(0);
+    this.setDefaultEeTargets();
+  }
+  nudgeRightTargetPosition(deltaX, deltaY, deltaZ) {
+    this.rightPosTarget[0] += deltaX;
+    this.rightPosTarget[1] += deltaY;
+    this.rightPosTarget[2] += deltaZ;
+  }
+  rotateRightTargetLocal(axisX, axisY, axisZ, angle) {
+    if (Math.abs(angle) <= 1e-12) {
+      return;
+    }
+    const deltaQuat = [1, 0, 0, 0];
+    const nextQuat = [1, 0, 0, 0];
+    writeAxisAngleQuatWxyz(axisX, axisY, axisZ, angle, deltaQuat);
+    multiplyQuatWxyz(this.rightQuatTargetWxyz, deltaQuat, nextQuat);
+    normalizeQuatWxyz(nextQuat);
+    this.rightQuatTargetWxyz.set(nextQuat);
+  }
+  dispose() {
+    this.rbdl._free(this.qRefBuffer.pointer);
+    this.rbdl._free(this.qdotBuffer.pointer);
+    this.rbdl._free(this.leftPosBuffer.pointer);
+    this.rbdl._free(this.rightPosBuffer.pointer);
+    this.rbdl._free(this.leftQuatBuffer.pointer);
+    this.rbdl._free(this.rightQuatBuffer.pointer);
+    this.rbdl._free(this.cgBuffer.pointer);
+    this.rbdl._free(this.qOutBuffer.pointer);
+  }
+  initializeHomeModeIfNeeded() {
+    if (this.initialized) {
+      return;
+    }
+    this.stateUpdate();
+    this.armPosInit.set(this.armPos);
+    this.armDesPos.set(this.armPos);
+    this.armRefPos.set(this.armPos);
+    this.headPosInit.set(this.headPos);
+    this.headDesPos.set(this.headPos);
+    this.handDesPos.set(this.handPos);
+    this.qRefBuffer.view.set(this.armRefPos);
+    this.rbdl._daru_ik_reset_ref(this.qRefBuffer.pointer);
+    this.mode = 1;
+    this.count = 0;
+    this.initialized = true;
+  }
+  step() {
+    this.initializeHomeModeIfNeeded();
+    const currentTime = this.data.time;
+    this.dt = currentTime - this.lastUpdateTime;
+    if (this.dt <= 1e-9) {
+      this.dt = this.model.opt.timestep;
+    }
+    this.handControlAccumulator += this.dt;
+    if (this.worldCount % 2 === 1) {
+      this.stateUpdate();
+      this.armRefTau.fill(0);
+      if (this.mode === 1) {
+        this.setHomePose();
+        this.applyCgCompensation();
+        this.count += 1;
+        if (this.count > HOME_MODE_END_COUNT) {
+          this.mode = 2;
+          this.count = 0;
+          this.setDefaultEeTargets();
+          this.armRefPos.set(this.armDesPos);
+          this.qRefBuffer.view.set(this.armRefPos);
+          this.rbdl._daru_ik_reset_ref(this.qRefBuffer.pointer);
+        }
+      } else if (this.mode === 2 || this.mode === 3) {
+        this.solveIkTargets();
+        this.applyCgCompensation();
+        this.count += 1;
+      }
+      if (this.mode === 1 || this.mode === 2 || this.mode === 3) {
+        this.updateArmPdTorques();
+        this.updateHeadPdTorques();
+        this.updateHandCommands();
+      }
+    }
+    this.applyCommands();
+    this.worldCount += 1;
+    this.lastUpdateTime = currentTime;
+  }
+  stateUpdate() {
+    for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
+      const qposId = this.armQposIds[index];
+      const dofId = this.armDofIds[index];
+      const velocity = this.data.qvel[dofId];
+      this.armPos[index] = this.data.qpos[qposId];
+      this.armVel[index] = velocity;
+      this.armTau[index] = this.data.qfrc_actuator[dofId] + this.data.qfrc_applied[dofId];
+      this.armVelOld[index] = velocity;
+    }
+    for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
+      const qposId = this.headQposIds[index];
+      const dofId = this.headDofIds[index];
+      if (qposId < 0 || dofId < 0) {
+        continue;
+      }
+      this.headPos[index] = this.data.qpos[qposId];
+      this.headVel[index] = this.data.qvel[dofId];
+    }
+    for (let index = 0; index < HAND_JOINT_NAMES.length; index += 1) {
+      const qposId = this.handQposIds[index];
+      const dofId = this.handDofIds[index];
+      if (qposId < 0 || dofId < 0) {
+        continue;
+      }
+      this.handPos[index] = this.data.qpos[qposId];
+      this.handVel[index] = this.data.qvel[dofId];
+    }
+  }
+  setHomePose() {
+    const stage1 = cosineBlend(this.count, 1e3);
+    const stage2 = cosineBlend(this.count - 1e3, 1e3);
+    const stage3 = cosineBlend(this.count - 2e3, 2e3);
+    const stage4 = cosineBlend(this.count - 4e3, 2e3);
+    if (this.count < 1e3) {
+      this.armDesPos.set(this.armPosInit);
+      this.headDesPos.set(this.headPosInit);
+      this.armDesPos[ARM_INDEX.LSR] = this.armPosInit[ARM_INDEX.LSR] + (Math.PI / 6 - this.armPosInit[ARM_INDEX.LSR]) * stage1;
+      this.armDesPos[ARM_INDEX.RSR] = this.armPosInit[ARM_INDEX.RSR] + (-Math.PI / 6 - this.armPosInit[ARM_INDEX.RSR]) * stage1;
+      this.armDesPos[ARM_INDEX.WAIST] = this.armPosInit[ARM_INDEX.WAIST] + (0 - this.armPosInit[ARM_INDEX.WAIST]) * stage1;
+      this.headDesPos[HEAD_INDEX.HY] = this.headPosInit[HEAD_INDEX.HY] + (0 - this.headPosInit[HEAD_INDEX.HY]) * stage1;
+      this.headDesPos[HEAD_INDEX.HP] = this.headPosInit[HEAD_INDEX.HP] + (0 - this.headPosInit[HEAD_INDEX.HP]) * stage1;
+    }
+    if (this.count >= 1e3 && this.count < 2e3) {
+      this.armDesPos[ARM_INDEX.LSP] = this.armPosInit[ARM_INDEX.LSP] + (0 - this.armPosInit[ARM_INDEX.LSP]) * stage2;
+      this.armDesPos[ARM_INDEX.LSY] = this.armPosInit[ARM_INDEX.LSY] + (0 - this.armPosInit[ARM_INDEX.LSY]) * stage2;
+      this.armDesPos[ARM_INDEX.LEP] = this.armPosInit[ARM_INDEX.LEP] + (0 - this.armPosInit[ARM_INDEX.LEP]) * stage2;
+      this.armDesPos[ARM_INDEX.RSP] = this.armPosInit[ARM_INDEX.RSP] + (0 - this.armPosInit[ARM_INDEX.RSP]) * stage2;
+      this.armDesPos[ARM_INDEX.RSY] = this.armPosInit[ARM_INDEX.RSY] + (0 - this.armPosInit[ARM_INDEX.RSY]) * stage2;
+      this.armDesPos[ARM_INDEX.REP] = this.armPosInit[ARM_INDEX.REP] + (0 - this.armPosInit[ARM_INDEX.REP]) * stage2;
+      this.armDesPos[ARM_INDEX.LEY] = this.armPosInit[ARM_INDEX.LEY] + (0 - this.armPosInit[ARM_INDEX.LEY]) * stage2;
+      this.armDesPos[ARM_INDEX.LWR] = this.armPosInit[ARM_INDEX.LWR] + (0 - this.armPosInit[ARM_INDEX.LWR]) * stage2;
+      this.armDesPos[ARM_INDEX.LWP] = this.armPosInit[ARM_INDEX.LWP] + (0 - this.armPosInit[ARM_INDEX.LWP]) * stage2;
+      this.armDesPos[ARM_INDEX.REY] = this.armPosInit[ARM_INDEX.REY] + (0 - this.armPosInit[ARM_INDEX.REY]) * stage2;
+      this.armDesPos[ARM_INDEX.RWR] = this.armPosInit[ARM_INDEX.RWR] + (0 - this.armPosInit[ARM_INDEX.RWR]) * stage2;
+      this.armDesPos[ARM_INDEX.RWP] = this.armPosInit[ARM_INDEX.RWP] + (0 - this.armPosInit[ARM_INDEX.RWP]) * stage2;
+    }
+    if (this.count >= 2e3 && this.count < 4e3) {
+      this.armDesPos[ARM_INDEX.LSP] = Math.PI * 3 / 8 * stage3;
+      this.armDesPos[ARM_INDEX.RSP] = Math.PI * 3 / 8 * stage3;
+      this.armDesPos[ARM_INDEX.LSR] = Math.PI / 6 + (0 - Math.PI / 6) * stage3;
+      this.armDesPos[ARM_INDEX.LEP] = -Math.PI * 3 / 4 * stage3;
+      this.armDesPos[ARM_INDEX.RSR] = -Math.PI / 6 + (0 - -Math.PI / 6) * stage3;
+      this.armDesPos[ARM_INDEX.REP] = -Math.PI * 3 / 4 * stage3;
+    }
+    if (this.count >= 4e3 && this.count < 6e3) {
+      this.armDesPos[ARM_INDEX.LSP] = Math.PI * 3 / 8 + (0 - Math.PI * 3 / 8) * stage4;
+      this.armDesPos[ARM_INDEX.RSP] = Math.PI * 3 / 8 + (0 - Math.PI * 3 / 8) * stage4;
+      this.armDesPos[ARM_INDEX.LEP] = -Math.PI * 3 / 4 + (-Math.PI / 2 - -Math.PI * 3 / 4) * stage4;
+      this.armDesPos[ARM_INDEX.REP] = -Math.PI * 3 / 4 + (-Math.PI / 2 - -Math.PI * 3 / 4) * stage4;
+    }
+    if (this.count >= 6e3) {
+      this.armDesPos[ARM_INDEX.WAIST] = 0;
+      this.armDesPos[ARM_INDEX.LSP] = 0;
+      this.armDesPos[ARM_INDEX.LSR] = 0;
+      this.armDesPos[ARM_INDEX.LSY] = 0;
+      this.armDesPos[ARM_INDEX.LEP] = -Math.PI / 2;
+      this.armDesPos[ARM_INDEX.LEY] = 0;
+      this.armDesPos[ARM_INDEX.LWR] = 0;
+      this.armDesPos[ARM_INDEX.LWP] = 0;
+      this.armDesPos[ARM_INDEX.RSP] = 0;
+      this.armDesPos[ARM_INDEX.RSR] = 0;
+      this.armDesPos[ARM_INDEX.RSY] = 0;
+      this.armDesPos[ARM_INDEX.REP] = -Math.PI / 2;
+      this.armDesPos[ARM_INDEX.REY] = 0;
+      this.armDesPos[ARM_INDEX.RWR] = 0;
+      this.armDesPos[ARM_INDEX.RWP] = 0;
+      this.headDesPos[HEAD_INDEX.HY] = 0;
+      this.headDesPos[HEAD_INDEX.HP] = 0;
+    }
+    for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
+      this.armDesPos[index] = clamp2(this.armDesPos[index], this.armLowerLimits[index], this.armUpperLimits[index]);
+    }
+  }
+  setDefaultEeTargets() {
+    this.leftPosTarget.set(DEFAULT_LEFT_POS);
+    this.rightPosTarget.set(DEFAULT_RIGHT_POS);
+    this.leftQuatTargetWxyz.set(DEFAULT_LEFT_QUAT_WXYZ);
+    this.rightQuatTargetWxyz.set(DEFAULT_RIGHT_QUAT_WXYZ);
+  }
+  captureCurrentEeTargets() {
+    this.captureEeTarget(this.leftWristBodyId, this.leftPosTarget, this.leftQuatTargetWxyz);
+    this.captureEeTarget(this.rightWristBodyId, this.rightPosTarget, this.rightQuatTargetWxyz);
+  }
+  captureCurrentRightEeTarget() {
+    this.stateUpdate();
+    this.captureEeTarget(this.rightWristBodyId, this.rightPosTarget, this.rightQuatTargetWxyz);
+  }
+  captureEeTarget(bodyId, posTarget, quatTarget) {
+    if (bodyId < 0) {
+      return;
+    }
+    const posBase = 3 * bodyId;
+    const quatBase = 4 * bodyId;
+    const quat = [
+      this.data.xquat[quatBase + 0],
+      this.data.xquat[quatBase + 1],
+      this.data.xquat[quatBase + 2],
+      this.data.xquat[quatBase + 3]
+    ];
+    const tipOffset = rotateVectorByQuatWxyz(quat, EE_LOCAL_OFFSET);
+    posTarget[0] = this.data.xpos[posBase + 0] + tipOffset[0];
+    posTarget[1] = this.data.xpos[posBase + 1] + tipOffset[1];
+    posTarget[2] = this.data.xpos[posBase + 2] + tipOffset[2];
+    quatTarget[0] = quat[0];
+    quatTarget[1] = quat[1];
+    quatTarget[2] = quat[2];
+    quatTarget[3] = quat[3];
+  }
+  solveIkTargets() {
+    this.qRefBuffer.view.set(this.armRefPos);
+    this.leftPosBuffer.view.set(this.leftPosTarget);
+    this.rightPosBuffer.view.set(this.rightPosTarget);
+    writeIkTargetQuatWithNegatedW(this.leftQuatBuffer.view, this.leftQuatTargetWxyz);
+    writeIkTargetQuatWithNegatedW(this.rightQuatBuffer.view, this.rightQuatTargetWxyz);
+    const solved = this.rbdl._daru_ik_step(
+      this.qRefBuffer.pointer,
+      this.leftPosBuffer.pointer,
+      this.rightPosBuffer.pointer,
+      this.leftQuatBuffer.pointer,
+      this.rightQuatBuffer.pointer,
+      this.qOutBuffer.pointer
+    );
+    if (!solved) {
+      throw new Error("RBDL IK step failed");
+    }
+    this.armRefPos.set(this.qOutBuffer.view);
+    this.clampArmReferenceToModelLimits();
+    this.armDesPos.set(this.armRefPos);
+  }
+  clampArmReferenceToModelLimits() {
+    for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
+      this.armRefPos[index] = clamp2(this.armRefPos[index], this.armLowerLimits[index], this.armUpperLimits[index]);
+    }
+  }
+  applyCgCompensation() {
+    this.qRefBuffer.view.set(this.armPos);
+    this.qdotBuffer.view.set(this.armVel);
+    const solved = this.rbdl._daru_cg_from_state(
+      this.qRefBuffer.pointer,
+      this.qdotBuffer.pointer,
+      this.cgBuffer.pointer
+    );
+    if (!solved) {
+      throw new Error("RBDL CG compensation failed");
+    }
+    for (let index = 1; index < ARM_JOINT_NAMES.length; index += 1) {
+      this.armRefTau[index] += CG_COMPENSATION_SCALE * this.cgBuffer.view[index];
+    }
+  }
+  updateArmPdTorques() {
+    for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
+      let command = 15 * (this.armDesPos[index] - this.armPos[index]) + 1 * (0 - this.armVel[index]);
+      if (index === 0) {
+        command = 200 * (this.armDesPos[index] - this.armPos[index]) + 20 * (0 - this.armVel[index]);
+      } else if (index === 5 || index === 6 || index === 7 || index === 12 || index === 13 || index === 14) {
+        command = 10 * (this.armDesPos[index] - this.armPos[index]) + 5e-3 * (0 - this.armVel[index]);
+      }
+      this.armRefTau[index] += clamp2(command, -ARM_PD_LIMITS[index], ARM_PD_LIMITS[index]);
+    }
+  }
+  updateHeadPdTorques() {
+    const kp = [25, 25];
+    const kd = [1.5, 1.5];
+    const fallbackLimit = [7, 7];
+    for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
+      if (this.headDofIds[index] < 0) {
+        this.headCmdTau[index] = 0;
+        continue;
+      }
+      const command = kp[index] * (this.headDesPos[index] - this.headPos[index]) - kd[index] * this.headVel[index];
+      this.headCmdTau[index] = clampActuatorCommand(this.model, this.headActuatorIds[index], fallbackLimit[index], command);
+    }
+  }
+  updateHandCommands() {
+    const handControlPeriod = 0.02;
+    if (this.handControlAccumulator + 1e-9 < handControlPeriod) {
+      return;
+    }
+    while (this.handControlAccumulator >= handControlPeriod) {
+      this.handControlAccumulator -= handControlPeriod;
+    }
+    const kp = 2e3;
+    const kd = 9;
+    const fallbackLimit = 56;
+    for (let index = 0; index < HAND_JOINT_NAMES.length; index += 1) {
+      if (this.handJointIds[index] < 0) {
+        this.handCmd[index] = 0;
+        continue;
+      }
+      const forceCommand = kp * (this.handDesPos[index] - this.handPos[index]) - kd * this.handVel[index];
+      this.handCmd[index] = clampActuatorCommand(this.model, this.handActuatorIds[index], fallbackLimit, forceCommand);
+    }
+  }
+  applyCommands() {
+    this.data.ctrl.fill(0);
+    this.data.qfrc_applied.fill(0);
+    for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
+      const actuatorId = this.armActuatorIds[index];
+      const dofId = this.armDofIds[index];
+      if (actuatorId >= 0) {
+        this.data.ctrl[actuatorId] = this.armRefTau[index];
+      } else {
+        this.data.qfrc_applied[dofId] = this.armRefTau[index];
+      }
+    }
+    for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
+      const dofId = this.headDofIds[index];
+      if (dofId < 0) {
+        continue;
+      }
+      const actuatorId = this.headActuatorIds[index];
+      if (actuatorId >= 0) {
+        this.data.ctrl[actuatorId] = this.headCmdTau[index];
+      } else {
+        this.data.qfrc_applied[dofId] += this.headCmdTau[index];
+      }
+    }
+    for (let index = 0; index < HAND_JOINT_NAMES.length; index += 1) {
+      const dofId = this.handDofIds[index];
+      if (dofId < 0) {
+        continue;
+      }
+      const actuatorId = this.handActuatorIds[index];
+      if (actuatorId >= 0) {
+        this.data.ctrl[actuatorId] = this.handCmd[index];
+      } else {
+        this.data.qfrc_applied[dofId] += this.handCmd[index];
+      }
+    }
+  }
+};
+
 // src/utils/Reflector.js
 var Reflector = class _Reflector extends Mesh {
   constructor(geometry, options = {}) {
@@ -30866,6 +34203,15 @@ async function reloadFunc() {
   this.scene.remove(this.scene.getObjectByName("MuJoCo Root"));
   [this.model, this.data, this.bodies, this.lights] = await loadSceneFromURL(this.mujoco, this.params.scene, this);
   this.mujoco.mj_forward(this.model, this.data);
+  if (this.configureSceneController) {
+    await this.configureSceneController();
+  }
+  if (this.applyControlDisableState) {
+    this.applyControlDisableState();
+  }
+  if (this.applyCollisionDisableState) {
+    this.applyCollisionDisableState();
+  }
   for (let i2 = 0; i2 < this.updateGUICallbacks.length; i2++) {
     this.updateGUICallbacks[i2](this.model, this.data, this.params);
   }
@@ -30879,7 +34225,9 @@ function setupGUI(parentContext) {
   });
   let reload = reloadFunc.bind(parentContext);
   parentContext.gui.add(parentContext.params, "scene", {
-    "DARU": "DARU/meshes/world.xml"
+    "DARU New Torque": "DARU_NEW_260323/scene.xml",
+    "DARU New Position": "DARU_NEW_260323/DARU_NEW_260323_position.xml"
+    // "DARU": "DARU/meshes/world.xml"
     // , "Cassie": "agility_cassie/scene.xml",
     // "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
     // "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
@@ -30983,6 +34331,16 @@ function setupGUI(parentContext) {
   });
   actionInnerHTML += "Play / Pause<br>";
   keyInnerHTML += "Space<br>";
+  simulationFolder.add(parentContext.params, "controlsDisabled").name("Disable All Control").onChange(() => {
+    if (parentContext.applyControlDisableState) {
+      parentContext.applyControlDisableState();
+    }
+  });
+  simulationFolder.add(parentContext.params, "collisionsDisabled").name("Disable All Collision").onChange(() => {
+    if (parentContext.applyCollisionDisableState) {
+      parentContext.applyCollisionDisableState();
+    }
+  });
   simulationFolder.add({ reload: () => {
     reload();
   } }, "reload").name("Reload");
@@ -30997,6 +34355,18 @@ function setupGUI(parentContext) {
   const resetSimulation = () => {
     parentContext.mujoco.mj_resetData(parentContext.model, parentContext.data);
     parentContext.mujoco.mj_forward(parentContext.model, parentContext.data);
+    if (parentContext.controller && parentContext.controller.reset) {
+      parentContext.controller.reset();
+    }
+    if (parentContext.syncPassiveSceneControls) {
+      parentContext.syncPassiveSceneControls();
+    }
+    if (parentContext.applyControlDisableState) {
+      parentContext.applyControlDisableState();
+    }
+    if (parentContext.applyCollisionDisableState) {
+      parentContext.applyCollisionDisableState();
+    }
   };
   simulationFolder.add({ reset: () => {
     resetSimulation();
@@ -31047,7 +34417,7 @@ function setupGUI(parentContext) {
           parentContext.model.name_actuatoradr[i2]
         )
       ).split(nullChar)[0];
-      parentContext.params[name] = 0;
+      parentContext.params[name] = data.ctrl[i2];
       let actuatorGUI = actuatorFolder.add(parentContext.params, name, act_range[2 * i2], act_range[2 * i2 + 1], 0.01).name(name).listen();
       actuatorGUIs2.push(actuatorGUI);
       actuatorGUI.onChange((value) => {
@@ -31410,80 +34780,11 @@ function drawTendonsAndFlex(mujocoRoot, model, data) {
   }
 }
 async function downloadExampleScenesFolder(mujoco2) {
-  let allFiles = [
-    "22_humanoids.xml",
-    "adhesion.xml",
-    "agility_cassie/assets/achilles-rod.obj",
-    "agility_cassie/assets/cassie-texture.png",
-    "agility_cassie/assets/foot-crank.obj",
-    "agility_cassie/assets/foot.obj",
-    "agility_cassie/assets/heel-spring.obj",
-    "agility_cassie/assets/hip-pitch.obj",
-    "agility_cassie/assets/hip-roll.obj",
-    "agility_cassie/assets/hip-yaw.obj",
-    "agility_cassie/assets/knee-spring.obj",
-    "agility_cassie/assets/knee.obj",
-    "agility_cassie/assets/pelvis.obj",
-    "agility_cassie/assets/plantar-rod.obj",
-    "agility_cassie/assets/shin.obj",
-    "agility_cassie/assets/tarsus.obj",
-    "agility_cassie/cassie.xml",
-    "agility_cassie/scene.xml",
-    "arm26.xml",
-    "balloons.xml",
-    "car.xml",
-    "flex.xml",
-    "hammock.xml",
-    "humanoid.xml",
-    "humanoid_body.xml",
-    "model.xml",
-    "mug.obj",
-    "mug.png",
-    "mug.xml",
-    "scene.xml",
-    "shadow_hand/assets/f_distal_pst.obj",
-    "shadow_hand/assets/f_knuckle.obj",
-    "shadow_hand/assets/f_middle.obj",
-    "shadow_hand/assets/f_proximal.obj",
-    "shadow_hand/assets/forearm_0.obj",
-    "shadow_hand/assets/forearm_1.obj",
-    "shadow_hand/assets/forearm_collision.obj",
-    "shadow_hand/assets/lf_metacarpal.obj",
-    "shadow_hand/assets/mounting_plate.obj",
-    "shadow_hand/assets/palm.obj",
-    "shadow_hand/assets/th_distal_pst.obj",
-    "shadow_hand/assets/th_middle.obj",
-    "shadow_hand/assets/th_proximal.obj",
-    "shadow_hand/assets/wrist.obj",
-    "shadow_hand/left_hand.xml",
-    "shadow_hand/right_hand.xml",
-    "shadow_hand/scene_left.xml",
-    "shadow_hand/scene_right.xml",
-    "simple.xml",
-    "slider_crank.xml",
-    "model_with_tendon.xml",
-    // DARU robot
-    "DARU/meshes/world.xml",
-    "DARU/meshes/DARU_stand.xml",
-    "DARU/meshes/Base.stl",
-    "DARU/meshes/HP_Link.stl",
-    "DARU/meshes/HY_Link.stl",
-    "DARU/meshes/LEP_Link.stl",
-    "DARU/meshes/LEY_Link.stl",
-    "DARU/meshes/LSP_Link.stl",
-    "DARU/meshes/LSR_Link.stl",
-    "DARU/meshes/LSY_Link.stl",
-    "DARU/meshes/LWP_Link.stl",
-    "DARU/meshes/LWR_Link.stl",
-    "DARU/meshes/REP_Link.stl",
-    "DARU/meshes/REY_Link.stl",
-    "DARU/meshes/RSP_Link.stl",
-    "DARU/meshes/RSR_Link.stl",
-    "DARU/meshes/RSY_Link.stl",
-    "DARU/meshes/RWP_Link.stl",
-    "DARU/meshes/RWR_Link.stl",
-    "DARU/meshes/UB_Link.stl"
-  ];
+  let indexResponse = await fetch("./assets/scenes/index.json");
+  if (!indexResponse.ok) {
+    throw new Error(`Failed to fetch assets/scenes/index.json: ${indexResponse.status}`);
+  }
+  let allFiles = await indexResponse.json();
   let requests = allFiles.map((url) => fetch("./assets/scenes/" + url));
   let responses = await Promise.all(requests);
   for (let i2 = 0; i2 < responses.length; i2++) {
@@ -31496,7 +34797,8 @@ async function downloadExampleScenesFolder(mujoco2) {
       }
       working += "/";
     }
-    if (allFiles[i2].endsWith(".png") || allFiles[i2].endsWith(".stl") || allFiles[i2].endsWith(".skn")) {
+    let lowerName = allFiles[i2].toLowerCase();
+    if (lowerName.endsWith(".png") || lowerName.endsWith(".stl") || lowerName.endsWith(".skn")) {
       mujoco2.FS.writeFile("/working/" + allFiles[i2], new Uint8Array(await responses[i2].arrayBuffer()));
     } else {
       mujoco2.FS.writeFile("/working/" + allFiles[i2], await responses[i2].text());
@@ -31546,7 +34848,7 @@ function standardNormal() {
 var loadMujoco = /* @__PURE__ */ (() => {
   return (async function(moduleArg = {}) {
     var moduleRtn;
-    var Module = moduleArg;
+    var Module2 = moduleArg;
     var ENVIRONMENT_IS_WEB = typeof window == "object";
     var ENVIRONMENT_IS_WORKER = typeof WorkerGlobalScope != "undefined";
     var ENVIRONMENT_IS_NODE = typeof process == "object" && process.versions?.node && process.type != "renderer";
@@ -31563,8 +34865,8 @@ var loadMujoco = /* @__PURE__ */ (() => {
     var _scriptName = import.meta.url;
     var scriptDirectory = "";
     function locateFile(path) {
-      if (Module["locateFile"]) {
-        return Module["locateFile"](path, scriptDirectory);
+      if (Module2["locateFile"]) {
+        return Module2["locateFile"](path, scriptDirectory);
       }
       return scriptDirectory + path;
     }
@@ -31724,8 +35026,8 @@ var loadMujoco = /* @__PURE__ */ (() => {
       if (h8[0] !== 115 || h8[1] !== 99) throw "Runtime error: expected the system to be little-endian! (Run with -sSUPPORT_BIG_ENDIAN to bypass)";
     })();
     function consumedModuleProp(prop) {
-      if (!Object.getOwnPropertyDescriptor(Module, prop)) {
-        Object.defineProperty(Module, prop, {
+      if (!Object.getOwnPropertyDescriptor(Module2, prop)) {
+        Object.defineProperty(Module2, prop, {
           configurable: true,
           set() {
             abort(`Attempt to set \`Module.${prop}\` after it has already been processed.  This can happen, for example, when code is injected via '--post-js' rather than '--pre-js'`);
@@ -31737,7 +35039,7 @@ var loadMujoco = /* @__PURE__ */ (() => {
       return () => assert(false, `call to '${name}' via reference taken before Wasm module initialization`);
     }
     function ignoredModuleProp(prop) {
-      if (Object.getOwnPropertyDescriptor(Module, prop)) {
+      if (Object.getOwnPropertyDescriptor(Module2, prop)) {
         abort(`\`Module.${prop}\` was supplied but \`${prop}\` not included in INCOMING_MODULE_JS_API`);
       }
     }
@@ -31779,8 +35081,8 @@ var loadMujoco = /* @__PURE__ */ (() => {
       unexportedRuntimeSymbol(sym);
     }
     function unexportedRuntimeSymbol(sym) {
-      if (!Object.getOwnPropertyDescriptor(Module, sym)) {
-        Object.defineProperty(Module, sym, {
+      if (!Object.getOwnPropertyDescriptor(Module2, sym)) {
+        Object.defineProperty(Module2, sym, {
           configurable: true,
           get() {
             var msg = `'${sym}' was not exported. add it to EXPORTED_RUNTIME_METHODS (see the Emscripten FAQ)`;
@@ -31815,10 +35117,10 @@ var loadMujoco = /* @__PURE__ */ (() => {
       "JS engine does not provide full typed array support"
     );
     function preRun() {
-      if (Module["preRun"]) {
-        if (typeof Module["preRun"] == "function") Module["preRun"] = [Module["preRun"]];
-        while (Module["preRun"].length) {
-          addOnPreRun(Module["preRun"].shift());
+      if (Module2["preRun"]) {
+        if (typeof Module2["preRun"] == "function") Module2["preRun"] = [Module2["preRun"]];
+        while (Module2["preRun"].length) {
+          addOnPreRun(Module2["preRun"].shift());
         }
       }
       consumedModuleProp("preRun");
@@ -31828,17 +35130,17 @@ var loadMujoco = /* @__PURE__ */ (() => {
       assert(!runtimeInitialized);
       runtimeInitialized = true;
       checkStackCookie();
-      if (!Module["noFSInit"] && !FS.initialized) FS.init();
+      if (!Module2["noFSInit"] && !FS.initialized) FS.init();
       TTY.init();
       wasmExports["__wasm_call_ctors"]();
       FS.ignorePermissions = false;
     }
     function postRun() {
       checkStackCookie();
-      if (Module["postRun"]) {
-        if (typeof Module["postRun"] == "function") Module["postRun"] = [Module["postRun"]];
-        while (Module["postRun"].length) {
-          addOnPostRun(Module["postRun"].shift());
+      if (Module2["postRun"]) {
+        if (typeof Module2["postRun"] == "function") Module2["postRun"] = [Module2["postRun"]];
+        while (Module2["postRun"].length) {
+          addOnPostRun(Module2["postRun"].shift());
         }
       }
       consumedModuleProp("postRun");
@@ -31850,7 +35152,7 @@ var loadMujoco = /* @__PURE__ */ (() => {
     var runDependencyWatcher = null;
     function addRunDependency(id) {
       runDependencies++;
-      Module["monitorRunDependencies"]?.(runDependencies);
+      Module2["monitorRunDependencies"]?.(runDependencies);
       if (id) {
         assert(!runDependencyTracking[id]);
         runDependencyTracking[id] = 1;
@@ -31880,7 +35182,7 @@ var loadMujoco = /* @__PURE__ */ (() => {
     }
     function removeRunDependency(id) {
       runDependencies--;
-      Module["monitorRunDependencies"]?.(runDependencies);
+      Module2["monitorRunDependencies"]?.(runDependencies);
       if (id) {
         assert(runDependencyTracking[id]);
         delete runDependencyTracking[id];
@@ -31900,7 +35202,7 @@ var loadMujoco = /* @__PURE__ */ (() => {
       }
     }
     function abort(what) {
-      Module["onAbort"]?.(what);
+      Module2["onAbort"]?.(what);
       what = "Aborted(" + what + ")";
       err(what);
       ABORT = true;
@@ -31971,17 +35273,17 @@ var loadMujoco = /* @__PURE__ */ (() => {
         return wasmExports;
       }
       addRunDependency("wasm-instantiate");
-      var trueModule = Module;
+      var trueModule = Module2;
       function receiveInstantiationResult(result2) {
-        assert(Module === trueModule, "the Module object should not be replaced during async compilation - perhaps the order of HTML elements is wrong?");
+        assert(Module2 === trueModule, "the Module object should not be replaced during async compilation - perhaps the order of HTML elements is wrong?");
         trueModule = null;
         return receiveInstance(result2["instance"]);
       }
       var info = getWasmImports();
-      if (Module["instantiateWasm"]) {
+      if (Module2["instantiateWasm"]) {
         return new Promise((resolve, reject) => {
           try {
-            Module["instantiateWasm"](info, (mod, inst) => {
+            Module2["instantiateWasm"](info, (mod, inst) => {
               resolve(receiveInstance(mod, inst));
             });
           } catch (e2) {
@@ -32004,7 +35306,7 @@ var loadMujoco = /* @__PURE__ */ (() => {
     }
     var callRuntimeCallbacks = (callbacks) => {
       while (callbacks.length > 0) {
-        callbacks.shift()(Module);
+        callbacks.shift()(Module2);
       }
     };
     var onPostRuns = [];
@@ -34007,7 +37309,7 @@ var loadMujoco = /* @__PURE__ */ (() => {
         if (created) {
           FS.chmod(node, mode & 511);
         }
-        if (Module["logReadFiles"] && !(flags & 1)) {
+        if (Module2["logReadFiles"] && !(flags & 1)) {
           if (!(path in FS.readFiles)) {
             FS.readFiles[path] = 1;
           }
@@ -34274,9 +37576,9 @@ var loadMujoco = /* @__PURE__ */ (() => {
       init(input, output, error2) {
         assert(!FS.initialized, "FS.init was previously called. If you want to initialize later with custom parameters, remove any earlier calls (note that one is automatically added to the generated code)");
         FS.initialized = true;
-        input ??= Module["stdin"];
-        output ??= Module["stdout"];
-        error2 ??= Module["stderr"];
+        input ??= Module2["stdin"];
+        output ??= Module2["stdout"];
+        error2 ??= Module2["stderr"];
         FS.createStandardStreams(input, output, error2);
       },
       quit() {
@@ -35298,18 +38600,18 @@ Originally allocated`);
       }
     };
     var exposePublicSymbol = (name, value, numArguments) => {
-      if (Module.hasOwnProperty(name)) {
-        if (void 0 === numArguments || void 0 !== Module[name].overloadTable && void 0 !== Module[name].overloadTable[numArguments]) {
+      if (Module2.hasOwnProperty(name)) {
+        if (void 0 === numArguments || void 0 !== Module2[name].overloadTable && void 0 !== Module2[name].overloadTable[numArguments]) {
           throwBindingError(`Cannot register public name '${name}' twice`);
         }
-        ensureOverloadTable(Module, name, name);
-        if (Module[name].overloadTable.hasOwnProperty(numArguments)) {
+        ensureOverloadTable(Module2, name, name);
+        if (Module2[name].overloadTable.hasOwnProperty(numArguments)) {
           throwBindingError(`Cannot register multiple overloads of a function with the same number of arguments (${numArguments})!`);
         }
-        Module[name].overloadTable[numArguments] = value;
+        Module2[name].overloadTable[numArguments] = value;
       } else {
-        Module[name] = value;
-        Module[name].argCount = numArguments;
+        Module2[name] = value;
+        Module2[name].argCount = numArguments;
       }
     };
     var char_0 = 48;
@@ -35487,14 +38789,14 @@ Originally allocated`);
       }
     }
     var replacePublicSymbol = (name, value, numArguments) => {
-      if (!Module.hasOwnProperty(name)) {
+      if (!Module2.hasOwnProperty(name)) {
         throwInternalError("Replacing nonexistent public symbol");
       }
-      if (void 0 !== Module[name].overloadTable && void 0 !== numArguments) {
-        Module[name].overloadTable[numArguments] = value;
+      if (void 0 !== Module2[name].overloadTable && void 0 !== numArguments) {
+        Module2[name].overloadTable[numArguments] = value;
       } else {
-        Module[name] = value;
-        Module[name].argCount = numArguments;
+        Module2[name] = value;
+        Module2[name].argCount = numArguments;
       }
     };
     var wasmTableMirror = [];
@@ -35979,7 +39281,7 @@ ${invokerFnBody}`;
       name = AsciiToString(name);
       whenDependentTypesAreResolved([], [type], (type2) => {
         type2 = type2[0];
-        Module[name] = type2["fromWireType"](value);
+        Module2[name] = type2["fromWireType"](value);
         return [];
       });
     };
@@ -36742,7 +40044,7 @@ ${invokerFnBody}`;
     var _proc_exit = (code) => {
       EXITSTATUS = code;
       if (!keepRuntimeAlive()) {
-        Module["onExit"]?.(code);
+        Module2["onExit"]?.(code);
         ABORT = true;
       }
       quit_(code, new ExitStatus(code));
@@ -36840,7 +40142,7 @@ ${invokerFnBody}`;
       }
     }
     var getCFunc = (ident) => {
-      var func = Module["_" + ident];
+      var func = Module2["_" + ident];
       assert(func, "Cannot call unknown function " + ident + ", make sure it is exported");
       return func;
     };
@@ -36945,40 +40247,40 @@ ${invokerFnBody}`;
     init_RegisteredPointer();
     assert(emval_handles.length === 5 * 2);
     {
-      if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
-      if (Module["preloadPlugins"]) preloadPlugins = Module["preloadPlugins"];
-      if (Module["print"]) out = Module["print"];
-      if (Module["printErr"]) err = Module["printErr"];
-      if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
+      if (Module2["noExitRuntime"]) noExitRuntime = Module2["noExitRuntime"];
+      if (Module2["preloadPlugins"]) preloadPlugins = Module2["preloadPlugins"];
+      if (Module2["print"]) out = Module2["print"];
+      if (Module2["printErr"]) err = Module2["printErr"];
+      if (Module2["wasmBinary"]) wasmBinary = Module2["wasmBinary"];
       checkIncomingModuleAPI();
-      if (Module["arguments"]) arguments_ = Module["arguments"];
-      if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-      assert(typeof Module["memoryInitializerPrefixURL"] == "undefined", "Module.memoryInitializerPrefixURL option was removed, use Module.locateFile instead");
-      assert(typeof Module["pthreadMainPrefixURL"] == "undefined", "Module.pthreadMainPrefixURL option was removed, use Module.locateFile instead");
-      assert(typeof Module["cdInitializerPrefixURL"] == "undefined", "Module.cdInitializerPrefixURL option was removed, use Module.locateFile instead");
-      assert(typeof Module["filePackagePrefixURL"] == "undefined", "Module.filePackagePrefixURL option was removed, use Module.locateFile instead");
-      assert(typeof Module["read"] == "undefined", "Module.read option was removed");
-      assert(typeof Module["readAsync"] == "undefined", "Module.readAsync option was removed (modify readAsync in JS)");
-      assert(typeof Module["readBinary"] == "undefined", "Module.readBinary option was removed (modify readBinary in JS)");
-      assert(typeof Module["setWindowTitle"] == "undefined", "Module.setWindowTitle option was removed (modify emscripten_set_window_title in JS)");
-      assert(typeof Module["TOTAL_MEMORY"] == "undefined", "Module.TOTAL_MEMORY has been renamed Module.INITIAL_MEMORY");
-      assert(typeof Module["ENVIRONMENT"] == "undefined", "Module.ENVIRONMENT has been deprecated. To force the environment, use the ENVIRONMENT compile-time option (for example, -sENVIRONMENT=web or -sENVIRONMENT=node)");
-      assert(typeof Module["STACK_SIZE"] == "undefined", "STACK_SIZE can no longer be set at runtime.  Use -sSTACK_SIZE at link time");
-      assert(typeof Module["wasmMemory"] == "undefined", "Use of `wasmMemory` detected.  Use -sIMPORTED_MEMORY to define wasmMemory externally");
-      assert(typeof Module["INITIAL_MEMORY"] == "undefined", "Detected runtime INITIAL_MEMORY setting.  Use -sIMPORTED_MEMORY to define wasmMemory dynamically");
+      if (Module2["arguments"]) arguments_ = Module2["arguments"];
+      if (Module2["thisProgram"]) thisProgram = Module2["thisProgram"];
+      assert(typeof Module2["memoryInitializerPrefixURL"] == "undefined", "Module.memoryInitializerPrefixURL option was removed, use Module.locateFile instead");
+      assert(typeof Module2["pthreadMainPrefixURL"] == "undefined", "Module.pthreadMainPrefixURL option was removed, use Module.locateFile instead");
+      assert(typeof Module2["cdInitializerPrefixURL"] == "undefined", "Module.cdInitializerPrefixURL option was removed, use Module.locateFile instead");
+      assert(typeof Module2["filePackagePrefixURL"] == "undefined", "Module.filePackagePrefixURL option was removed, use Module.locateFile instead");
+      assert(typeof Module2["read"] == "undefined", "Module.read option was removed");
+      assert(typeof Module2["readAsync"] == "undefined", "Module.readAsync option was removed (modify readAsync in JS)");
+      assert(typeof Module2["readBinary"] == "undefined", "Module.readBinary option was removed (modify readBinary in JS)");
+      assert(typeof Module2["setWindowTitle"] == "undefined", "Module.setWindowTitle option was removed (modify emscripten_set_window_title in JS)");
+      assert(typeof Module2["TOTAL_MEMORY"] == "undefined", "Module.TOTAL_MEMORY has been renamed Module.INITIAL_MEMORY");
+      assert(typeof Module2["ENVIRONMENT"] == "undefined", "Module.ENVIRONMENT has been deprecated. To force the environment, use the ENVIRONMENT compile-time option (for example, -sENVIRONMENT=web or -sENVIRONMENT=node)");
+      assert(typeof Module2["STACK_SIZE"] == "undefined", "STACK_SIZE can no longer be set at runtime.  Use -sSTACK_SIZE at link time");
+      assert(typeof Module2["wasmMemory"] == "undefined", "Use of `wasmMemory` detected.  Use -sIMPORTED_MEMORY to define wasmMemory externally");
+      assert(typeof Module2["INITIAL_MEMORY"] == "undefined", "Detected runtime INITIAL_MEMORY setting.  Use -sIMPORTED_MEMORY to define wasmMemory dynamically");
     }
-    Module["addRunDependency"] = addRunDependency;
-    Module["removeRunDependency"] = removeRunDependency;
-    Module["ccall"] = ccall;
-    Module["cwrap"] = cwrap;
-    Module["FS_createPreloadedFile"] = FS_createPreloadedFile;
-    Module["FS_unlink"] = FS_unlink;
-    Module["FS_createPath"] = FS_createPath;
-    Module["FS_createDevice"] = FS_createDevice;
-    Module["FS"] = FS;
-    Module["FS_createDataFile"] = FS_createDataFile;
-    Module["FS_createLazyFile"] = FS_createLazyFile;
-    Module["MEMFS"] = MEMFS;
+    Module2["addRunDependency"] = addRunDependency;
+    Module2["removeRunDependency"] = removeRunDependency;
+    Module2["ccall"] = ccall;
+    Module2["cwrap"] = cwrap;
+    Module2["FS_createPreloadedFile"] = FS_createPreloadedFile;
+    Module2["FS_unlink"] = FS_unlink;
+    Module2["FS_createPath"] = FS_createPath;
+    Module2["FS_createDevice"] = FS_createDevice;
+    Module2["FS"] = FS;
+    Module2["FS_createDataFile"] = FS_createDataFile;
+    Module2["FS_createLazyFile"] = FS_createLazyFile;
+    Module2["MEMFS"] = MEMFS;
     var missingLibrarySymbols = [
       "writeI53ToI64",
       "writeI53ToI64Clamped",
@@ -37469,9 +40771,9 @@ ${invokerFnBody}`;
       "emval_addMethodCaller"
     ];
     unexportedSymbols.forEach(unexportedRuntimeSymbol);
-    Module["incrementExceptionRefcount"] = incrementExceptionRefcount;
-    Module["decrementExceptionRefcount"] = decrementExceptionRefcount;
-    Module["getExceptionMessage"] = getExceptionMessage;
+    Module2["incrementExceptionRefcount"] = incrementExceptionRefcount;
+    Module2["decrementExceptionRefcount"] = decrementExceptionRefcount;
+    Module2["getExceptionMessage"] = getExceptionMessage;
     function checkIncomingModuleAPI() {
       ignoredModuleProp("fetchSettings");
     }
@@ -38394,19 +41696,19 @@ ${invokerFnBody}`;
       function doRun() {
         assert(!calledRun);
         calledRun = true;
-        Module["calledRun"] = true;
+        Module2["calledRun"] = true;
         if (ABORT) return;
         initRuntime();
-        readyPromiseResolve?.(Module);
-        Module["onRuntimeInitialized"]?.();
+        readyPromiseResolve?.(Module2);
+        Module2["onRuntimeInitialized"]?.();
         consumedModuleProp("onRuntimeInitialized");
-        assert(!Module["_main"], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
+        assert(!Module2["_main"], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
         postRun();
       }
-      if (Module["setStatus"]) {
-        Module["setStatus"]("Running...");
+      if (Module2["setStatus"]) {
+        Module2["setStatus"]("Running...");
         setTimeout(() => {
-          setTimeout(() => Module["setStatus"](""), 1);
+          setTimeout(() => Module2["setStatus"](""), 1);
           doRun();
         }, 1);
       } else {
@@ -38442,10 +41744,10 @@ ${invokerFnBody}`;
       }
     }
     function preInit() {
-      if (Module["preInit"]) {
-        if (typeof Module["preInit"] == "function") Module["preInit"] = [Module["preInit"]];
-        while (Module["preInit"].length > 0) {
-          Module["preInit"].shift()();
+      if (Module2["preInit"]) {
+        if (typeof Module2["preInit"] == "function") Module2["preInit"] = [Module2["preInit"]];
+        while (Module2["preInit"].length > 0) {
+          Module2["preInit"].shift()();
         }
       }
       consumedModuleProp("preInit");
@@ -38453,14 +41755,14 @@ ${invokerFnBody}`;
     preInit();
     run();
     if (runtimeInitialized) {
-      moduleRtn = Module;
+      moduleRtn = Module2;
     } else {
       moduleRtn = new Promise((resolve, reject) => {
         readyPromiseResolve = resolve;
         readyPromiseReject = reject;
       });
     }
-    for (const prop of Object.keys(Module)) {
+    for (const prop of Object.keys(Module2)) {
       if (!(prop in moduleArg)) {
         Object.defineProperty(moduleArg, prop, {
           configurable: true,
@@ -38477,7 +41779,12 @@ var mujoco_wasm_default = loadMujoco;
 
 // src/main.js
 var mujoco = await mujoco_wasm_default();
-var initialScene = "DARU/meshes/world.xml";
+var MJDSBL_CONTACT = 1 << 4;
+var MJDSBL_ACTUATION = 1 << 11;
+var RIGHT_TARGET_POSITION_SPEED = 0.2;
+var RIGHT_TARGET_ROTATION_SPEED = Math.PI * 0.75;
+var RIGHT_TARGET_INPUT_KEYS = /* @__PURE__ */ new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF"]);
+var initialScene = DARU_TORQUE_SCENE;
 mujoco.FS.mkdir("/working");
 mujoco.FS.mount(mujoco.MEMFS, { root: "." }, "/working");
 var MuJoCoDemo = class {
@@ -38485,14 +41792,44 @@ var MuJoCoDemo = class {
     this.mujoco = mujoco;
     this.model = null;
     this.data = null;
-    this.params = { scene: initialScene, paused: false, help: false, ctrlnoiserate: 0, ctrlnoisestd: 0, keyframeNumber: 0 };
+    this.controller = null;
+    this.controllerLoading = false;
+    this.controllerInitGeneration = 0;
+    this.controllerInitStartedAt = 0;
+    this.debugState = { status: "boot", rbdl: "" };
+    this.activeTargetKeys = /* @__PURE__ */ new Set();
+    this.rightTargetRotationMode = false;
+    this.lastRenderTimeMs = null;
+    this.params = {
+      scene: initialScene,
+      paused: false,
+      help: false,
+      collisionsDisabled: true,
+      controlsDisabled: false,
+      ctrlnoiserate: 0,
+      ctrlnoisestd: 0,
+      keyframeNumber: 0
+    };
     this.mujoco_time = 0;
     this.bodies = {}, this.lights = {};
     this.tmpVec = new Vector3();
     this.tmpQuat = new Quaternion();
     this.updateGUICallbacks = [];
+    this.textDecoder = new TextDecoder("utf-8");
     this.container = document.createElement("div");
     document.body.appendChild(this.container);
+    this.container.style.position = "relative";
+    this.debugOverlay = document.createElement("div");
+    this.debugOverlay.style.position = "absolute";
+    this.debugOverlay.style.left = "10px";
+    this.debugOverlay.style.bottom = "10px";
+    this.debugOverlay.style.padding = "8px 10px";
+    this.debugOverlay.style.background = "rgba(0, 0, 0, 0.55)";
+    this.debugOverlay.style.color = "#fff";
+    this.debugOverlay.style.font = "12px monospace";
+    this.debugOverlay.style.whiteSpace = "pre";
+    this.debugOverlay.style.zIndex = "1000";
+    this.debugOverlay.style.pointerEvents = "none";
     this.scene = new Scene();
     this.scene.name = "scene";
     this.camera = new PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1e-3, 100);
@@ -38530,6 +41867,7 @@ var MuJoCoDemo = class {
     this.renderer.useLegacyLights = true;
     this.renderer.setAnimationLoop(this.render.bind(this));
     this.container.appendChild(this.renderer.domElement);
+    this.container.appendChild(this.debugOverlay);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.target.set(0, 0.7, 0);
     this.controls.panSpeed = 2;
@@ -38538,14 +41876,283 @@ var MuJoCoDemo = class {
     this.controls.dampingFactor = 0.1;
     this.controls.screenSpacePanning = true;
     this.controls.update();
+    this.handleTargetKeyDown = this.onTargetKeyDown.bind(this);
+    this.handleTargetKeyUp = this.onTargetKeyUp.bind(this);
+    this.handleTargetKeyClear = this.clearTargetKeys.bind(this);
     window.addEventListener("resize", this.onWindowResize.bind(this));
+    window.addEventListener("keydown", this.handleTargetKeyDown);
+    window.addEventListener("keyup", this.handleTargetKeyUp);
+    window.addEventListener("blur", this.handleTargetKeyClear);
     this.dragStateManager = new DragStateManager(this.scene, this.renderer, this.camera, this.container.parentElement, this.controls);
   }
   async init() {
     await downloadExampleScenesFolder(mujoco);
     [this.model, this.data, this.bodies, this.lights] = await loadSceneFromURL(mujoco, initialScene, this);
+    this.mujoco.mj_forward(this.model, this.data);
+    this.configureSceneController();
+    window.mujocoDemo = this;
     this.gui = new g();
     setupGUI(this);
+  }
+  sceneUsesPositionTargets() {
+    return typeof this.params.scene === "string" && (this.params.scene.endsWith("_position.xml") || this.params.scene.endsWith("_hands_pos.xml"));
+  }
+  getActuatorName(actuatorId) {
+    return this.textDecoder.decode(
+      this.model.names.subarray(this.model.name_actuatoradr[actuatorId])
+    ).split("\0")[0];
+  }
+  syncPassiveSceneControls() {
+    if (!this.model || !this.data || !this.sceneUsesPositionTargets()) {
+      return;
+    }
+    for (let actuatorId = 0; actuatorId < this.model.nu; actuatorId += 1) {
+      const name = this.getActuatorName(actuatorId);
+      if (!name.endsWith("_pos")) {
+        continue;
+      }
+      const jointId = this.model.actuator_trnid[2 * actuatorId];
+      if (jointId < 0 || jointId >= this.model.njnt) {
+        continue;
+      }
+      const qposId = this.model.jnt_qposadr[jointId];
+      let target = this.data.qpos[qposId];
+      if (this.model.actuator_ctrllimited[actuatorId]) {
+        target = Math.min(
+          this.model.actuator_ctrlrange[2 * actuatorId + 1],
+          Math.max(this.model.actuator_ctrlrange[2 * actuatorId + 0], target)
+        );
+      }
+      this.data.ctrl[actuatorId] = target;
+      this.params[name] = target;
+    }
+  }
+  applyControlDisableState() {
+    if (!this.model || !this.data) {
+      return;
+    }
+    if (this.params.controlsDisabled) {
+      this.model.opt.disableflags |= MJDSBL_ACTUATION;
+      this.data.ctrl.fill(0);
+      this.data.qfrc_applied.fill(0);
+      this.debugState.status = this.controller ? "controller:bypassed" : "controller:off";
+    } else {
+      this.model.opt.disableflags &= ~MJDSBL_ACTUATION;
+      if (!this.controller) {
+        this.syncPassiveSceneControls();
+      }
+      if (this.params.scene === DARU_TORQUE_SCENE) {
+        this.debugState.status = this.controller ? "controller:ready" : "controller:init";
+      } else {
+        this.debugState.status = "controller:disabled";
+      }
+    }
+  }
+  applyCollisionDisableState() {
+    if (!this.model || !this.data) {
+      return;
+    }
+    if (this.params.collisionsDisabled) {
+      this.model.opt.disableflags |= MJDSBL_CONTACT;
+    } else {
+      this.model.opt.disableflags &= ~MJDSBL_CONTACT;
+    }
+    this.mujoco.mj_forward(this.model, this.data);
+  }
+  async configureSceneController() {
+    const generation = ++this.controllerInitGeneration;
+    this.clearTargetKeys();
+    if (this.controller) {
+      this.controller.dispose();
+      this.controller = null;
+    }
+    this.data.qfrc_applied.fill(0);
+    if (this.params.scene !== DARU_TORQUE_SCENE) {
+      this.controllerLoading = false;
+      this.debugState.status = "controller:disabled";
+      this.debugState.rbdl = "";
+      this.syncPassiveSceneControls();
+      this.applyControlDisableState();
+      this.applyCollisionDisableState();
+      return;
+    }
+    this.data.ctrl.fill(0);
+    this.controllerLoading = true;
+    this.controllerInitStartedAt = performance.now();
+    this.debugState.status = "controller:init";
+    this.debugState.rbdl = "starting";
+    Promise.race([
+      DaruV4TorqueController.create(this.mujoco, this.model, this.data, (message) => {
+        if (generation !== this.controllerInitGeneration) {
+          return;
+        }
+        this.debugState.rbdl = message;
+      }),
+      new Promise((_, reject) => {
+        window.setTimeout(() => reject(new Error("controller init timeout")), 8e3);
+      })
+    ]).then((controller) => {
+      if (generation !== this.controllerInitGeneration) {
+        controller.dispose?.();
+        return;
+      }
+      this.controller = controller;
+      this.controllerLoading = false;
+      this.debugState.status = "controller:ready";
+      this.debugState.rbdl = "ready";
+      this.applyControlDisableState();
+      this.applyCollisionDisableState();
+      console.info("DARU torque controller initialized");
+    }).catch((error2) => {
+      if (generation !== this.controllerInitGeneration) {
+        return;
+      }
+      console.error("Failed to initialize DARU torque controller:", error2);
+      this.controller = null;
+      this.controllerLoading = false;
+      this.debugState.status = `controller:error ${error2.message}`;
+    });
+  }
+  updateDebugOverlay() {
+    const controllerMode = this.controller ? this.controller.mode : "none";
+    const loadingSeconds = this.controllerLoading ? ((performance.now() - this.controllerInitStartedAt) / 1e3).toFixed(1) : "0.0";
+    const ctrl0 = this.data && this.data.ctrl.length > 0 ? this.data.ctrl[0].toFixed(3) : "n/a";
+    const ctrl4 = this.data && this.data.ctrl.length > 4 ? this.data.ctrl[4].toFixed(3) : "n/a";
+    const ctrl11 = this.data && this.data.ctrl.length > 11 ? this.data.ctrl[11].toFixed(3) : "n/a";
+    const tau4 = this.controller ? this.controller.armRefTau[4].toFixed(3) : "n/a";
+    const tau11 = this.controller ? this.controller.armRefTau[11].toFixed(3) : "n/a";
+    const q4 = this.controller ? this.controller.armPos[4].toFixed(3) : "n/a";
+    const q11 = this.controller ? this.controller.armPos[11].toFixed(3) : "n/a";
+    const rightTargetX = this.controller ? this.controller.rightPosTarget[0].toFixed(3) : "n/a";
+    const rightTargetY = this.controller ? this.controller.rightPosTarget[1].toFixed(3) : "n/a";
+    const rightTargetZ = this.controller ? this.controller.rightPosTarget[2].toFixed(3) : "n/a";
+    const rightTargetQuatW = this.controller ? this.controller.rightQuatTargetWxyz[0].toFixed(3) : "n/a";
+    const rightTargetQuatX = this.controller ? this.controller.rightQuatTargetWxyz[1].toFixed(3) : "n/a";
+    const rightTargetQuatY = this.controller ? this.controller.rightQuatTargetWxyz[2].toFixed(3) : "n/a";
+    const rightTargetQuatZ = this.controller ? this.controller.rightQuatTargetWxyz[3].toFixed(3) : "n/a";
+    const inputMode = this.rightTargetRotationMode ? "rot" : "pos";
+    this.debugOverlay.textContent = `scene: ${this.params.scene}
+loading: ${this.controllerLoading}
+loading_s: ${loadingSeconds}
+controller: ${this.controller ? "yes" : "no"}
+collisions_disabled: ${this.params.collisionsDisabled}
+controls_disabled: ${this.params.controlsDisabled}
+mode: ${controllerMode}
+status: ${this.debugState.status}
+rbdl: ${this.debugState.rbdl}
+ctrl0/4/11: ${ctrl0} ${ctrl4} ${ctrl11}
+tau4/11: ${tau4} ${tau11}
+q4/11: ${q4} ${q11}
+rh_input: ${inputMode} (toggle:v, pos:wasd/rf, rot:wasd/rf)
+rh_xyz: ${rightTargetX} ${rightTargetY} ${rightTargetZ}
+rh_quat: ${rightTargetQuatW} ${rightTargetQuatX} ${rightTargetQuatY} ${rightTargetQuatZ}`;
+  }
+  shouldIgnoreTargetKeyEvent(event) {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return true;
+    }
+    const activeElement = document.activeElement;
+    if (!activeElement) {
+      return false;
+    }
+    const tagName = activeElement.tagName;
+    if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+      return true;
+    }
+    return activeElement.isContentEditable;
+  }
+  onTargetKeyDown(event) {
+    if (this.shouldIgnoreTargetKeyEvent(event)) {
+      return;
+    }
+    if (event.code === "KeyV") {
+      if (!event.repeat) {
+        this.rightTargetRotationMode = !this.rightTargetRotationMode;
+      }
+      event.preventDefault();
+      return;
+    }
+    if (!RIGHT_TARGET_INPUT_KEYS.has(event.code)) {
+      return;
+    }
+    this.activeTargetKeys.add(event.code);
+    event.preventDefault();
+  }
+  onTargetKeyUp(event) {
+    if (event.code === "KeyV") {
+      if (!this.shouldIgnoreTargetKeyEvent(event)) {
+        event.preventDefault();
+      }
+      return;
+    }
+    if (!RIGHT_TARGET_INPUT_KEYS.has(event.code)) {
+      return;
+    }
+    this.activeTargetKeys.delete(event.code);
+    if (!this.shouldIgnoreTargetKeyEvent(event)) {
+      event.preventDefault();
+    }
+  }
+  clearTargetKeys() {
+    this.activeTargetKeys.clear();
+    this.rightTargetRotationMode = false;
+  }
+  applyRightTargetKeyboardInput(frameDt) {
+    if (!this.controller || this.params.scene !== DARU_TORQUE_SCENE) {
+      return;
+    }
+    if (this.controller.mode !== 2 && this.controller.mode !== 3) {
+      return;
+    }
+    const clampedDt = Math.min(Math.max(frameDt, 0), 0.1);
+    const positionStep = RIGHT_TARGET_POSITION_SPEED * clampedDt;
+    const rotationStep = RIGHT_TARGET_ROTATION_SPEED * clampedDt;
+    const rotationMode = this.rightTargetRotationMode;
+    if (rotationMode) {
+      if (this.activeTargetKeys.has("KeyW")) {
+        this.controller.rotateRightTargetLocal(0, 1, 0, rotationStep);
+      }
+      if (this.activeTargetKeys.has("KeyS")) {
+        this.controller.rotateRightTargetLocal(0, 1, 0, -rotationStep);
+      }
+      if (this.activeTargetKeys.has("KeyA")) {
+        this.controller.rotateRightTargetLocal(0, 0, 1, rotationStep);
+      }
+      if (this.activeTargetKeys.has("KeyD")) {
+        this.controller.rotateRightTargetLocal(0, 0, 1, -rotationStep);
+      }
+      if (this.activeTargetKeys.has("KeyR")) {
+        this.controller.rotateRightTargetLocal(1, 0, 0, rotationStep);
+      }
+      if (this.activeTargetKeys.has("KeyF")) {
+        this.controller.rotateRightTargetLocal(1, 0, 0, -rotationStep);
+      }
+      return;
+    }
+    let deltaX = 0;
+    let deltaY = 0;
+    let deltaZ = 0;
+    if (this.activeTargetKeys.has("KeyW")) {
+      deltaX += positionStep;
+    }
+    if (this.activeTargetKeys.has("KeyS")) {
+      deltaX -= positionStep;
+    }
+    if (this.activeTargetKeys.has("KeyA")) {
+      deltaY += positionStep;
+    }
+    if (this.activeTargetKeys.has("KeyD")) {
+      deltaY -= positionStep;
+    }
+    if (this.activeTargetKeys.has("KeyR")) {
+      deltaZ += positionStep;
+    }
+    if (this.activeTargetKeys.has("KeyF")) {
+      deltaZ -= positionStep;
+    }
+    if (deltaX !== 0 || deltaY !== 0 || deltaZ !== 0) {
+      this.controller.nudgeRightTargetPosition(deltaX, deltaY, deltaZ);
+    }
   }
   onWindowResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -38555,24 +42162,26 @@ var MuJoCoDemo = class {
   render(timeMS) {
     if (!this.model || !this.data) return;
     this.controls.update();
+    const frameDt = this.lastRenderTimeMs === null ? this.model.opt.timestep : (timeMS - this.lastRenderTimeMs) / 1e3;
+    this.lastRenderTimeMs = timeMS;
+    this.applyRightTargetKeyboardInput(frameDt);
     if (!this.params["paused"]) {
       let timestep = this.model.opt.timestep;
       if (timeMS - this.mujoco_time > 35) {
         this.mujoco_time = timeMS;
       }
       while (this.mujoco_time < timeMS) {
-        if (this.model.nu > 0) {
-          let phase = 2 * Math.PI * this.data.time * 0.1;
-          let profile01 = 0.5 * (1 - Math.cos(phase));
-          let ctrl = this.data.ctrl;
-          let ctrlRange = this.model.actuator_ctrlrange;
-          for (let i2 = 0; i2 < this.model.nu; i2++) {
-            let min = ctrlRange[2 * i2];
-            let max = ctrlRange[2 * i2 + 1];
-            ctrl[i2] = min + profile01 * (max - min);
+        if (this.params.controlsDisabled) {
+          this.data.ctrl.fill(0);
+          this.data.qfrc_applied.fill(0);
+        } else if (this.controller) {
+          this.controller.step();
+        } else {
+          for (let i2 = 0; i2 < this.data.qfrc_applied.length; i2++) {
+            this.data.qfrc_applied[i2] = 0;
           }
         }
-        if (this.params["ctrlnoisestd"] > 0) {
+        if (!this.params.controlsDisabled && this.params["ctrlnoisestd"] > 0) {
           let rate = Math.exp(-timestep / Math.max(1e-10, this.params["ctrlnoiserate"]));
           let scale = this.params["ctrlnoisestd"] * Math.sqrt(1 - rate * rate);
           let currentCtrl = this.data.ctrl;
@@ -38580,9 +42189,6 @@ var MuJoCoDemo = class {
             currentCtrl[i2] = rate * currentCtrl[i2] + scale * standardNormal();
             this.params["Actuator " + i2] = currentCtrl[i2];
           }
-        }
-        for (let i2 = 0; i2 < this.data.qfrc_applied.length; i2++) {
-          this.data.qfrc_applied[i2] = 0;
         }
         let dragged = this.dragStateManager.physicsObject;
         if (dragged && dragged.bodyID) {
@@ -38643,6 +42249,7 @@ var MuJoCoDemo = class {
       }
     }
     drawTendonsAndFlex(this.mujocoRoot, this.model, this.data);
+    this.updateDebugOverlay();
     this.renderer.render(this.scene, this.camera);
   }
 };

@@ -8,6 +8,15 @@ export async function reloadFunc() {
   [this.model, this.data, this.bodies, this.lights] =
     await loadSceneFromURL(this.mujoco, this.params.scene, this);
   this.mujoco.mj_forward(this.model, this.data);
+  if (this.configureSceneController) {
+    await this.configureSceneController();
+  }
+  if (this.applyControlDisableState) {
+    this.applyControlDisableState();
+  }
+  if (this.applyCollisionDisableState) {
+    this.applyCollisionDisableState();
+  }
   for (let i = 0; i < this.updateGUICallbacks.length; i++) {
     this.updateGUICallbacks[i](this.model, this.data, this.params);
   }
@@ -27,7 +36,9 @@ export function setupGUI(parentContext) {
   // Add scene selection dropdown.
   let reload = reloadFunc.bind(parentContext);
   parentContext.gui.add(parentContext.params, 'scene', {
-    "DARU": "DARU/meshes/world.xml"
+    "DARU New Torque": "DARU_NEW_260323/scene.xml",
+    "DARU New Position": "DARU_NEW_260323/DARU_NEW_260323_position.xml",
+    // "DARU": "DARU/meshes/world.xml"
     // , "Cassie": "agility_cassie/scene.xml",
     // "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
     // "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
@@ -160,6 +171,17 @@ export function setupGUI(parentContext) {
   actionInnerHTML += 'Play / Pause<br>';
   keyInnerHTML += 'Space<br>';
 
+  simulationFolder.add(parentContext.params, 'controlsDisabled').name('Disable All Control').onChange(() => {
+    if (parentContext.applyControlDisableState) {
+      parentContext.applyControlDisableState();
+    }
+  });
+  simulationFolder.add(parentContext.params, 'collisionsDisabled').name('Disable All Collision').onChange(() => {
+    if (parentContext.applyCollisionDisableState) {
+      parentContext.applyCollisionDisableState();
+    }
+  });
+
   // Add reload model button.
   // Parameters:
   //  Under "Simulation" folder.
@@ -181,6 +203,18 @@ export function setupGUI(parentContext) {
   const resetSimulation = () => {
     parentContext.mujoco.mj_resetData(parentContext.model, parentContext.data);
     parentContext.mujoco.mj_forward(parentContext.model, parentContext.data);
+    if (parentContext.controller && parentContext.controller.reset) {
+      parentContext.controller.reset();
+    }
+    if (parentContext.syncPassiveSceneControls) {
+      parentContext.syncPassiveSceneControls();
+    }
+    if (parentContext.applyControlDisableState) {
+      parentContext.applyControlDisableState();
+    }
+    if (parentContext.applyCollisionDisableState) {
+      parentContext.applyCollisionDisableState();
+    }
   };
   simulationFolder.add({reset: () => { resetSimulation(); }}, 'reset').name('Reset');
   document.addEventListener('keydown', (event) => {
@@ -226,7 +260,7 @@ export function setupGUI(parentContext) {
         parentContext.model.names.subarray(
           parentContext.model.name_actuatoradr[i])).split(nullChar)[0];
 
-      parentContext.params[name] = 0.0;
+      parentContext.params[name] = data.ctrl[i];
       let actuatorGUI = actuatorFolder.add(parentContext.params, name, act_range[2 * i], act_range[2 * i + 1], 0.01).name(name).listen();
       actuatorGUIs.push(actuatorGUI);
       actuatorGUI.onChange((value) => {
@@ -640,80 +674,11 @@ export function drawTendonsAndFlex(mujocoRoot, model, data) {
 /** Downloads the scenes/assets folder to MuJoCo's virtual filesystem
  * @param {mujoco} mujoco */
 export async function downloadExampleScenesFolder(mujoco) {
-  let allFiles = [
-    "22_humanoids.xml",
-    "adhesion.xml",
-    "agility_cassie/assets/achilles-rod.obj",
-    "agility_cassie/assets/cassie-texture.png",
-    "agility_cassie/assets/foot-crank.obj",
-    "agility_cassie/assets/foot.obj",
-    "agility_cassie/assets/heel-spring.obj",
-    "agility_cassie/assets/hip-pitch.obj",
-    "agility_cassie/assets/hip-roll.obj",
-    "agility_cassie/assets/hip-yaw.obj",
-    "agility_cassie/assets/knee-spring.obj",
-    "agility_cassie/assets/knee.obj",
-    "agility_cassie/assets/pelvis.obj",
-    "agility_cassie/assets/plantar-rod.obj",
-    "agility_cassie/assets/shin.obj",
-    "agility_cassie/assets/tarsus.obj",
-    "agility_cassie/cassie.xml",
-    "agility_cassie/scene.xml",
-    "arm26.xml",
-    "balloons.xml",
-    "car.xml",
-    "flex.xml",
-    "hammock.xml",
-    "humanoid.xml",
-    "humanoid_body.xml",
-    "model.xml",
-    "mug.obj",
-    "mug.png",
-    "mug.xml",
-    "scene.xml",
-    "shadow_hand/assets/f_distal_pst.obj",
-    "shadow_hand/assets/f_knuckle.obj",
-    "shadow_hand/assets/f_middle.obj",
-    "shadow_hand/assets/f_proximal.obj",
-    "shadow_hand/assets/forearm_0.obj",
-    "shadow_hand/assets/forearm_1.obj",
-    "shadow_hand/assets/forearm_collision.obj",
-    "shadow_hand/assets/lf_metacarpal.obj",
-    "shadow_hand/assets/mounting_plate.obj",
-    "shadow_hand/assets/palm.obj",
-    "shadow_hand/assets/th_distal_pst.obj",
-    "shadow_hand/assets/th_middle.obj",
-    "shadow_hand/assets/th_proximal.obj",
-    "shadow_hand/assets/wrist.obj",
-    "shadow_hand/left_hand.xml",
-    "shadow_hand/right_hand.xml",
-    "shadow_hand/scene_left.xml",
-    "shadow_hand/scene_right.xml",
-    "simple.xml",
-    "slider_crank.xml",
-    "model_with_tendon.xml",
-    // DARU robot
-    "DARU/meshes/world.xml",
-    "DARU/meshes/DARU_stand.xml",
-    "DARU/meshes/Base.stl",
-    "DARU/meshes/HP_Link.stl",
-    "DARU/meshes/HY_Link.stl",
-    "DARU/meshes/LEP_Link.stl",
-    "DARU/meshes/LEY_Link.stl",
-    "DARU/meshes/LSP_Link.stl",
-    "DARU/meshes/LSR_Link.stl",
-    "DARU/meshes/LSY_Link.stl",
-    "DARU/meshes/LWP_Link.stl",
-    "DARU/meshes/LWR_Link.stl",
-    "DARU/meshes/REP_Link.stl",
-    "DARU/meshes/REY_Link.stl",
-    "DARU/meshes/RSP_Link.stl",
-    "DARU/meshes/RSR_Link.stl",
-    "DARU/meshes/RSY_Link.stl",
-    "DARU/meshes/RWP_Link.stl",
-    "DARU/meshes/RWR_Link.stl",
-    "DARU/meshes/UB_Link.stl",
-  ];
+  let indexResponse = await fetch("./assets/scenes/index.json");
+  if (!indexResponse.ok) {
+    throw new Error(`Failed to fetch assets/scenes/index.json: ${indexResponse.status}`);
+  }
+  let allFiles = await indexResponse.json();
 
   let requests = allFiles.map((url) => fetch("./assets/scenes/" + url));
   let responses = await Promise.all(requests);
@@ -726,7 +691,8 @@ export async function downloadExampleScenesFolder(mujoco) {
           working += "/";
       }
 
-      if (allFiles[i].endsWith(".png") || allFiles[i].endsWith(".stl") || allFiles[i].endsWith(".skn")) {
+      let lowerName = allFiles[i].toLowerCase();
+      if (lowerName.endsWith(".png") || lowerName.endsWith(".stl") || lowerName.endsWith(".skn")) {
           mujoco.FS.writeFile("/working/" + allFiles[i], new Uint8Array(await responses[i].arrayBuffer()));
       } else {
           mujoco.FS.writeFile("/working/" + allFiles[i], await responses[i].text());
@@ -780,4 +746,3 @@ export function toMujocoPos(target) { return target.set(target.x, -target.z, tar
 export function standardNormal() {
   return Math.sqrt(-2.0 * Math.log( Math.random())) *
          Math.cos ( 2.0 * Math.PI * Math.random()); }
-
