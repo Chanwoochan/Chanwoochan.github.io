@@ -206,6 +206,9 @@ export function setupGUI(parentContext) {
     if (parentContext.controller && parentContext.controller.reset) {
       parentContext.controller.reset();
     }
+    if (parentContext.resetHandGripStates) {
+      parentContext.resetHandGripStates();
+    }
     if (parentContext.syncPassiveSceneControls) {
       parentContext.syncPassiveSceneControls();
     }
@@ -221,62 +224,6 @@ export function setupGUI(parentContext) {
     if (event.code === 'Backspace') { resetSimulation(); event.preventDefault(); }});
   actionInnerHTML += 'Reset simulation<br>';
   keyInnerHTML += 'Backspace<br>';
-
-  // Add keyframe slider.
-  let nkeys = parentContext.model.nkey;
-  let keyframeGUI = simulationFolder.add(parentContext.params, "keyframeNumber", 0, nkeys - 1, 1).name('Load Keyframe').listen();
-  keyframeGUI.onChange((value) => {
-    if (value < parentContext.model.nkey) {
-      parentContext.data.qpos.set(parentContext.model.key_qpos.slice(
-        value * parentContext.model.nq, (value + 1) * parentContext.model.nq)); }});
-  parentContext.updateGUICallbacks.push((model, data, params) => {
-    let nkeys = parentContext.model.nkey;
-    console.log("new model loaded. has " + nkeys + " keyframes.");
-    if (nkeys > 0) {
-      keyframeGUI.max(nkeys - 1);
-      keyframeGUI.domElement.style.opacity = 1.0;
-    } else {
-      // Disable keyframe slider if no keyframes are available.
-      keyframeGUI.max(0);
-      keyframeGUI.domElement.style.opacity = 0.5;
-    }
-  });
-
-  // Add sliders for ctrlnoiserate and ctrlnoisestd; min = 0, max = 2, step = 0.01.
-  simulationFolder.add(parentContext.params, 'ctrlnoiserate', 0.0, 2.0, 0.01).name('Noise rate' );
-  simulationFolder.add(parentContext.params, 'ctrlnoisestd' , 0.0, 2.0, 0.01).name('Noise scale');
-
-  let textDecoder = new TextDecoder("utf-8");
-  let nullChar    = textDecoder.decode(new ArrayBuffer(1));
-
-  // Add actuator sliders.
-  let actuatorFolder = simulationFolder.addFolder("Actuators");
-  const addActuators = (model, data, params) => {
-    let act_range = model.actuator_ctrlrange;
-    let actuatorGUIs = [];
-    for (let i = 0; i < model.nu; i++) {
-      if (!model.actuator_ctrllimited[i]) { continue; }
-      let name = textDecoder.decode(
-        parentContext.model.names.subarray(
-          parentContext.model.name_actuatoradr[i])).split(nullChar)[0];
-
-      parentContext.params[name] = data.ctrl[i];
-      let actuatorGUI = actuatorFolder.add(parentContext.params, name, act_range[2 * i], act_range[2 * i + 1], 0.01).name(name).listen();
-      actuatorGUIs.push(actuatorGUI);
-      actuatorGUI.onChange((value) => {
-        data.ctrl[i] = value;
-      });
-    }
-    return actuatorGUIs;
-  };
-  let actuatorGUIs = addActuators(parentContext.model, parentContext.data, parentContext.params);
-  parentContext.updateGUICallbacks.push((model, data, params) => {
-    for (let i = 0; i < actuatorGUIs.length; i++) {
-      actuatorGUIs[i].destroy();
-    }
-    actuatorGUIs = addActuators(model, data, parentContext.params);
-  });
-  actuatorFolder.close();
 
   // Add function that resets the camera to the default position.
   // Can be triggered by pressing ctrl + A.

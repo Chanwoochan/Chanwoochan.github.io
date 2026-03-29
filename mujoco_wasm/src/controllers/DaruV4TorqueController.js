@@ -15,6 +15,7 @@ const HAND_JOINT_NAMES = [
   'lh_f1_Motor_Linear_Joint', 'lh_f2_Motor_Linear_Joint', 'lh_f3_Motor_Linear_Joint',
   'lh_f4_Motor_Linear_Joint', 'lh_c_t_Motor_Linear_Joint', 'lh_c_Motor_Linear_Joint',
 ];
+const HAND_MOTORS_PER_SIDE = 6;
 
 const ARM_PD_LIMITS = [100.0, 60.0, 60.0, 60.0, 60.0, 10.0, 10.0, 10.0, 60.0, 60.0, 60.0, 60.0, 10.0, 10.0, 10.0];
 const CG_COMPENSATION_SCALE = 1.2;
@@ -389,23 +390,80 @@ export class DaruV4TorqueController {
     this.setDefaultEeTargets();
   }
 
-  nudgeRightTargetPosition(deltaX, deltaY, deltaZ) {
-    this.rightPosTarget[0] += deltaX;
-    this.rightPosTarget[1] += deltaY;
-    this.rightPosTarget[2] += deltaZ;
+  getTargetPosition(hand) {
+    return hand === 'left' ? this.leftPosTarget : this.rightPosTarget;
   }
 
-  rotateRightTargetLocal(axisX, axisY, axisZ, angle) {
+  getTargetQuaternion(hand) {
+    return hand === 'left' ? this.leftQuatTargetWxyz : this.rightQuatTargetWxyz;
+  }
+
+  getHandMotorTargetIndex(hand, motorIndexWithinSide) {
+    if (motorIndexWithinSide < 0 || motorIndexWithinSide >= HAND_MOTORS_PER_SIDE) {
+      return -1;
+    }
+    const handOffset = hand === 'left' ? HAND_MOTORS_PER_SIDE : 0;
+    return handOffset + motorIndexWithinSide;
+  }
+
+  getHandMotorTargetRange(hand, motorIndexWithinSide) {
+    const targetIndex = this.getHandMotorTargetIndex(hand, motorIndexWithinSide);
+    if (targetIndex < 0 || targetIndex >= this.handDesPos.length) {
+      return [0.0, 0.0];
+    }
+
+    const actuatorId = this.handActuatorIds[targetIndex];
+    if (actuatorId >= 0 && this.model.actuator_ctrllimited[actuatorId]) {
+      return [
+        this.model.actuator_ctrlrange[2 * actuatorId + 0],
+        this.model.actuator_ctrlrange[2 * actuatorId + 1],
+      ];
+    }
+
+    const jointId = this.handJointIds[targetIndex];
+    if (jointId >= 0 && this.model.jnt_limited[jointId]) {
+      return [
+        this.model.jnt_range[2 * jointId + 0],
+        this.model.jnt_range[2 * jointId + 1],
+      ];
+    }
+
+    return [0.0, 0.0];
+  }
+
+  getHandMotorMaxTarget(hand, motorIndexWithinSide) {
+    return this.getHandMotorTargetRange(hand, motorIndexWithinSide)[1];
+  }
+
+  setHandMotorTarget(hand, motorIndexWithinSide, value) {
+    const targetIndex = this.getHandMotorTargetIndex(hand, motorIndexWithinSide);
+    if (targetIndex < 0 || targetIndex >= this.handDesPos.length) {
+      return;
+    }
+
+    const [lower, upper] = this.getHandMotorTargetRange(hand, motorIndexWithinSide);
+    this.handDesPos[targetIndex] = clamp(value, lower, upper);
+  }
+
+  nudgeTargetPosition(hand, deltaX, deltaY, deltaZ) {
+    const target = this.getTargetPosition(hand);
+    target[0] += deltaX;
+    target[1] += deltaY;
+    target[2] += deltaZ;
+  }
+
+  rotateTargetLocal(hand, axisX, axisY, axisZ, angle) {
     if (Math.abs(angle) <= 1e-12) {
       return;
     }
 
+    const targetQuat = this.getTargetQuaternion(hand);
     const deltaQuat = [1.0, 0.0, 0.0, 0.0];
     const nextQuat = [1.0, 0.0, 0.0, 0.0];
     writeAxisAngleQuatWxyz(axisX, axisY, axisZ, angle, deltaQuat);
-    multiplyQuatWxyz(this.rightQuatTargetWxyz, deltaQuat, nextQuat);
+    multiplyQuatWxyz(targetQuat, deltaQuat, nextQuat);
     normalizeQuatWxyz(nextQuat);
-    this.rightQuatTargetWxyz.set(nextQuat);
+    targetQuat.set(nextQuat);
   }
 
   dispose() {
