@@ -155,17 +155,7 @@ export function setupGUI(parentContext) {
   parentContext.updateGUICallbacks.push((model, data, params) => {
     resetDefaultCamera(parentContext); });
 
-  // Add scene selection dropdown.
   let reload = reloadFunc.bind(parentContext);
-  parentContext.gui.add(parentContext.params, 'scene', {
-    "DARU New Torque": "DARU_NEW_260323/scene.xml",
-    "DARU New Position": "DARU_NEW_260323/DARU_NEW_260323_position.xml",
-    // "DARU": "DARU/meshes/world.xml"
-    // , "Cassie": "agility_cassie/scene.xml",
-    // "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
-    // "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
-    // "Torture Model": "model.xml", "Flex": "flex.xml", "Car": "car.xml", 
-  }).name('Example Scene').onChange(reload);
 
   // Add a help menu.
   // Parameters:
@@ -304,18 +294,6 @@ export function setupGUI(parentContext) {
     }
   });
 
-  // Add reload model button.
-  // Parameters:
-  //  Under "Simulation" folder.
-  //  Name: "Reload".
-  //  When pressed, calls the reload function.
-  //  Can also be triggered by pressing ctrl + L.
-  simulationFolder.add({reload: () => { reload(); }}, 'reload').name('Reload');
-  document.addEventListener('keydown', (event) => {
-    if (event.ctrlKey && event.code === 'KeyL') { reload();  event.preventDefault(); }});
-  actionInnerHTML += 'Reload XML<br>';
-  keyInnerHTML += 'Ctrl L<br>';
-
   // Add reset simulation button.
   // Parameters:
   //  Under "Simulation" folder.
@@ -346,6 +324,40 @@ export function setupGUI(parentContext) {
     if (event.code === 'Backspace') { resetSimulation(); event.preventDefault(); }});
   actionInnerHTML += 'Reset simulation<br>';
   keyInnerHTML += 'Backspace<br>';
+
+  simulationFolder.add({resetView: () => { resetDefaultCamera(parentContext); }}, 'resetView').name('Reset View');
+  simulationFolder.add({resetCup: () => {
+    if (parentContext.resetCupPose) {
+      parentContext.resetCupPose();
+    }
+  }}, 'resetCup').name('Reset Cup');
+
+  if (simulationFolder.$children) {
+    const headCameraPanel = document.createElement('div');
+    headCameraPanel.style.height = '140px';
+    headCameraPanel.style.margin = '4px';
+    headCameraPanel.style.border = '1px solid #555';
+    headCameraPanel.style.borderRadius = '2px';
+    headCameraPanel.style.background = 'transparent';
+    headCameraPanel.style.overflow = 'hidden';
+    headCameraPanel.style.position = 'relative';
+    headCameraPanel.style.pointerEvents = 'none';
+
+    const label = document.createElement('div');
+    label.textContent = 'Head Left Camera';
+    label.style.position = 'absolute';
+    label.style.left = '6px';
+    label.style.top = '5px';
+    label.style.padding = '2px 4px';
+    label.style.background = 'rgba(0, 0, 0, 0.55)';
+    label.style.color = '#fff';
+    label.style.font = '10px monospace';
+    label.style.zIndex = '1';
+    headCameraPanel.appendChild(label);
+
+    simulationFolder.$children.appendChild(headCameraPanel);
+    parentContext.headCameraPanel = headCameraPanel;
+  }
 
   // Add function that resets the camera to the default position.
   // Can be triggered by pressing ctrl + A.
@@ -738,12 +750,13 @@ export function drawTendonsAndFlex(mujocoRoot, model, data) {
   }
 }
 
-async function ensureSceneAsset(mujoco, filePath) {
+async function ensureSceneAsset(mujoco, filePath, progressCallback) {
   const normalizedPath = normalizeScenePath(filePath);
   if (loadedSceneFiles.has(normalizedPath)) {
     return sceneTextCache.get(normalizedPath) ?? "";
   }
 
+  progressCallback?.(`fetch assets/scenes/${normalizedPath}`);
   const response = await fetch(sceneAssetUrl(normalizedPath), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Failed to fetch assets/scenes/${normalizedPath}: ${response.status}`);
@@ -761,17 +774,18 @@ async function ensureSceneAsset(mujoco, filePath) {
   }
 
   loadedSceneFiles.add(normalizedPath);
+  progressCallback?.(`loaded assets/scenes/${normalizedPath}`);
   return sceneTextCache.get(normalizedPath) ?? "";
 }
 
-async function downloadSceneXmlDependencies(mujoco, xmlPath, contextDir, seenXmlContexts) {
+async function downloadSceneXmlDependencies(mujoco, xmlPath, contextDir, seenXmlContexts, progressCallback) {
   const normalizedXmlPath = normalizeScenePath(xmlPath);
   const normalizedContextDir = normalizeScenePath(contextDir ?? sceneDirname(normalizedXmlPath));
   const contextKey = `${normalizedXmlPath}|${normalizedContextDir}`;
   if (seenXmlContexts.has(contextKey)) { return; }
   seenXmlContexts.add(contextKey);
 
-  const xmlText = await ensureSceneAsset(mujoco, normalizedXmlPath);
+  const xmlText = await ensureSceneAsset(mujoco, normalizedXmlPath, progressCallback);
   const compilerTag = xmlText.match(/<compiler\b[^>]*>/i)?.[0] ?? "";
   const meshDir = getXmlAttribute(compilerTag, "meshdir");
   const textureDir = getXmlAttribute(compilerTag, "texturedir");
@@ -792,9 +806,9 @@ async function downloadSceneXmlDependencies(mujoco, xmlPath, contextDir, seenXml
       const dependencyContextDir = tagName === "include"
         ? normalizedContextDir
         : sceneDirname(dependencyPath);
-      await downloadSceneXmlDependencies(mujoco, dependencyPath, dependencyContextDir, seenXmlContexts);
+      await downloadSceneXmlDependencies(mujoco, dependencyPath, dependencyContextDir, seenXmlContexts, progressCallback);
     } else {
-      await ensureSceneAsset(mujoco, dependencyPath);
+      await ensureSceneAsset(mujoco, dependencyPath, progressCallback);
     }
   }
 }
@@ -802,7 +816,7 @@ async function downloadSceneXmlDependencies(mujoco, xmlPath, contextDir, seenXml
 /** Downloads a scene and its direct XML/mesh/texture dependencies to MuJoCo's virtual filesystem.
  * @param {mujoco} mujoco
  * @param {string} sceneFile */
-export async function downloadExampleScenesFolder(mujoco, sceneFile) {
+export async function downloadExampleScenesFolder(mujoco, sceneFile, progressCallback) {
   if (!sceneFile) {
     throw new Error("downloadExampleScenesFolder requires a scene XML path.");
   }
@@ -810,7 +824,8 @@ export async function downloadExampleScenesFolder(mujoco, sceneFile) {
     mujoco,
     normalizeScenePath(sceneFile),
     sceneDirname(sceneFile),
-    new Set()
+    new Set(),
+    progressCallback
   );
 }
 

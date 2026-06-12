@@ -42,7 +42,7 @@
           <body name="Link_5" pos="0.002118 0 0.020302" quat="1 0 0 0">
             <inertial mass="0.0058587" pos="0.000753 2e-06 0.014588" fullinertia="2.4099e-07 2.6235e-07 1.9419e-07 -4.0406e-11 -4.9959e-09 1.0186e-11" />
             <geom type="mesh" mesh="mesh_6" pos="0 0 0" quat="1 0 0 0" group="3" />
-            <geom type="mesh" mesh="mesh_6" pos="0 0 0" quat="1 0 0 0" contype="2" conaffinity="2" friction="1.2 0.12 0.03" margin="0.0015" group="1" rgba="1 1 1 1" />
+            <geom type="mesh" mesh="mesh_6" pos="0 0 0" quat="1 0 0 0" contype="0" conaffinity="0" friction="1.2 0.12 0.03" margin="0.0015" group="1" rgba="1 1 1 1" />
             <geom name="Link_5_tip_pad" type="capsule" fromto="0 0 0.006 0 0 0.028"
                   size="0.008" contype="2" conaffinity="2" condim="6" margin="0.0015"
                   friction="1.2 0.12 0.03" solref="0.0025 1.2" solimp="0.985 0.998 0.0005 0.5 2"

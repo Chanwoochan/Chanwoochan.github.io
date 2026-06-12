@@ -7,14 +7,37 @@ import { DaruV4TorqueController, DARU_TORQUE_SCENE } from './controllers/DaruV4T
 import { setupGUI, downloadExampleScenesFolder, loadSceneFromURL, drawTendonsAndFlex, getPosition, getQuaternion, toMujocoPos, standardNormal } from './mujocoUtils.js';
 import   load_mujoco        from '../node_modules/mujoco-js/dist/mujoco_wasm.js';
 
+function updateLoading(progress, message) {
+  window.daruLoading?.set(progress, message);
+}
+
+function logLoading(message) {
+  window.daruLoading?.log(message);
+}
+
 // Load the MuJoCo Module
-const mujoco = await load_mujoco();
+updateLoading(8, 'Loading MuJoCo WebAssembly runtime...');
+let mujoco;
+try {
+  mujoco = await load_mujoco();
+} catch (error) {
+  console.error('Failed to load MuJoCo WebAssembly runtime:', error);
+  window.daruLoading?.error(error);
+  throw error;
+}
+updateLoading(18, 'MuJoCo runtime ready');
 const MJDSBL_CONTACT = 1 << 4;
 const MJDSBL_ACTUATION = 1 << 11;
 const RIGHT_TARGET_POSITION_SPEED = 0.20;
 const RIGHT_TARGET_ROTATION_SPEED = Math.PI * 0.75;
 const DEFAULT_CAMERA_POSITION = [0.18, 1.78, -2.45];
 const DEFAULT_CAMERA_TARGET = [0.10, 0.78, 0.0];
+const HEAD_LEFT_XML_CAMERA_NAME = 'L_front_cam';
+const HEAD_LEFT_XML_CAMERA_BODY = 'HP_Link';
+const HEAD_LEFT_XML_CAMERA_POS_MJ = [0.1, 0.0325, -0.1];
+const HEAD_LEFT_XML_CAMERA_EULER = [0.0, -0.7854, -1.5708];
+const HEAD_LEFT_XML_CAMERA_FOVY = 60;
+const HEAD_LEFT_CAMERA_EXTRA_PITCH = -Math.PI / 2;
 const ACTIVE_TARGET_HAND_TOGGLE_KEY = 'KeyT';
 const ACTIVE_TARGET_HAND_GRIP_TOGGLE_COUNT = 5;
 const RIGHT_TARGET_INPUT_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyF']);
@@ -92,17 +115,18 @@ export class MuJoCoDemo {
     document.body.appendChild( this.container );
     this.container.style.position = 'relative';
 
-    this.debugOverlay = document.createElement('div');
-    this.debugOverlay.style.position = 'absolute';
-    this.debugOverlay.style.left = '10px';
-    this.debugOverlay.style.bottom = '10px';
-    this.debugOverlay.style.padding = '8px 10px';
-    this.debugOverlay.style.background = 'rgba(0, 0, 0, 0.55)';
-    this.debugOverlay.style.color = '#fff';
-    this.debugOverlay.style.font = '12px monospace';
-    this.debugOverlay.style.whiteSpace = 'pre';
-    this.debugOverlay.style.zIndex = '1000';
-    this.debugOverlay.style.pointerEvents = 'none';
+    this.watermark = document.createElement('img');
+    this.watermark.src = './assets/darumujoco.png';
+    this.watermark.alt = 'DARU MuJoCo';
+    this.watermark.style.position = 'absolute';
+    this.watermark.style.left = '14px';
+    this.watermark.style.bottom = '14px';
+    this.watermark.style.width = '180px';
+    this.watermark.style.maxWidth = '28vw';
+    this.watermark.style.opacity = '0.72';
+    this.watermark.style.zIndex = '900';
+    this.watermark.style.pointerEvents = 'none';
+    this.watermark.style.filter = 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45))';
 
     this.rightTargetPad = this.createRightTargetPad();
 
@@ -113,6 +137,37 @@ export class MuJoCoDemo {
     this.camera.name = 'PerspectiveCamera';
     this.camera.position.set(...DEFAULT_CAMERA_POSITION);
     this.scene.add(this.camera);
+    this.headLeftCamera = new THREE.PerspectiveCamera(HEAD_LEFT_XML_CAMERA_FOVY, 16 / 9, 0.01, 8.0);
+    this.headLeftCamera.name = 'HeadLeftCamera';
+    this.headCameraRenderer = null;
+    this.headCameraPanel = null;
+    this.headCameraId = -1;
+    this.headCameraBodyId = -1;
+    this.headCameraPosition = new THREE.Vector3();
+    this.headCameraQuaternion = new THREE.Quaternion();
+    this.headCameraLocalPosition = new THREE.Vector3(
+      HEAD_LEFT_XML_CAMERA_POS_MJ[0],
+      HEAD_LEFT_XML_CAMERA_POS_MJ[2],
+      -HEAD_LEFT_XML_CAMERA_POS_MJ[1],
+    );
+    const headCameraLocalQuaternionMj = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(...HEAD_LEFT_XML_CAMERA_EULER, 'XYZ'),
+    );
+    this.headCameraLocalQuaternion = new THREE.Quaternion(
+      -headCameraLocalQuaternionMj.x,
+      -headCameraLocalQuaternionMj.z,
+      headCameraLocalQuaternionMj.y,
+      -headCameraLocalQuaternionMj.w,
+    );
+    this.headCameraLocalQuaternion.multiply(
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(HEAD_LEFT_CAMERA_EXTRA_PITCH, 0.0, 0.0, 'XYZ')),
+    );
+    this.headCameraLocalForward = new THREE.Vector3();
+    this.headCameraLocalUp = new THREE.Vector3();
+    this.headCameraForward = new THREE.Vector3();
+    this.headCameraUp = new THREE.Vector3();
+    this.headCameraTarget = new THREE.Vector3();
+    this.cupInitialState = null;
 
     this.scene.background = new THREE.Color(0.15, 0.25, 0.35);
     this.scene.fog = new THREE.Fog(this.scene.background, 15, 25.5 );
@@ -153,7 +208,7 @@ export class MuJoCoDemo {
     this.renderer.setAnimationLoop( this.render.bind(this) );
 
     this.container.appendChild( this.renderer.domElement );
-    this.container.appendChild( this.debugOverlay );
+    this.container.appendChild( this.watermark );
     this.container.appendChild( this.rightTargetPad );
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -428,17 +483,28 @@ export class MuJoCoDemo {
 
   async init() {
     // Download the the examples to MuJoCo's virtual file system
-    await downloadExampleScenesFolder(mujoco, initialScene);
+    updateLoading(24, 'Downloading scene XML, meshes, and assets...');
+    let assetCount = 0;
+    await downloadExampleScenesFolder(mujoco, initialScene, (message) => {
+      assetCount += message.startsWith('loaded ') ? 1 : 0;
+      const progress = Math.min(62, 24 + assetCount * 1.5);
+      updateLoading(progress, message);
+    });
 
     // Initialize the three.js Scene using the .xml Model in initialScene
+    updateLoading(68, 'Building MuJoCo and Three.js scene...');
     [this.model, this.data, this.bodies, this.lights] =
       await loadSceneFromURL(mujoco, initialScene, this);
     this.mujoco.mj_forward(this.model, this.data);
+    updateLoading(78, 'Initializing DARU torque controller...');
     await this.configureSceneController();
+    updateLoading(92, 'Creating UI controls...');
     window.mujocoDemo = this;
 
     this.gui = new GUI();
     setupGUI(this);
+    updateLoading(100, 'Ready');
+    window.daruLoading?.done();
   }
 
   sceneUsesPositionTargets() {
@@ -459,6 +525,53 @@ export class MuJoCoDemo {
     return this.textDecoder.decode(
       this.model.names.subarray(this.model.name_bodyadr[bodyId]),
     ).split('\u0000')[0];
+  }
+
+  findBodyIdByName(name) {
+    if (!this.model) {
+      return -1;
+    }
+    return this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, name);
+  }
+
+  findCameraIdByName(name) {
+    if (!this.model) {
+      return -1;
+    }
+    return this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_CAMERA.value, name);
+  }
+
+  captureCupInitialPose() {
+    const bodyId = this.findBodyIdByName('desk_cup_RAND_1');
+    if (bodyId < 0 || this.model.body_jntnum[bodyId] <= 0) {
+      this.cupInitialState = null;
+      return;
+    }
+
+    const jointId = this.model.body_jntadr[bodyId];
+    const qposId = this.model.jnt_qposadr[jointId];
+    const dofId = this.model.jnt_dofadr[jointId];
+    this.cupInitialState = {
+      qposId,
+      dofId,
+      qpos: Array.from(this.data.qpos.slice(qposId, qposId + 7)),
+      qvel: Array.from(this.data.qvel.slice(dofId, dofId + 6)),
+    };
+  }
+
+  resetCupPose() {
+    if (!this.cupInitialState || !this.model || !this.data) {
+      return;
+    }
+
+    const { qposId, dofId, qpos, qvel } = this.cupInitialState;
+    for (let index = 0; index < qpos.length; index += 1) {
+      this.data.qpos[qposId + index] = qpos[index];
+    }
+    for (let index = 0; index < qvel.length; index += 1) {
+      this.data.qvel[dofId + index] = qvel[index];
+    }
+    this.mujoco.mj_forward(this.model, this.data);
   }
 
   applyHandOnlyCollisionMask() {
@@ -547,6 +660,12 @@ export class MuJoCoDemo {
     const generation = ++this.controllerInitGeneration;
     this.clearTargetKeys();
     this.resetHandGripStates();
+    this.headCameraId = this.findCameraIdByName(HEAD_LEFT_XML_CAMERA_NAME);
+    this.headCameraBodyId = this.findBodyIdByName(HEAD_LEFT_XML_CAMERA_BODY);
+    if (this.headCameraBodyId < 0) {
+      this.headCameraBodyId = this.findBodyIdByName('HY_Link');
+    }
+    this.captureCupInitialPose();
 
     if (this.controller) {
       this.controller.dispose();
@@ -578,6 +697,7 @@ export class MuJoCoDemo {
             return;
           }
           this.debugState.rbdl = message;
+          logLoading(`controller ${message}`);
         }),
         new Promise((_, reject) => {
           window.setTimeout(() => reject(new Error('controller init timeout')), 8000);
@@ -609,45 +729,7 @@ export class MuJoCoDemo {
 
   updateDebugOverlay() {
     const controllerMode = this.controller ? this.controller.mode : 'none';
-    const loadingSeconds = this.controllerLoading
-      ? ((performance.now() - this.controllerInitStartedAt) / 1000.0).toFixed(1)
-      : '0.0';
-    const ctrl0 = this.data && this.data.ctrl.length > 0 ? this.data.ctrl[0].toFixed(3) : 'n/a';
-    const ctrl4 = this.data && this.data.ctrl.length > 4 ? this.data.ctrl[4].toFixed(3) : 'n/a';
-    const ctrl11 = this.data && this.data.ctrl.length > 11 ? this.data.ctrl[11].toFixed(3) : 'n/a';
-    const tau4 = this.controller ? this.controller.armRefTau[4].toFixed(3) : 'n/a';
-    const tau11 = this.controller ? this.controller.armRefTau[11].toFixed(3) : 'n/a';
-    const q4 = this.controller ? this.controller.armPos[4].toFixed(3) : 'n/a';
-    const q11 = this.controller ? this.controller.armPos[11].toFixed(3) : 'n/a';
-    const activeTargetPos = this.controller ? this.controller.getTargetPosition(this.activeTargetHand) : null;
-    const activeTargetQuat = this.controller ? this.controller.getTargetQuaternion(this.activeTargetHand) : null;
-    const targetX = activeTargetPos ? activeTargetPos[0].toFixed(3) : 'n/a';
-    const targetY = activeTargetPos ? activeTargetPos[1].toFixed(3) : 'n/a';
-    const targetZ = activeTargetPos ? activeTargetPos[2].toFixed(3) : 'n/a';
-    const targetQuatW = activeTargetQuat ? activeTargetQuat[0].toFixed(3) : 'n/a';
-    const targetQuatX = activeTargetQuat ? activeTargetQuat[1].toFixed(3) : 'n/a';
-    const targetQuatY = activeTargetQuat ? activeTargetQuat[2].toFixed(3) : 'n/a';
-    const targetQuatZ = activeTargetQuat ? activeTargetQuat[3].toFixed(3) : 'n/a';
-    const inputMode = this.rightTargetRotationMode ? 'rot' : 'pos';
     this.updateRightTargetPadState(controllerMode);
-    this.debugOverlay.textContent =
-      `scene: ${this.params.scene}
-loading: ${this.controllerLoading}
-loading_s: ${loadingSeconds}
-controller: ${this.controller ? 'yes' : 'no'}
-collisions_disabled: ${this.params.collisionsDisabled}
-controls_disabled: ${this.params.controlsDisabled}
-mode: ${controllerMode}
-status: ${this.debugState.status}
-rbdl: ${this.debugState.rbdl}
-ctrl0/4/11: ${ctrl0} ${ctrl4} ${ctrl11}
-tau4/11: ${tau4} ${tau11}
-q4/11: ${q4} ${q11}
-target_hand: ${this.activeTargetHand}
-target_input: pad+kb (hand:t rot:v)
-target_mode: ${inputMode}
-target_xyz: ${targetX} ${targetY} ${targetZ}
-target_quat: ${targetQuatW} ${targetQuatX} ${targetQuatY} ${targetQuatZ}`;
   }
 
   updateRightTargetPadState(controllerMode) {
@@ -836,6 +918,73 @@ target_quat: ${targetQuatW} ${targetQuatX} ${targetQuatY} ${targetQuatZ}`;
     this.renderer.setSize( window.innerWidth, window.innerHeight );
   }
 
+  ensureHeadCameraRenderer() {
+    if (!this.headCameraPanel || this.headCameraRenderer) {
+      return;
+    }
+
+    this.headCameraRenderer = new THREE.WebGLRenderer({ antialias: true });
+    this.headCameraRenderer.setPixelRatio(1.0);
+    this.headCameraRenderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+    this.headCameraRenderer.useLegacyLights = true;
+    this.headCameraRenderer.domElement.style.position = 'absolute';
+    this.headCameraRenderer.domElement.style.inset = '0';
+    this.headCameraRenderer.domElement.style.width = '100%';
+    this.headCameraRenderer.domElement.style.height = '100%';
+    this.headCameraPanel.insertBefore(this.headCameraRenderer.domElement, this.headCameraPanel.firstChild);
+  }
+
+  renderHeadCameraView() {
+    if (!this.headCameraPanel || this.headCameraBodyId < 0) {
+      return;
+    }
+
+    this.ensureHeadCameraRenderer();
+    if (!this.headCameraRenderer) {
+      return;
+    }
+
+    const width = Math.max(1, this.headCameraPanel.clientWidth);
+    const height = Math.max(1, this.headCameraPanel.clientHeight);
+    const canvas = this.headCameraRenderer.domElement;
+    if (canvas.width !== width || canvas.height !== height) {
+      this.headCameraRenderer.setSize(width, height, false);
+      this.headLeftCamera.aspect = width / height;
+      this.headLeftCamera.updateProjectionMatrix();
+    }
+
+    getPosition(this.data.xpos, this.headCameraBodyId, this.headCameraPosition);
+    getQuaternion(this.data.xquat, this.headCameraBodyId, this.headCameraQuaternion);
+
+    this.headLeftCamera.position
+      .copy(this.headCameraLocalPosition)
+      .applyQuaternion(this.headCameraQuaternion)
+      .add(this.headCameraPosition);
+
+    this.headCameraLocalForward
+      .set(0.0, 0.0, -1.0)
+      .applyQuaternion(this.headCameraLocalQuaternion);
+    this.headCameraLocalUp
+      .set(0.0, 1.0, 0.0)
+      .applyQuaternion(this.headCameraLocalQuaternion);
+    this.headCameraForward
+      .copy(this.headCameraLocalForward)
+      .applyQuaternion(this.headCameraQuaternion)
+      .normalize();
+    this.headCameraUp
+      .copy(this.headCameraLocalUp)
+      .applyQuaternion(this.headCameraQuaternion)
+      .normalize();
+
+    this.headCameraTarget
+      .copy(this.headLeftCamera.position)
+      .addScaledVector(this.headCameraForward, 1.0);
+    this.headLeftCamera.up.copy(this.headCameraUp);
+    this.headLeftCamera.lookAt(this.headCameraTarget);
+
+    this.headCameraRenderer.render(this.scene, this.headLeftCamera);
+  }
+
   render(timeMS) {
     if (!this.model || !this.data) return;
     this.controls.update();
@@ -957,8 +1106,15 @@ target_quat: ${targetQuatW} ${targetQuatX} ${targetQuatY} ${targetQuatZ}`;
 
     // Render!
     this.renderer.render( this.scene, this.camera );
+    this.renderHeadCameraView();
   }
 }
 
 let demo = new MuJoCoDemo();
-await demo.init();
+try {
+  await demo.init();
+} catch (error) {
+  console.error('Failed to initialize DARU MuJoCo:', error);
+  window.daruLoading?.error(error);
+  throw error;
+}

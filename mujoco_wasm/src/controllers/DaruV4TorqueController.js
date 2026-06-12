@@ -25,7 +25,11 @@ const HAND_MOTORS_PER_SIDE = 6;
 
 const ARM_PD_LIMITS = [100.0, 60.0, 60.0, 60.0, 60.0, 10.0, 10.0, 10.0, 60.0, 60.0, 60.0, 60.0, 10.0, 10.0, 10.0];
 const CG_COMPENSATION_SCALE = 1.2;
-const HOME_MODE_END_COUNT = 6000;
+const HOME_MODE_SPEEDUP = 3.0;
+const HOME_STAGE1_END_COUNT = 1000.0 / HOME_MODE_SPEEDUP;
+const HOME_STAGE2_END_COUNT = 2000.0 / HOME_MODE_SPEEDUP;
+const HOME_STAGE3_END_COUNT = 4000.0 / HOME_MODE_SPEEDUP;
+const HOME_MODE_END_COUNT = 6000.0 / HOME_MODE_SPEEDUP;
 const DEG_TO_RAD = Math.PI / 180.0;
 const LOWERBODY_MODE1_HOME_POSE = new Float64Array([
   0.0, 0.0, -20.0 * DEG_TO_RAD, 65.0 * DEG_TO_RAD, -45.0 * DEG_TO_RAD, 0.0,
@@ -57,6 +61,8 @@ const HEAD_INDEX = Object.freeze({
   HY: 0,
   HP: 1,
 });
+const HEAD_LOOK_TARGET_MIN_DISTANCE = 1e-4;
+const HEAD_FRONT_AXIS_LOCAL_Y_OFFSET = Math.PI / 4.0;
 
 let rbdlModulePromise = null;
 
@@ -267,6 +273,8 @@ export class DaruV4TorqueController {
     this.headQposIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
     this.headDofIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
     this.headActuatorIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
+    this.headLowerLimits = new Float64Array(HEAD_JOINT_NAMES.length);
+    this.headUpperLimits = new Float64Array(HEAD_JOINT_NAMES.length);
     this.handJointIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handQposIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handDofIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
@@ -302,6 +310,8 @@ export class DaruV4TorqueController {
     this.rightPosTarget = new Float64Array(DEFAULT_RIGHT_POS);
     this.leftQuatTargetWxyz = new Float64Array(DEFAULT_LEFT_QUAT_WXYZ);
     this.rightQuatTargetWxyz = new Float64Array(DEFAULT_RIGHT_QUAT_WXYZ);
+    this.leftEePos = new Float64Array(3);
+    this.rightEePos = new Float64Array(3);
 
     this.worldCount = 0;
     this.mode = 0;
@@ -349,6 +359,7 @@ export class DaruV4TorqueController {
 
     this.leftWristBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, 'LWP_Link');
     this.rightWristBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, 'RWP_Link');
+    this.headBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, 'HP_Link');
 
     for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
       const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, HEAD_JOINT_NAMES[index]);
@@ -360,6 +371,7 @@ export class DaruV4TorqueController {
       this.headQposIds[index] = this.model.jnt_qposadr[jointId];
       this.headDofIds[index] = this.model.jnt_dofadr[jointId];
       this.headActuatorIds[index] = findActuatorForJoint(this.model, jointId);
+      [this.headLowerLimits[index], this.headUpperLimits[index]] = jointRangeOrFallback(this.model, jointId);
     }
 
     for (let index = 0; index < HAND_JOINT_NAMES.length; index += 1) {
@@ -608,6 +620,7 @@ export class DaruV4TorqueController {
         }
       } else if (this.mode === 2 || this.mode === 3) {
         this.solveIkTargets();
+        this.updateHeadLookAtHandMidpoint();
         this.applyCgCompensation();
         this.count += 1;
       }
@@ -672,12 +685,12 @@ export class DaruV4TorqueController {
   }
 
   setHomePose() {
-    const stage1 = cosineBlend(this.count, 1000.0);
-    const stage2 = cosineBlend(this.count - 1000.0, 1000.0);
-    const stage3 = cosineBlend(this.count - 2000.0, 2000.0);
-    const stage4 = cosineBlend(this.count - 4000.0, 2000.0);
+    const stage1 = cosineBlend(this.count, HOME_STAGE1_END_COUNT);
+    const stage2 = cosineBlend(this.count - HOME_STAGE1_END_COUNT, HOME_STAGE2_END_COUNT - HOME_STAGE1_END_COUNT);
+    const stage3 = cosineBlend(this.count - HOME_STAGE2_END_COUNT, HOME_STAGE3_END_COUNT - HOME_STAGE2_END_COUNT);
+    const stage4 = cosineBlend(this.count - HOME_STAGE3_END_COUNT, HOME_MODE_END_COUNT - HOME_STAGE3_END_COUNT);
 
-    if (this.count < 1000) {
+    if (this.count < HOME_STAGE1_END_COUNT) {
       this.armDesPos.set(this.armPosInit);
       this.headDesPos.set(this.headPosInit);
 
@@ -693,7 +706,7 @@ export class DaruV4TorqueController {
         this.headPosInit[HEAD_INDEX.HP] + (0.0 - this.headPosInit[HEAD_INDEX.HP]) * stage1;
     }
 
-    if (this.count >= 1000 && this.count < 2000) {
+    if (this.count >= HOME_STAGE1_END_COUNT && this.count < HOME_STAGE2_END_COUNT) {
       this.armDesPos[ARM_INDEX.LSP] =
         this.armPosInit[ARM_INDEX.LSP] + (0.0 - this.armPosInit[ARM_INDEX.LSP]) * stage2;
       this.armDesPos[ARM_INDEX.LSY] =
@@ -720,7 +733,7 @@ export class DaruV4TorqueController {
         this.armPosInit[ARM_INDEX.RWP] + (0.0 - this.armPosInit[ARM_INDEX.RWP]) * stage2;
     }
 
-    if (this.count >= 2000 && this.count < 4000) {
+    if (this.count >= HOME_STAGE2_END_COUNT && this.count < HOME_STAGE3_END_COUNT) {
       this.armDesPos[ARM_INDEX.LSP] = ((Math.PI * 3.0) / 8.0) * stage3;
       this.armDesPos[ARM_INDEX.RSP] = ((Math.PI * 3.0) / 8.0) * stage3;
       this.armDesPos[ARM_INDEX.LSR] = (Math.PI / 6.0) + (0.0 - (Math.PI / 6.0)) * stage3;
@@ -729,14 +742,14 @@ export class DaruV4TorqueController {
       this.armDesPos[ARM_INDEX.REP] = ((-Math.PI * 3.0) / 4.0) * stage3;
     }
 
-    if (this.count >= 4000 && this.count < 6000) {
+    if (this.count >= HOME_STAGE3_END_COUNT && this.count < HOME_MODE_END_COUNT) {
       this.armDesPos[ARM_INDEX.LSP] = ((Math.PI * 3.0) / 8.0) + (0.0 - ((Math.PI * 3.0) / 8.0)) * stage4;
       this.armDesPos[ARM_INDEX.RSP] = ((Math.PI * 3.0) / 8.0) + (0.0 - ((Math.PI * 3.0) / 8.0)) * stage4;
       this.armDesPos[ARM_INDEX.LEP] = ((-Math.PI * 3.0) / 4.0) + ((-Math.PI / 2.0) - ((-Math.PI * 3.0) / 4.0)) * stage4;
       this.armDesPos[ARM_INDEX.REP] = ((-Math.PI * 3.0) / 4.0) + ((-Math.PI / 2.0) - ((-Math.PI * 3.0) / 4.0)) * stage4;
     }
 
-    if (this.count >= 6000) {
+    if (this.count >= HOME_MODE_END_COUNT) {
       this.armDesPos[ARM_INDEX.WAIST] = 0.0;
       this.armDesPos[ARM_INDEX.LSP] = 0.0;
       this.armDesPos[ARM_INDEX.LSR] = 0.0;
@@ -802,6 +815,26 @@ export class DaruV4TorqueController {
     quatTarget[3] = quat[3];
   }
 
+  readEePosition(bodyId, posOut) {
+    if (bodyId < 0) {
+      return false;
+    }
+
+    const posBase = 3 * bodyId;
+    const quatBase = 4 * bodyId;
+    const quat = [
+      this.data.xquat[quatBase + 0],
+      this.data.xquat[quatBase + 1],
+      this.data.xquat[quatBase + 2],
+      this.data.xquat[quatBase + 3],
+    ];
+    const tipOffset = rotateVectorByQuatWxyz(quat, EE_LOCAL_OFFSET);
+    posOut[0] = this.data.xpos[posBase + 0] + tipOffset[0];
+    posOut[1] = this.data.xpos[posBase + 1] + tipOffset[1];
+    posOut[2] = this.data.xpos[posBase + 2] + tipOffset[2];
+    return true;
+  }
+
   solveIkTargets() {
     this.qRefBuffer.view.set(this.armRefPos);
     this.leftPosBuffer.view.set(this.leftPosTarget);
@@ -825,6 +858,39 @@ export class DaruV4TorqueController {
     this.armRefPos.set(this.qOutBuffer.view);
     this.clampArmReferenceToModelLimits();
     this.armDesPos.set(this.armRefPos);
+  }
+
+  updateHeadLookAtHandMidpoint() {
+    if (this.headBodyId < 0) {
+      return;
+    }
+    if (!this.readEePosition(this.leftWristBodyId, this.leftEePos)
+        || !this.readEePosition(this.rightWristBodyId, this.rightEePos)) {
+      return;
+    }
+
+    const headBase = 3 * this.headBodyId;
+    const targetX = 0.5 * (this.leftEePos[0] + this.rightEePos[0]);
+    const targetY = 0.5 * (this.leftEePos[1] + this.rightEePos[1]);
+    const targetZ = 0.5 * (this.leftEePos[2] + this.rightEePos[2]);
+    const dx = targetX - this.data.xpos[headBase + 0];
+    const dy = targetY - this.data.xpos[headBase + 1];
+    const dz = targetZ - this.data.xpos[headBase + 2];
+    const horizontalDistance = Math.hypot(dx, dy);
+    if (horizontalDistance < HEAD_LOOK_TARGET_MIN_DISTANCE) {
+      return;
+    }
+
+    this.headDesPos[HEAD_INDEX.HY] = clamp(
+      Math.atan2(dy, dx),
+      this.headLowerLimits[HEAD_INDEX.HY],
+      this.headUpperLimits[HEAD_INDEX.HY],
+    );
+    this.headDesPos[HEAD_INDEX.HP] = clamp(
+      -Math.atan2(dz, horizontalDistance) - HEAD_FRONT_AXIS_LOCAL_Y_OFFSET,
+      this.headLowerLimits[HEAD_INDEX.HP],
+      this.headUpperLimits[HEAD_INDEX.HP],
+    );
   }
 
   clampArmReferenceToModelLimits() {
@@ -853,11 +919,11 @@ export class DaruV4TorqueController {
 
   updateArmPdTorques() {
     for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
-      let command = 15.0 * (this.armDesPos[index] - this.armPos[index]) + 1.0 * (0.0 - this.armVel[index]);
+      let command = 30.0 * (this.armDesPos[index] - this.armPos[index]) + 2.0 * (0.0 - this.armVel[index]);
       if (index === 0) {
-        command = 200.0 * (this.armDesPos[index] - this.armPos[index]) + 20.0 * (0.0 - this.armVel[index]);
+        command = 400.0 * (this.armDesPos[index] - this.armPos[index]) + 40.0 * (0.0 - this.armVel[index]);
       } else if (index === 5 || index === 6 || index === 7 || index === 12 || index === 13 || index === 14) {
-        command = 10.0 * (this.armDesPos[index] - this.armPos[index]) + 0.005 * (0.0 - this.armVel[index]);
+        command = 20.0 * (this.armDesPos[index] - this.armPos[index]) + 0.01 * (0.0 - this.armVel[index]);
       }
 
       this.armRefTau[index] += clamp(command, -ARM_PD_LIMITS[index], ARM_PD_LIMITS[index]);
@@ -865,8 +931,8 @@ export class DaruV4TorqueController {
   }
 
   updateHeadPdTorques() {
-    const kp = [25.0, 25.0];
-    const kd = [1.5, 1.5];
+    const kp = [40.0, 40.0];
+    const kd = [2.4, 2.4];
     const fallbackLimit = [7.0, 7.0];
     for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
       if (this.headDofIds[index] < 0) {

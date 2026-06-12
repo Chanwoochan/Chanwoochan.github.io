@@ -33652,7 +33652,11 @@ var LOWERBODY_JOINT_NAMES = [
 var HAND_MOTORS_PER_SIDE = 6;
 var ARM_PD_LIMITS = [100, 60, 60, 60, 60, 10, 10, 10, 60, 60, 60, 60, 10, 10, 10];
 var CG_COMPENSATION_SCALE = 1.2;
-var HOME_MODE_END_COUNT = 6e3;
+var HOME_MODE_SPEEDUP = 3;
+var HOME_STAGE1_END_COUNT = 1e3 / HOME_MODE_SPEEDUP;
+var HOME_STAGE2_END_COUNT = 2e3 / HOME_MODE_SPEEDUP;
+var HOME_STAGE3_END_COUNT = 4e3 / HOME_MODE_SPEEDUP;
+var HOME_MODE_END_COUNT = 6e3 / HOME_MODE_SPEEDUP;
 var DEG_TO_RAD = Math.PI / 180;
 var LOWERBODY_MODE1_HOME_POSE = new Float64Array([
   0,
@@ -33694,6 +33698,8 @@ var HEAD_INDEX = Object.freeze({
   HY: 0,
   HP: 1
 });
+var HEAD_LOOK_TARGET_MIN_DISTANCE = 1e-4;
+var HEAD_FRONT_AXIS_LOCAL_Y_OFFSET = Math.PI / 4;
 var rbdlModulePromise = null;
 function clamp2(value, lower, upper) {
   return Math.min(upper, Math.max(lower, value));
@@ -33879,6 +33885,8 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     this.headQposIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
     this.headDofIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
     this.headActuatorIds = new Int32Array(HEAD_JOINT_NAMES.length).fill(-1);
+    this.headLowerLimits = new Float64Array(HEAD_JOINT_NAMES.length);
+    this.headUpperLimits = new Float64Array(HEAD_JOINT_NAMES.length);
     this.handJointIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handQposIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handDofIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
@@ -33911,6 +33919,8 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     this.rightPosTarget = new Float64Array(DEFAULT_RIGHT_POS);
     this.leftQuatTargetWxyz = new Float64Array(DEFAULT_LEFT_QUAT_WXYZ);
     this.rightQuatTargetWxyz = new Float64Array(DEFAULT_RIGHT_QUAT_WXYZ);
+    this.leftEePos = new Float64Array(3);
+    this.rightEePos = new Float64Array(3);
     this.worldCount = 0;
     this.mode = 0;
     this.count = 0;
@@ -33951,6 +33961,7 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     }
     this.leftWristBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "LWP_Link");
     this.rightWristBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "RWP_Link");
+    this.headBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "HP_Link");
     for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
       const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, HEAD_JOINT_NAMES[index]);
       if (jointId < 0) {
@@ -33960,6 +33971,7 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
       this.headQposIds[index] = this.model.jnt_qposadr[jointId];
       this.headDofIds[index] = this.model.jnt_dofadr[jointId];
       this.headActuatorIds[index] = findActuatorForJoint(this.model, jointId);
+      [this.headLowerLimits[index], this.headUpperLimits[index]] = jointRangeOrFallback(this.model, jointId);
     }
     for (let index = 0; index < HAND_JOINT_NAMES.length; index += 1) {
       const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, HAND_JOINT_NAMES[index]);
@@ -34172,6 +34184,7 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
         }
       } else if (this.mode === 2 || this.mode === 3) {
         this.solveIkTargets();
+        this.updateHeadLookAtHandMidpoint();
         this.applyCgCompensation();
         this.count += 1;
       }
@@ -34225,11 +34238,11 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     }
   }
   setHomePose() {
-    const stage1 = cosineBlend(this.count, 1e3);
-    const stage2 = cosineBlend(this.count - 1e3, 1e3);
-    const stage3 = cosineBlend(this.count - 2e3, 2e3);
-    const stage4 = cosineBlend(this.count - 4e3, 2e3);
-    if (this.count < 1e3) {
+    const stage1 = cosineBlend(this.count, HOME_STAGE1_END_COUNT);
+    const stage2 = cosineBlend(this.count - HOME_STAGE1_END_COUNT, HOME_STAGE2_END_COUNT - HOME_STAGE1_END_COUNT);
+    const stage3 = cosineBlend(this.count - HOME_STAGE2_END_COUNT, HOME_STAGE3_END_COUNT - HOME_STAGE2_END_COUNT);
+    const stage4 = cosineBlend(this.count - HOME_STAGE3_END_COUNT, HOME_MODE_END_COUNT - HOME_STAGE3_END_COUNT);
+    if (this.count < HOME_STAGE1_END_COUNT) {
       this.armDesPos.set(this.armPosInit);
       this.headDesPos.set(this.headPosInit);
       this.armDesPos[ARM_INDEX.LSR] = this.armPosInit[ARM_INDEX.LSR] + (Math.PI / 6 - this.armPosInit[ARM_INDEX.LSR]) * stage1;
@@ -34238,7 +34251,7 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
       this.headDesPos[HEAD_INDEX.HY] = this.headPosInit[HEAD_INDEX.HY] + (0 - this.headPosInit[HEAD_INDEX.HY]) * stage1;
       this.headDesPos[HEAD_INDEX.HP] = this.headPosInit[HEAD_INDEX.HP] + (0 - this.headPosInit[HEAD_INDEX.HP]) * stage1;
     }
-    if (this.count >= 1e3 && this.count < 2e3) {
+    if (this.count >= HOME_STAGE1_END_COUNT && this.count < HOME_STAGE2_END_COUNT) {
       this.armDesPos[ARM_INDEX.LSP] = this.armPosInit[ARM_INDEX.LSP] + (0 - this.armPosInit[ARM_INDEX.LSP]) * stage2;
       this.armDesPos[ARM_INDEX.LSY] = this.armPosInit[ARM_INDEX.LSY] + (0 - this.armPosInit[ARM_INDEX.LSY]) * stage2;
       this.armDesPos[ARM_INDEX.LEP] = this.armPosInit[ARM_INDEX.LEP] + (0 - this.armPosInit[ARM_INDEX.LEP]) * stage2;
@@ -34252,7 +34265,7 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
       this.armDesPos[ARM_INDEX.RWR] = this.armPosInit[ARM_INDEX.RWR] + (0 - this.armPosInit[ARM_INDEX.RWR]) * stage2;
       this.armDesPos[ARM_INDEX.RWP] = this.armPosInit[ARM_INDEX.RWP] + (0 - this.armPosInit[ARM_INDEX.RWP]) * stage2;
     }
-    if (this.count >= 2e3 && this.count < 4e3) {
+    if (this.count >= HOME_STAGE2_END_COUNT && this.count < HOME_STAGE3_END_COUNT) {
       this.armDesPos[ARM_INDEX.LSP] = Math.PI * 3 / 8 * stage3;
       this.armDesPos[ARM_INDEX.RSP] = Math.PI * 3 / 8 * stage3;
       this.armDesPos[ARM_INDEX.LSR] = Math.PI / 6 + (0 - Math.PI / 6) * stage3;
@@ -34260,13 +34273,13 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
       this.armDesPos[ARM_INDEX.RSR] = -Math.PI / 6 + (0 - -Math.PI / 6) * stage3;
       this.armDesPos[ARM_INDEX.REP] = -Math.PI * 3 / 4 * stage3;
     }
-    if (this.count >= 4e3 && this.count < 6e3) {
+    if (this.count >= HOME_STAGE3_END_COUNT && this.count < HOME_MODE_END_COUNT) {
       this.armDesPos[ARM_INDEX.LSP] = Math.PI * 3 / 8 + (0 - Math.PI * 3 / 8) * stage4;
       this.armDesPos[ARM_INDEX.RSP] = Math.PI * 3 / 8 + (0 - Math.PI * 3 / 8) * stage4;
       this.armDesPos[ARM_INDEX.LEP] = -Math.PI * 3 / 4 + (-Math.PI / 2 - -Math.PI * 3 / 4) * stage4;
       this.armDesPos[ARM_INDEX.REP] = -Math.PI * 3 / 4 + (-Math.PI / 2 - -Math.PI * 3 / 4) * stage4;
     }
-    if (this.count >= 6e3) {
+    if (this.count >= HOME_MODE_END_COUNT) {
       this.armDesPos[ARM_INDEX.WAIST] = 0;
       this.armDesPos[ARM_INDEX.LSP] = 0;
       this.armDesPos[ARM_INDEX.LSR] = 0;
@@ -34324,6 +34337,24 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     quatTarget[2] = quat[2];
     quatTarget[3] = quat[3];
   }
+  readEePosition(bodyId, posOut) {
+    if (bodyId < 0) {
+      return false;
+    }
+    const posBase = 3 * bodyId;
+    const quatBase = 4 * bodyId;
+    const quat = [
+      this.data.xquat[quatBase + 0],
+      this.data.xquat[quatBase + 1],
+      this.data.xquat[quatBase + 2],
+      this.data.xquat[quatBase + 3]
+    ];
+    const tipOffset = rotateVectorByQuatWxyz(quat, EE_LOCAL_OFFSET);
+    posOut[0] = this.data.xpos[posBase + 0] + tipOffset[0];
+    posOut[1] = this.data.xpos[posBase + 1] + tipOffset[1];
+    posOut[2] = this.data.xpos[posBase + 2] + tipOffset[2];
+    return true;
+  }
   solveIkTargets() {
     this.qRefBuffer.view.set(this.armRefPos);
     this.leftPosBuffer.view.set(this.leftPosTarget);
@@ -34344,6 +34375,35 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     this.armRefPos.set(this.qOutBuffer.view);
     this.clampArmReferenceToModelLimits();
     this.armDesPos.set(this.armRefPos);
+  }
+  updateHeadLookAtHandMidpoint() {
+    if (this.headBodyId < 0) {
+      return;
+    }
+    if (!this.readEePosition(this.leftWristBodyId, this.leftEePos) || !this.readEePosition(this.rightWristBodyId, this.rightEePos)) {
+      return;
+    }
+    const headBase = 3 * this.headBodyId;
+    const targetX = 0.5 * (this.leftEePos[0] + this.rightEePos[0]);
+    const targetY = 0.5 * (this.leftEePos[1] + this.rightEePos[1]);
+    const targetZ = 0.5 * (this.leftEePos[2] + this.rightEePos[2]);
+    const dx = targetX - this.data.xpos[headBase + 0];
+    const dy = targetY - this.data.xpos[headBase + 1];
+    const dz = targetZ - this.data.xpos[headBase + 2];
+    const horizontalDistance = Math.hypot(dx, dy);
+    if (horizontalDistance < HEAD_LOOK_TARGET_MIN_DISTANCE) {
+      return;
+    }
+    this.headDesPos[HEAD_INDEX.HY] = clamp2(
+      Math.atan2(dy, dx),
+      this.headLowerLimits[HEAD_INDEX.HY],
+      this.headUpperLimits[HEAD_INDEX.HY]
+    );
+    this.headDesPos[HEAD_INDEX.HP] = clamp2(
+      -Math.atan2(dz, horizontalDistance) - HEAD_FRONT_AXIS_LOCAL_Y_OFFSET,
+      this.headLowerLimits[HEAD_INDEX.HP],
+      this.headUpperLimits[HEAD_INDEX.HP]
+    );
   }
   clampArmReferenceToModelLimits() {
     for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
@@ -34367,18 +34427,18 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
   }
   updateArmPdTorques() {
     for (let index = 0; index < ARM_JOINT_NAMES.length; index += 1) {
-      let command = 15 * (this.armDesPos[index] - this.armPos[index]) + 1 * (0 - this.armVel[index]);
+      let command = 30 * (this.armDesPos[index] - this.armPos[index]) + 2 * (0 - this.armVel[index]);
       if (index === 0) {
-        command = 200 * (this.armDesPos[index] - this.armPos[index]) + 20 * (0 - this.armVel[index]);
+        command = 400 * (this.armDesPos[index] - this.armPos[index]) + 40 * (0 - this.armVel[index]);
       } else if (index === 5 || index === 6 || index === 7 || index === 12 || index === 13 || index === 14) {
-        command = 10 * (this.armDesPos[index] - this.armPos[index]) + 5e-3 * (0 - this.armVel[index]);
+        command = 20 * (this.armDesPos[index] - this.armPos[index]) + 0.01 * (0 - this.armVel[index]);
       }
       this.armRefTau[index] += clamp2(command, -ARM_PD_LIMITS[index], ARM_PD_LIMITS[index]);
     }
   }
   updateHeadPdTorques() {
-    const kp = [25, 25];
-    const kd = [1.5, 1.5];
+    const kp = [40, 40];
+    const kd = [2.4, 2.4];
     const fallbackLimit = [7, 7];
     for (let index = 0; index < HEAD_JOINT_NAMES.length; index += 1) {
       if (this.headDofIds[index] < 0) {
@@ -34808,15 +34868,6 @@ function setupGUI(parentContext) {
     resetDefaultCamera(parentContext);
   });
   let reload = reloadFunc.bind(parentContext);
-  parentContext.gui.add(parentContext.params, "scene", {
-    "DARU New Torque": "DARU_NEW_260323/scene.xml",
-    "DARU New Position": "DARU_NEW_260323/DARU_NEW_260323_position.xml"
-    // "DARU": "DARU/meshes/world.xml"
-    // , "Cassie": "agility_cassie/scene.xml",
-    // "Hammock": "hammock.xml", "Balloons": "balloons.xml", "Hand": "shadow_hand/scene_right.xml",
-    // "Mug": "mug.xml", "Tendon": "model_with_tendon.xml",
-    // "Torture Model": "model.xml", "Flex": "flex.xml", "Car": "car.xml", 
-  }).name("Example Scene").onChange(reload);
   let keyInnerHTML = "";
   let actionInnerHTML = "";
   const displayHelpMenu = () => {
@@ -34925,17 +34976,6 @@ function setupGUI(parentContext) {
       parentContext.applyCollisionDisableState();
     }
   });
-  simulationFolder.add({ reload: () => {
-    reload();
-  } }, "reload").name("Reload");
-  document.addEventListener("keydown", (event) => {
-    if (event.ctrlKey && event.code === "KeyL") {
-      reload();
-      event.preventDefault();
-    }
-  });
-  actionInnerHTML += "Reload XML<br>";
-  keyInnerHTML += "Ctrl L<br>";
   const resetSimulation = () => {
     parentContext.mujoco.mj_resetData(parentContext.model, parentContext.data);
     parentContext.mujoco.mj_forward(parentContext.model, parentContext.data);
@@ -34966,6 +35006,38 @@ function setupGUI(parentContext) {
   });
   actionInnerHTML += "Reset simulation<br>";
   keyInnerHTML += "Backspace<br>";
+  simulationFolder.add({ resetView: () => {
+    resetDefaultCamera(parentContext);
+  } }, "resetView").name("Reset View");
+  simulationFolder.add({ resetCup: () => {
+    if (parentContext.resetCupPose) {
+      parentContext.resetCupPose();
+    }
+  } }, "resetCup").name("Reset Cup");
+  if (simulationFolder.$children) {
+    const headCameraPanel = document.createElement("div");
+    headCameraPanel.style.height = "140px";
+    headCameraPanel.style.margin = "4px";
+    headCameraPanel.style.border = "1px solid #555";
+    headCameraPanel.style.borderRadius = "2px";
+    headCameraPanel.style.background = "transparent";
+    headCameraPanel.style.overflow = "hidden";
+    headCameraPanel.style.position = "relative";
+    headCameraPanel.style.pointerEvents = "none";
+    const label = document.createElement("div");
+    label.textContent = "Head Left Camera";
+    label.style.position = "absolute";
+    label.style.left = "6px";
+    label.style.top = "5px";
+    label.style.padding = "2px 4px";
+    label.style.background = "rgba(0, 0, 0, 0.55)";
+    label.style.color = "#fff";
+    label.style.font = "10px monospace";
+    label.style.zIndex = "1";
+    headCameraPanel.appendChild(label);
+    simulationFolder.$children.appendChild(headCameraPanel);
+    parentContext.headCameraPanel = headCameraPanel;
+  }
   document.addEventListener("keydown", (event) => {
     if (event.ctrlKey && event.code === "KeyA") {
       resetDefaultCamera(parentContext);
@@ -35309,11 +35381,12 @@ function drawTendonsAndFlex(mujocoRoot, model, data) {
     mujocoRoot.spheres.instanceMatrix.needsUpdate = true;
   }
 }
-async function ensureSceneAsset(mujoco2, filePath) {
+async function ensureSceneAsset(mujoco2, filePath, progressCallback) {
   const normalizedPath = normalizeScenePath(filePath);
   if (loadedSceneFiles.has(normalizedPath)) {
     return sceneTextCache.get(normalizedPath) ?? "";
   }
+  progressCallback?.(`fetch assets/scenes/${normalizedPath}`);
   const response = await fetch(sceneAssetUrl(normalizedPath), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`Failed to fetch assets/scenes/${normalizedPath}: ${response.status}`);
@@ -35329,9 +35402,10 @@ async function ensureSceneAsset(mujoco2, filePath) {
     mujoco2.FS.writeFile(`/working/${normalizedPath}`, new Uint8Array(await response.arrayBuffer()));
   }
   loadedSceneFiles.add(normalizedPath);
+  progressCallback?.(`loaded assets/scenes/${normalizedPath}`);
   return sceneTextCache.get(normalizedPath) ?? "";
 }
-async function downloadSceneXmlDependencies(mujoco2, xmlPath, contextDir, seenXmlContexts) {
+async function downloadSceneXmlDependencies(mujoco2, xmlPath, contextDir, seenXmlContexts, progressCallback) {
   const normalizedXmlPath = normalizeScenePath(xmlPath);
   const normalizedContextDir = normalizeScenePath(contextDir ?? sceneDirname(normalizedXmlPath));
   const contextKey = `${normalizedXmlPath}|${normalizedContextDir}`;
@@ -35339,7 +35413,7 @@ async function downloadSceneXmlDependencies(mujoco2, xmlPath, contextDir, seenXm
     return;
   }
   seenXmlContexts.add(contextKey);
-  const xmlText = await ensureSceneAsset(mujoco2, normalizedXmlPath);
+  const xmlText = await ensureSceneAsset(mujoco2, normalizedXmlPath, progressCallback);
   const compilerTag = xmlText.match(/<compiler\b[^>]*>/i)?.[0] ?? "";
   const meshDir = getXmlAttribute(compilerTag, "meshdir");
   const textureDir = getXmlAttribute(compilerTag, "texturedir");
@@ -35356,13 +35430,13 @@ async function downloadSceneXmlDependencies(mujoco2, xmlPath, contextDir, seenXm
     const dependencyPath = resolveScenePath(baseDir, relativePath);
     if (isXmlSceneAsset(dependencyPath)) {
       const dependencyContextDir = tagName === "include" ? normalizedContextDir : sceneDirname(dependencyPath);
-      await downloadSceneXmlDependencies(mujoco2, dependencyPath, dependencyContextDir, seenXmlContexts);
+      await downloadSceneXmlDependencies(mujoco2, dependencyPath, dependencyContextDir, seenXmlContexts, progressCallback);
     } else {
-      await ensureSceneAsset(mujoco2, dependencyPath);
+      await ensureSceneAsset(mujoco2, dependencyPath, progressCallback);
     }
   }
 }
-async function downloadExampleScenesFolder(mujoco2, sceneFile) {
+async function downloadExampleScenesFolder(mujoco2, sceneFile, progressCallback) {
   if (!sceneFile) {
     throw new Error("downloadExampleScenesFolder requires a scene XML path.");
   }
@@ -35370,7 +35444,8 @@ async function downloadExampleScenesFolder(mujoco2, sceneFile) {
     mujoco2,
     normalizeScenePath(sceneFile),
     sceneDirname(sceneFile),
-    /* @__PURE__ */ new Set()
+    /* @__PURE__ */ new Set(),
+    progressCallback
   );
 }
 function getPosition(buffer, index, target, swizzle = true) {
@@ -42346,13 +42421,34 @@ ${invokerFnBody}`;
 var mujoco_wasm_default = loadMujoco;
 
 // src/main.js
-var mujoco = await mujoco_wasm_default();
+function updateLoading(progress, message) {
+  window.daruLoading?.set(progress, message);
+}
+function logLoading(message) {
+  window.daruLoading?.log(message);
+}
+updateLoading(8, "Loading MuJoCo WebAssembly runtime...");
+var mujoco;
+try {
+  mujoco = await mujoco_wasm_default();
+} catch (error2) {
+  console.error("Failed to load MuJoCo WebAssembly runtime:", error2);
+  window.daruLoading?.error(error2);
+  throw error2;
+}
+updateLoading(18, "MuJoCo runtime ready");
 var MJDSBL_CONTACT = 1 << 4;
 var MJDSBL_ACTUATION = 1 << 11;
 var RIGHT_TARGET_POSITION_SPEED = 0.2;
 var RIGHT_TARGET_ROTATION_SPEED = Math.PI * 0.75;
 var DEFAULT_CAMERA_POSITION2 = [0.18, 1.78, -2.45];
 var DEFAULT_CAMERA_TARGET2 = [0.1, 0.78, 0];
+var HEAD_LEFT_XML_CAMERA_NAME = "L_front_cam";
+var HEAD_LEFT_XML_CAMERA_BODY = "HP_Link";
+var HEAD_LEFT_XML_CAMERA_POS_MJ = [0.1, 0.0325, -0.1];
+var HEAD_LEFT_XML_CAMERA_EULER = [0, -0.7854, -1.5708];
+var HEAD_LEFT_XML_CAMERA_FOVY = 60;
+var HEAD_LEFT_CAMERA_EXTRA_PITCH = -Math.PI / 2;
 var ACTIVE_TARGET_HAND_TOGGLE_KEY = "KeyT";
 var ACTIVE_TARGET_HAND_GRIP_TOGGLE_COUNT = 5;
 var RIGHT_TARGET_INPUT_KEYS = /* @__PURE__ */ new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF"]);
@@ -42431,17 +42527,18 @@ var MuJoCoDemo = class {
     this.container = document.createElement("div");
     document.body.appendChild(this.container);
     this.container.style.position = "relative";
-    this.debugOverlay = document.createElement("div");
-    this.debugOverlay.style.position = "absolute";
-    this.debugOverlay.style.left = "10px";
-    this.debugOverlay.style.bottom = "10px";
-    this.debugOverlay.style.padding = "8px 10px";
-    this.debugOverlay.style.background = "rgba(0, 0, 0, 0.55)";
-    this.debugOverlay.style.color = "#fff";
-    this.debugOverlay.style.font = "12px monospace";
-    this.debugOverlay.style.whiteSpace = "pre";
-    this.debugOverlay.style.zIndex = "1000";
-    this.debugOverlay.style.pointerEvents = "none";
+    this.watermark = document.createElement("img");
+    this.watermark.src = "./assets/darumujoco.png";
+    this.watermark.alt = "DARU MuJoCo";
+    this.watermark.style.position = "absolute";
+    this.watermark.style.left = "14px";
+    this.watermark.style.bottom = "14px";
+    this.watermark.style.width = "180px";
+    this.watermark.style.maxWidth = "28vw";
+    this.watermark.style.opacity = "0.72";
+    this.watermark.style.zIndex = "900";
+    this.watermark.style.pointerEvents = "none";
+    this.watermark.style.filter = "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45))";
     this.rightTargetPad = this.createRightTargetPad();
     this.scene = new Scene();
     this.scene.name = "scene";
@@ -42449,6 +42546,37 @@ var MuJoCoDemo = class {
     this.camera.name = "PerspectiveCamera";
     this.camera.position.set(...DEFAULT_CAMERA_POSITION2);
     this.scene.add(this.camera);
+    this.headLeftCamera = new PerspectiveCamera(HEAD_LEFT_XML_CAMERA_FOVY, 16 / 9, 0.01, 8);
+    this.headLeftCamera.name = "HeadLeftCamera";
+    this.headCameraRenderer = null;
+    this.headCameraPanel = null;
+    this.headCameraId = -1;
+    this.headCameraBodyId = -1;
+    this.headCameraPosition = new Vector3();
+    this.headCameraQuaternion = new Quaternion();
+    this.headCameraLocalPosition = new Vector3(
+      HEAD_LEFT_XML_CAMERA_POS_MJ[0],
+      HEAD_LEFT_XML_CAMERA_POS_MJ[2],
+      -HEAD_LEFT_XML_CAMERA_POS_MJ[1]
+    );
+    const headCameraLocalQuaternionMj = new Quaternion().setFromEuler(
+      new Euler(...HEAD_LEFT_XML_CAMERA_EULER, "XYZ")
+    );
+    this.headCameraLocalQuaternion = new Quaternion(
+      -headCameraLocalQuaternionMj.x,
+      -headCameraLocalQuaternionMj.z,
+      headCameraLocalQuaternionMj.y,
+      -headCameraLocalQuaternionMj.w
+    );
+    this.headCameraLocalQuaternion.multiply(
+      new Quaternion().setFromEuler(new Euler(HEAD_LEFT_CAMERA_EXTRA_PITCH, 0, 0, "XYZ"))
+    );
+    this.headCameraLocalForward = new Vector3();
+    this.headCameraLocalUp = new Vector3();
+    this.headCameraForward = new Vector3();
+    this.headCameraUp = new Vector3();
+    this.headCameraTarget = new Vector3();
+    this.cupInitialState = null;
     this.scene.background = new Color(0.15, 0.25, 0.35);
     this.scene.fog = new Fog(this.scene.background, 15, 25.5);
     this.ambientLight = new AmbientLight(16777215, 0.1 * 3.14);
@@ -42480,7 +42608,7 @@ var MuJoCoDemo = class {
     this.renderer.useLegacyLights = true;
     this.renderer.setAnimationLoop(this.render.bind(this));
     this.container.appendChild(this.renderer.domElement);
-    this.container.appendChild(this.debugOverlay);
+    this.container.appendChild(this.watermark);
     this.container.appendChild(this.rightTargetPad);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.target.set(...DEFAULT_CAMERA_TARGET2);
@@ -42719,13 +42847,24 @@ var MuJoCoDemo = class {
     this.handGripToggleButton.textContent = `Finger 1-5 ${handLabel} -> ${nextLabel}`;
   }
   async init() {
-    await downloadExampleScenesFolder(mujoco, initialScene);
+    updateLoading(24, "Downloading scene XML, meshes, and assets...");
+    let assetCount = 0;
+    await downloadExampleScenesFolder(mujoco, initialScene, (message) => {
+      assetCount += message.startsWith("loaded ") ? 1 : 0;
+      const progress = Math.min(62, 24 + assetCount * 1.5);
+      updateLoading(progress, message);
+    });
+    updateLoading(68, "Building MuJoCo and Three.js scene...");
     [this.model, this.data, this.bodies, this.lights] = await loadSceneFromURL(mujoco, initialScene, this);
     this.mujoco.mj_forward(this.model, this.data);
+    updateLoading(78, "Initializing DARU torque controller...");
     await this.configureSceneController();
+    updateLoading(92, "Creating UI controls...");
     window.mujocoDemo = this;
     this.gui = new g();
     setupGUI(this);
+    updateLoading(100, "Ready");
+    window.daruLoading?.done();
   }
   sceneUsesPositionTargets() {
     return typeof this.params.scene === "string" && (this.params.scene.endsWith("_position.xml") || this.params.scene.endsWith("_hands_pos.xml"));
@@ -42742,6 +42881,47 @@ var MuJoCoDemo = class {
     return this.textDecoder.decode(
       this.model.names.subarray(this.model.name_bodyadr[bodyId])
     ).split("\0")[0];
+  }
+  findBodyIdByName(name) {
+    if (!this.model) {
+      return -1;
+    }
+    return this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, name);
+  }
+  findCameraIdByName(name) {
+    if (!this.model) {
+      return -1;
+    }
+    return this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_CAMERA.value, name);
+  }
+  captureCupInitialPose() {
+    const bodyId = this.findBodyIdByName("desk_cup_RAND_1");
+    if (bodyId < 0 || this.model.body_jntnum[bodyId] <= 0) {
+      this.cupInitialState = null;
+      return;
+    }
+    const jointId = this.model.body_jntadr[bodyId];
+    const qposId = this.model.jnt_qposadr[jointId];
+    const dofId = this.model.jnt_dofadr[jointId];
+    this.cupInitialState = {
+      qposId,
+      dofId,
+      qpos: Array.from(this.data.qpos.slice(qposId, qposId + 7)),
+      qvel: Array.from(this.data.qvel.slice(dofId, dofId + 6))
+    };
+  }
+  resetCupPose() {
+    if (!this.cupInitialState || !this.model || !this.data) {
+      return;
+    }
+    const { qposId, dofId, qpos, qvel } = this.cupInitialState;
+    for (let index = 0; index < qpos.length; index += 1) {
+      this.data.qpos[qposId + index] = qpos[index];
+    }
+    for (let index = 0; index < qvel.length; index += 1) {
+      this.data.qvel[dofId + index] = qvel[index];
+    }
+    this.mujoco.mj_forward(this.model, this.data);
   }
   applyHandOnlyCollisionMask() {
     if (!this.model) {
@@ -42818,6 +42998,12 @@ var MuJoCoDemo = class {
     const generation = ++this.controllerInitGeneration;
     this.clearTargetKeys();
     this.resetHandGripStates();
+    this.headCameraId = this.findCameraIdByName(HEAD_LEFT_XML_CAMERA_NAME);
+    this.headCameraBodyId = this.findBodyIdByName(HEAD_LEFT_XML_CAMERA_BODY);
+    if (this.headCameraBodyId < 0) {
+      this.headCameraBodyId = this.findBodyIdByName("HY_Link");
+    }
+    this.captureCupInitialPose();
     if (this.controller) {
       this.controller.dispose();
       this.controller = null;
@@ -42844,6 +43030,7 @@ var MuJoCoDemo = class {
             return;
           }
           this.debugState.rbdl = message;
+          logLoading(`controller ${message}`);
         }),
         new Promise((_, reject) => {
           window.setTimeout(() => reject(new Error("controller init timeout")), 8e3);
@@ -42872,42 +43059,7 @@ var MuJoCoDemo = class {
   }
   updateDebugOverlay() {
     const controllerMode = this.controller ? this.controller.mode : "none";
-    const loadingSeconds = this.controllerLoading ? ((performance.now() - this.controllerInitStartedAt) / 1e3).toFixed(1) : "0.0";
-    const ctrl0 = this.data && this.data.ctrl.length > 0 ? this.data.ctrl[0].toFixed(3) : "n/a";
-    const ctrl4 = this.data && this.data.ctrl.length > 4 ? this.data.ctrl[4].toFixed(3) : "n/a";
-    const ctrl11 = this.data && this.data.ctrl.length > 11 ? this.data.ctrl[11].toFixed(3) : "n/a";
-    const tau4 = this.controller ? this.controller.armRefTau[4].toFixed(3) : "n/a";
-    const tau11 = this.controller ? this.controller.armRefTau[11].toFixed(3) : "n/a";
-    const q4 = this.controller ? this.controller.armPos[4].toFixed(3) : "n/a";
-    const q11 = this.controller ? this.controller.armPos[11].toFixed(3) : "n/a";
-    const activeTargetPos = this.controller ? this.controller.getTargetPosition(this.activeTargetHand) : null;
-    const activeTargetQuat = this.controller ? this.controller.getTargetQuaternion(this.activeTargetHand) : null;
-    const targetX = activeTargetPos ? activeTargetPos[0].toFixed(3) : "n/a";
-    const targetY = activeTargetPos ? activeTargetPos[1].toFixed(3) : "n/a";
-    const targetZ = activeTargetPos ? activeTargetPos[2].toFixed(3) : "n/a";
-    const targetQuatW = activeTargetQuat ? activeTargetQuat[0].toFixed(3) : "n/a";
-    const targetQuatX = activeTargetQuat ? activeTargetQuat[1].toFixed(3) : "n/a";
-    const targetQuatY = activeTargetQuat ? activeTargetQuat[2].toFixed(3) : "n/a";
-    const targetQuatZ = activeTargetQuat ? activeTargetQuat[3].toFixed(3) : "n/a";
-    const inputMode = this.rightTargetRotationMode ? "rot" : "pos";
     this.updateRightTargetPadState(controllerMode);
-    this.debugOverlay.textContent = `scene: ${this.params.scene}
-loading: ${this.controllerLoading}
-loading_s: ${loadingSeconds}
-controller: ${this.controller ? "yes" : "no"}
-collisions_disabled: ${this.params.collisionsDisabled}
-controls_disabled: ${this.params.controlsDisabled}
-mode: ${controllerMode}
-status: ${this.debugState.status}
-rbdl: ${this.debugState.rbdl}
-ctrl0/4/11: ${ctrl0} ${ctrl4} ${ctrl11}
-tau4/11: ${tau4} ${tau11}
-q4/11: ${q4} ${q11}
-target_hand: ${this.activeTargetHand}
-target_input: pad+kb (hand:t rot:v)
-target_mode: ${inputMode}
-target_xyz: ${targetX} ${targetY} ${targetZ}
-target_quat: ${targetQuatW} ${targetQuatX} ${targetQuatY} ${targetQuatZ}`;
   }
   updateRightTargetPadState(controllerMode) {
     if (!this.rightTargetPad || !this.rightTargetPadStatus) {
@@ -43064,6 +43216,48 @@ target_quat: ${targetQuatW} ${targetQuatX} ${targetQuatY} ${targetQuatZ}`;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
+  ensureHeadCameraRenderer() {
+    if (!this.headCameraPanel || this.headCameraRenderer) {
+      return;
+    }
+    this.headCameraRenderer = new WebGLRenderer({ antialias: true });
+    this.headCameraRenderer.setPixelRatio(1);
+    this.headCameraRenderer.outputColorSpace = LinearSRGBColorSpace;
+    this.headCameraRenderer.useLegacyLights = true;
+    this.headCameraRenderer.domElement.style.position = "absolute";
+    this.headCameraRenderer.domElement.style.inset = "0";
+    this.headCameraRenderer.domElement.style.width = "100%";
+    this.headCameraRenderer.domElement.style.height = "100%";
+    this.headCameraPanel.insertBefore(this.headCameraRenderer.domElement, this.headCameraPanel.firstChild);
+  }
+  renderHeadCameraView() {
+    if (!this.headCameraPanel || this.headCameraBodyId < 0) {
+      return;
+    }
+    this.ensureHeadCameraRenderer();
+    if (!this.headCameraRenderer) {
+      return;
+    }
+    const width = Math.max(1, this.headCameraPanel.clientWidth);
+    const height = Math.max(1, this.headCameraPanel.clientHeight);
+    const canvas = this.headCameraRenderer.domElement;
+    if (canvas.width !== width || canvas.height !== height) {
+      this.headCameraRenderer.setSize(width, height, false);
+      this.headLeftCamera.aspect = width / height;
+      this.headLeftCamera.updateProjectionMatrix();
+    }
+    getPosition(this.data.xpos, this.headCameraBodyId, this.headCameraPosition);
+    getQuaternion(this.data.xquat, this.headCameraBodyId, this.headCameraQuaternion);
+    this.headLeftCamera.position.copy(this.headCameraLocalPosition).applyQuaternion(this.headCameraQuaternion).add(this.headCameraPosition);
+    this.headCameraLocalForward.set(0, 0, -1).applyQuaternion(this.headCameraLocalQuaternion);
+    this.headCameraLocalUp.set(0, 1, 0).applyQuaternion(this.headCameraLocalQuaternion);
+    this.headCameraForward.copy(this.headCameraLocalForward).applyQuaternion(this.headCameraQuaternion).normalize();
+    this.headCameraUp.copy(this.headCameraLocalUp).applyQuaternion(this.headCameraQuaternion).normalize();
+    this.headCameraTarget.copy(this.headLeftCamera.position).addScaledVector(this.headCameraForward, 1);
+    this.headLeftCamera.up.copy(this.headCameraUp);
+    this.headLeftCamera.lookAt(this.headCameraTarget);
+    this.headCameraRenderer.render(this.scene, this.headLeftCamera);
+  }
   render(timeMS) {
     if (!this.model || !this.data) return;
     this.controls.update();
@@ -43160,10 +43354,17 @@ target_quat: ${targetQuatW} ${targetQuatX} ${targetQuatY} ${targetQuatZ}`;
     drawTendonsAndFlex(this.mujocoRoot, this.model, this.data);
     this.updateDebugOverlay();
     this.renderer.render(this.scene, this.camera);
+    this.renderHeadCameraView();
   }
 };
 var demo = new MuJoCoDemo();
-await demo.init();
+try {
+  await demo.init();
+} catch (error2) {
+  console.error("Failed to initialize DARU MuJoCo:", error2);
+  window.daruLoading?.error(error2);
+  throw error2;
+}
 export {
   MuJoCoDemo
 };

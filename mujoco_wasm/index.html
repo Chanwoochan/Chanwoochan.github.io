@@ -8,17 +8,142 @@
     <meta name="keywords" content="MuJoCo">
     <meta name="author" content="zalo">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no, shrink-to-fit=0">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#05070a">
     <link rel="icon" type="image/x-icon" href="./assets/favicon.png">
+    <style>
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #05070a;
+      }
+
+      #loadingOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #05070a;
+        color: #e8eef7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      }
+
+      #loadingCard {
+        width: min(560px, calc(100vw - 40px));
+      }
+
+      #loadingTitle {
+        margin: 0 0 12px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      #loadingLogo {
+        display: block;
+        width: min(360px, 78vw);
+        max-height: 160px;
+        margin: 0 auto 18px;
+        object-fit: contain;
+      }
+
+      #loadingMessage {
+        min-height: 18px;
+        color: #aab7c8;
+        font-size: 13px;
+      }
+
+      #loadingBarOuter {
+        height: 8px;
+        margin: 14px 0 12px;
+        overflow: hidden;
+        background: #18202b;
+        border-radius: 4px;
+      }
+
+      #loadingBarInner {
+        width: 4%;
+        height: 100%;
+        background: #4da3ff;
+        border-radius: inherit;
+        transition: width 180ms ease;
+      }
+
+      #loadingLog {
+        height: 150px;
+        margin: 0;
+        padding: 10px;
+        overflow: hidden;
+        background: #0c1118;
+        border: 1px solid #1b2635;
+        color: #7f8da0;
+        font-size: 11px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
+      #loadingOverlay.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 220ms ease;
+      }
+    </style>
   </head>
 
-  <body style="margin:0px; background-color:rgb(255,255,255); overflow:hidden; position:fixed; min-height:100%;
+  <body style="margin:0px; background-color:#05070a; overflow:hidden; position:fixed; min-height:100%;
                touch-action:none; -webkit-touch-callout:none; -webkit-user-select:none; -khtml-user-select:none;
                -moz-user-select:none; -ms-user-select:none; user-select:none;">
     <h1 hidden></h1>
 
     <div id="appbody" style="position:absolute; inset:0;"></div>
+    <div id="loadingOverlay">
+      <div id="loadingCard">
+        <img id="loadingLogo" src="./assets/darumujoco.png" alt="DARU MuJoCo">
+        <h2 id="loadingTitle">Loading DARU MuJoCo</h2>
+        <div id="loadingMessage">Starting JavaScript bundle...</div>
+        <div id="loadingBarOuter"><div id="loadingBarInner"></div></div>
+        <pre id="loadingLog">[boot] page ready</pre>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const overlay = document.getElementById('loadingOverlay');
+        const message = document.getElementById('loadingMessage');
+        const bar = document.getElementById('loadingBarInner');
+        const log = document.getElementById('loadingLog');
+        const lines = ['[boot] page ready'];
+        const append = (text) => {
+          lines.push(`[${new Date().toLocaleTimeString()}] ${text}`);
+          while (lines.length > 9) { lines.shift(); }
+          log.textContent = lines.join('\n');
+        };
+        window.daruLoading = {
+          set(progress, text) {
+            const clamped = Math.max(0, Math.min(100, Number(progress) || 0));
+            bar.style.width = `${clamped}%`;
+            if (text) {
+              message.textContent = text;
+              append(text);
+            }
+          },
+          log: append,
+          done() {
+            bar.style.width = '100%';
+            message.textContent = 'Ready';
+            append('Ready');
+            window.setTimeout(() => overlay.classList.add('is-hidden'), 180);
+            window.setTimeout(() => overlay.remove(), 500);
+          },
+          error(error) {
+            message.textContent = 'Load failed. See browser console.';
+            append(`ERROR: ${error?.message || error}`);
+            bar.style.background = '#ff5d5d';
+          },
+        };
+      })();
+    </script>
 
-    <script type="module" src="./build/main.js?v=20260515-side-top-homepose"></script>
+    <script type="module" src="./build/main.js"></script>
   </body>
 </html>
