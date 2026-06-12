@@ -1,6 +1,6 @@
 <!-- DARU_NEW_260323 Model MJCF -->
 <mujoco model="DARU_NEW_260323_hands">
-  <compiler angle="radian" autolimits="true"/>
+  <compiler angle="radian"/>
 
   <asset>
     <mesh name="Base" content_type="model/stl" file="meshes/Base.STL"/>
@@ -25,7 +25,7 @@
     <model name="ROUGH_R_hand" file="../ROUGH_R/ROUGH_R_pos.xml"/>
     <model name="ROUGH_L_hand" file="../ROUGH_L/ROUGH_L_pos.xml"/>
 
-    <material name="robot_mat" rgba="0.82 0.84 0.88 1"/>
+    <material name="robot_mat" rgba="0.22 0.22 0.22 1" specular="0.10" shininess="0.15"/>
   </asset>
 
   <worldbody>
@@ -66,6 +66,10 @@
                     <body name="R_Hand_Mount" pos="0 -0.0045 -0.0255" euler="0 3.142 1.571">
                       <attach model="ROUGH_R_hand" prefix="rh_"/>
                     </body>
+                    <camera name="R_wrist_cam"
+                        pos="0.082 -0.006 -0.038"
+                        euler="0.2618 0.3918 0"
+                        fovy="58"/>
                   </body>
                 </body>
               </body>
@@ -104,6 +108,10 @@
                     <body name="L_Hand_Mount" pos="0 0.0045 -0.0255" euler="0 3.142 -1.571">
                       <attach model="ROUGH_L_hand" prefix="lh_"/>
                     </body>
+                    <camera name="L_wrist_cam"
+                        pos="0.082 0.006 -0.038"
+                        euler="-0.2618 0.3918 0"
+                        fovy="58"/>
                   </body>
                 </body>
               </body>

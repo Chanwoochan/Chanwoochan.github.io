@@ -1,0 +1,187 @@
+<!-- DARU_NEW_260323 scene with front desk and overhead light -->
+<mujoco model="DARU_NEW_260323_scene">
+<option timestep="0.002" solver="Newton" iterations="20"
+  noslip_iterations="50"/>
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="grab">
+      <joint limited="false" margin="0.01" armature="0.001" damping="0.02" frictionloss="0.001"/>
+      <geom type="mesh" rgba=".93 .99 .97 1.0"/>
+      <site size="0.005 0 0" rgba="0.4 0.9 0.4 1"/>
+      <default class="object_col">
+        <geom type="mesh" density="1250" contype="3" conaffinity="3"
+              friction="1 0.5 0.01" margin="0.0000" condim="4"
+              rgba=".3 .4 .5 1" group="3"/>
+      </default>
+    </default>
+  </default>
+
+  <!-- <visual>
+    <headlight ambient="0.18 0.18 0.18" diffuse="0.55 0.55 0.55" specular="0.18 0.18 0.18"/>
+    <rgba haze="0.08 0.10 0.12 1"/>
+    <global azimuth="150" elevation="-18" offwidth="340" offheight="180"/>
+  </visual> -->
+  <include file="../furniture_sim/studyTable/studyTable_asset.xml"/>
+  <include file="../object_sim/waterbottle/assets.xml"/>
+  <asset>
+    <model name="DARU_robot" file="DARU_NEW_260323_torque.xml"/>
+    <model name="desk" file="../furniture_sim/studyTable.xml"/>
+    <mesh name="ice_basket_mesh" file="../object_sim/basket/tripo_convert_bb9fbf4f-ccc5-422a-adc8-e63227bfd0b1.obj"
+          scale="0.3 0.3 0.3"/>
+    <mesh name="pour_cup_mesh" file="../object_sim/cup/cup.stl"/>
+    <mesh name="pour_cup_contact0_mesh" file="../object_sim/cup/contact0.stl"/>
+    <mesh name="pour_cup_contact1_mesh" file="../object_sim/cup/contact1.stl"/>
+    <mesh name="pour_cup_contact2_mesh" file="../object_sim/cup/contact2.stl"/>
+    <mesh name="pour_cup_contact3_mesh" file="../object_sim/cup/contact3.stl"/>
+    <mesh name="pour_cup_contact4_mesh" file="../object_sim/cup/contact4.stl"/>
+    <mesh name="pour_cup_contact5_mesh" file="../object_sim/cup/contact5.stl"/>
+    <mesh name="pour_cup_contact6_mesh" file="../object_sim/cup/contact6.stl"/>
+    <mesh name="pour_cup_contact7_mesh" file="../object_sim/cup/contact7.stl"/>
+    <mesh name="pour_cup_contact8_mesh" file="../object_sim/cup/contact8.stl"/>
+    <mesh name="pour_cup_contact9_mesh" file="../object_sim/cup/contact9.stl"/>
+    <mesh name="pour_cup_contact10_mesh" file="../object_sim/cup/contact10.stl"/>
+    <mesh name="pour_cup_contact11_mesh" file="../object_sim/cup/contact11.stl"/>
+    <texture name="scene_checker" type="2d" builtin="checker" rgb1="0.18 0.20 0.22" rgb2="0.12 0.14 0.16"
+             width="512" height="512"/>
+    <texture name="desk_wood_tex" type="cube" file="../furniture_sim/common/textures/wood1.png"
+             width="2" height="2"/>
+    <texture name="tray_stone_tex" type="cube" file="../furniture_sim/common/textures/metal3.png"
+             width="2" height="2"/>
+    <texture name="box_cube_tex" type="cube" file="textures/cube_puzzle.png"
+             width="2" height="2"/>
+    <texture name="wall_frame_art_tex" type="2d" file="../furniture_sim/pic.png"/>
+    <material name="floor_mat" texture="scene_checker" texrepeat="6 6" texuniform="true"
+              reflectance="0.02" rgba="1 1 1 1"/>
+    <material name="desk_top_mat" texture="desk_wood_tex" texrepeat="2.5 2.5" texuniform="false"
+              rgba="0.98 0.92 0.84 1" reflectance="0.0" specular="0.0" shininess="0.0"/>
+    <material name="desk_leg_mat" texture="desk_wood_tex" texrepeat="4.0 4.0" texuniform="false"
+              rgba="0.84 0.74 0.60 1" reflectance="0.10" specular="0.08" shininess="0.10"/>
+    <material name="tray_mat" texture="tray_stone_tex" texrepeat="1.5 1.5" texuniform="false"
+              rgba="0.96 0.96 0.94 1" reflectance="0.18" specular="0.12" shininess="0.18"/>
+    <material name="box_cube_mat" texture="box_cube_tex" texrepeat="1 1" texuniform="false"
+              rgba="1 1 1 1" reflectance="0.12" specular="0.10" shininess="0.08"/>
+    <material name="wall_frame_art_mat" texture="wall_frame_art_tex" texrepeat="3.5 3.5" texuniform="true"
+              rgba="1 1 1 1" reflectance="0" specular="0" shininess="0"/>
+    <material name="wall_frame_border_mat" rgba="0.10 0.08 0.06 1"
+              reflectance="0.03" specular="0.02" shininess="0.02"/>
+    <material name="peg_mat" rgba="0.82 0.30 0.22 1" reflectance="0.14" specular="0.18" shininess="0.18"/>
+    <material name="hole_mat" rgba="0.20 0.42 0.78 1" reflectance="0.14" specular="0.18" shininess="0.18"/>
+    <material name="ice_basket_mat" rgba="0.92 0.95 0.98 1"
+              reflectance="0.18" specular="0.22" shininess="0.22"/>
+    <material name="ice_mat" rgba="0.78 0.90 1.0 0.72"
+              reflectance="0.18" specular="0.30" shininess="0.30"/>
+    <material name="pour_liquid_mat" rgba="0.24 0.55 0.96 0.68"
+              reflectance="0.04" specular="0.08" shininess="0.08"/>
+  </asset>
+
+  <worldbody>
+    <!-- <light name="overhead_key" pos="0.55 0 2.45" dir="0 0 -1" directional="true"
+           diffuse="0.95 0.95 0.92" specular="0.20 0.20 0.20" castshadow="true"/> -->
+
+    <geom name="floor" type="box" pos="0 0 -0.005" size="1.2 1.2 0.01" material="desk_top_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_front_NL" type="box" pos="0.73 0 1.2" size="0.01 1.2 1.2" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_left_NL" type="box" pos="0 1.2 1.2" size="1.2 0.01 1.2" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_right_NL" type="box" pos="0 -1.2 1.2" size="1.2 0.01 1.2" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="ceiling_NL" type="box" pos="0 0 2.4" size="1.2 1.2 0.01" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_frame_border_NL" type="box" pos="0.709 -0.6 1.6" size="0.018 0.31 0.24"
+          material="wall_frame_border_mat" contype="0" conaffinity="0"/>
+          
+    <geom name="wall_frame_art_NL"
+      type="plane"
+      pos="0.696 -0.6 1.6"
+      size="0.27 0.20 0.001"
+      material="wall_frame_art_mat"
+      euler="0 -1.576 -1.576"
+      contype="0"
+      conaffinity="0"/>
+
+    <light 
+      pos="-0.4 -0.8 2.35"  
+      dir="0 0 -1"      
+      diffuse="2 2 2"
+      ambient="0.3 0.3 0.3"
+      directional="false"
+      castshadow="true"/>
+    <geom type="box" pos="-0.4 -0.8 2.4"  size="0.1 0.1 0.05"
+          rgba="3 3 3 1" contype="0" conaffinity="0"/>
+    <light 
+      pos="-0.4 0.8 2.35"  
+      dir="0 0 -1"      
+      diffuse="2 2 2"
+      ambient="0.3 0.3 0.3"
+      directional="false"
+      castshadow="true"/>
+    <geom type="box" pos="-0.4 0.8 2.4"  size="0.1 0.1 0.05"
+          rgba="3 3 3 1" contype="0" conaffinity="0"/>
+
+    <body name="robot_anchor" pos="-0.1 0 0.94">
+      <freejoint name="robot_anchor_free"/>
+      <attach model="DARU_robot" prefix=""/>
+    </body>
+
+    <body name="left_foot_anchor" pos="-0.10 0.105 0"/>
+    <body name="right_foot_anchor" pos="-0.10 -0.105 0"/>
+
+    <body name="desk_" pos="0.44 0 0" euler="0 0 -1.57">
+      <attach model="desk" prefix="de_"/>
+    </body>
+
+    <body name="pour_cup" pos="0.32 -0.0 0.80" euler="0 0 0">
+      <freejoint/>
+      <geom name="pour_cup_visual" type="mesh" mesh="pour_cup_mesh"
+            rgba="1 0.75 0.8 1.0" mass="0.05"
+            contype="2" conaffinity="6"
+            margin="0.002" gap="0.001"
+            solref="0.03 1" solimp="0.90 0.97 0.001 0.5 2" />
+      <geom name="pour_cup_liquid" type="cylinder" pos="0 0 0.001" size="0.026 0.001"
+            material="pour_liquid_mat" rgba="0.24 0.55 0.96 0.0"
+            contype="0" conaffinity="0"/>
+    </body>
+
+    <body name="pour_bottle" pos="0.34 -0.15 0.82" euler="0 0 0">
+      <freejoint/>
+      <geom name="pour_bottle_visual" type="mesh" mesh="waterbottle"
+            rgba="0.78 0.86 0.96 1.0" 
+            contype="0" conaffinity="0" mass="0.75"/>
+      <geom name="pour_bottle_body" type="cylinder" pos="0 0 -0.01"
+            size="0.03 0.06" rgba="0 0 0 0" contype="2" conaffinity="6"
+            margin="0.002" gap="0.001"
+            solref="0.03 1" solimp="0.90 0.97 0.001 0.5 2" />    
+      <site name="pour_bottle_mouth_site" pos="0 0 0.075" size="0.004" rgba="0.2 0.6 1.0 0.25"/>
+    </body>
+
+    <geom name="pour_stream_geom" type="capsule"
+          fromto="0 0 -5 0 0 -5.05"
+          size="0.004"
+          material="pour_liquid_mat"
+          rgba="0.24 0.55 0.96 0.0"
+          contype="0" conaffinity="0"/>
+
+    <body name="pour_particle_00" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_01" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_02" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_03" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_04" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_05" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_06" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_07" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_08" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_09" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_10" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_11" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_12" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_13" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_14" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_15" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_16" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_17" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_18" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+    <body name="pour_particle_19" pos="0 0 -5"><freejoint/><geom type="sphere" size="0.01" material="pour_liquid_mat" contype="4" conaffinity="2" mass="0.015"/></body>
+  </worldbody>
+
+  <equality>
+    <weld body1="Lowerbody_L_Ankle_Roll_Link" body2="left_foot_anchor" solimp="0.999 0.9999 0.00001 0.5 2" />
+    <weld body1="Lowerbody_R_Ankle_Roll_Link" body2="right_foot_anchor" solimp="0.999 0.9999 0.00001 0.5 2" />
+  </equality>
+</mujoco>

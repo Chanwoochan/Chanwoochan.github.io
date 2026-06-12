@@ -13,6 +13,8 @@ const MJDSBL_CONTACT = 1 << 4;
 const MJDSBL_ACTUATION = 1 << 11;
 const RIGHT_TARGET_POSITION_SPEED = 0.20;
 const RIGHT_TARGET_ROTATION_SPEED = Math.PI * 0.75;
+const DEFAULT_CAMERA_POSITION = [0.18, 1.78, -2.45];
+const DEFAULT_CAMERA_TARGET = [0.10, 0.78, 0.0];
 const ACTIVE_TARGET_HAND_TOGGLE_KEY = 'KeyT';
 const ACTIVE_TARGET_HAND_GRIP_TOGGLE_COUNT = 5;
 const RIGHT_TARGET_INPUT_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyF']);
@@ -109,7 +111,7 @@ export class MuJoCoDemo {
 
     this.camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.001, 100 );
     this.camera.name = 'PerspectiveCamera';
-    this.camera.position.set(2.0, 1.7, 1.7);
+    this.camera.position.set(...DEFAULT_CAMERA_POSITION);
     this.scene.add(this.camera);
 
     this.scene.background = new THREE.Color(0.15, 0.25, 0.35);
@@ -155,7 +157,7 @@ export class MuJoCoDemo {
     this.container.appendChild( this.rightTargetPad );
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 0.7, 0);
+    this.controls.target.set(...DEFAULT_CAMERA_TARGET);
     this.controls.panSpeed = 2;
     this.controls.zoomSpeed = 1;
     this.controls.enableDamping = true;
@@ -426,7 +428,7 @@ export class MuJoCoDemo {
 
   async init() {
     // Download the the examples to MuJoCo's virtual file system
-    await downloadExampleScenesFolder(mujoco);
+    await downloadExampleScenesFolder(mujoco, initialScene);
 
     // Initialize the three.js Scene using the .xml Model in initialScene
     [this.model, this.data, this.bodies, this.lights] =

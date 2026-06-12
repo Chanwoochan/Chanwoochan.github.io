@@ -15,11 +15,22 @@ const HAND_JOINT_NAMES = [
   'lh_f1_Motor_Linear_Joint', 'lh_f2_Motor_Linear_Joint', 'lh_f3_Motor_Linear_Joint',
   'lh_f4_Motor_Linear_Joint', 'lh_c_t_Motor_Linear_Joint', 'lh_c_Motor_Linear_Joint',
 ];
+const LOWERBODY_JOINT_NAMES = [
+  'Lowerbody_L_Hip_Yaw_Joint', 'Lowerbody_L_Hip_Roll_Joint', 'Lowerbody_L_Hip_Pitch_Joint',
+  'Lowerbody_L_Knee_Pitch_Joint', 'Lowerbody_L_Ankle_Pitch_Joint', 'Lowerbody_L_Ankle_Roll_Joint',
+  'Lowerbody_R_Hip_Yaw_Joint', 'Lowerbody_R_Hip_Roll_Joint', 'Lowerbody_R_Hip_Pitch_Joint',
+  'Lowerbody_R_Knee_Pitch_Joint', 'Lowerbody_R_Ankle_Pitch_Joint', 'Lowerbody_R_Ankle_Roll_Joint',
+];
 const HAND_MOTORS_PER_SIDE = 6;
 
 const ARM_PD_LIMITS = [100.0, 60.0, 60.0, 60.0, 60.0, 10.0, 10.0, 10.0, 60.0, 60.0, 60.0, 60.0, 10.0, 10.0, 10.0];
 const CG_COMPENSATION_SCALE = 1.2;
 const HOME_MODE_END_COUNT = 6000;
+const DEG_TO_RAD = Math.PI / 180.0;
+const LOWERBODY_MODE1_HOME_POSE = new Float64Array([
+  0.0, 0.0, -20.0 * DEG_TO_RAD, 65.0 * DEG_TO_RAD, -45.0 * DEG_TO_RAD, 0.0,
+  0.0, 0.0, -20.0 * DEG_TO_RAD, 65.0 * DEG_TO_RAD, -40.0 * DEG_TO_RAD, 0.0,
+]);
 const DEFAULT_LEFT_POS = new Float64Array([0.2930, 0.2250, 0.0725]);
 const DEFAULT_RIGHT_POS = new Float64Array([0.2930, -0.2250, 0.0725]);
 const DEFAULT_LEFT_QUAT_WXYZ = new Float64Array([0.707, 0.0, -0.707, 0.0]);
@@ -260,6 +271,10 @@ export class DaruV4TorqueController {
     this.handQposIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handDofIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handActuatorIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyJointIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyQposIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyDofIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyActuatorIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
 
     this.armPos = new Float64Array(ARM_JOINT_NAMES.length);
     this.armVel = new Float64Array(ARM_JOINT_NAMES.length);
@@ -280,6 +295,9 @@ export class DaruV4TorqueController {
     this.handVel = new Float64Array(HAND_JOINT_NAMES.length);
     this.handDesPos = new Float64Array(HAND_JOINT_NAMES.length);
     this.handCmd = new Float64Array(HAND_JOINT_NAMES.length);
+    this.lowerbodyPos = new Float64Array(LOWERBODY_JOINT_NAMES.length);
+    this.lowerbodyVel = new Float64Array(LOWERBODY_JOINT_NAMES.length);
+    this.lowerbodyDesPos = new Float64Array(LOWERBODY_MODE1_HOME_POSE);
     this.leftPosTarget = new Float64Array(DEFAULT_LEFT_POS);
     this.rightPosTarget = new Float64Array(DEFAULT_RIGHT_POS);
     this.leftQuatTargetWxyz = new Float64Array(DEFAULT_LEFT_QUAT_WXYZ);
@@ -355,6 +373,18 @@ export class DaruV4TorqueController {
       this.handDofIds[index] = this.model.jnt_dofadr[jointId];
       this.handActuatorIds[index] = findActuatorForJoint(this.model, jointId);
     }
+
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, LOWERBODY_JOINT_NAMES[index]);
+      if (jointId < 0) {
+        continue;
+      }
+
+      this.lowerbodyJointIds[index] = jointId;
+      this.lowerbodyQposIds[index] = this.model.jnt_qposadr[jointId];
+      this.lowerbodyDofIds[index] = this.model.jnt_dofadr[jointId];
+      this.lowerbodyActuatorIds[index] = findActuatorForJoint(this.model, jointId);
+    }
   }
 
   initializeRbdl() {
@@ -387,7 +417,11 @@ export class DaruV4TorqueController {
     this.handVel.fill(0.0);
     this.handDesPos.fill(0.0);
     this.handCmd.fill(0.0);
+    this.lowerbodyPos.fill(0.0);
+    this.lowerbodyVel.fill(0.0);
+    this.lowerbodyDesPos.set(LOWERBODY_MODE1_HOME_POSE);
     this.setDefaultEeTargets();
+    this.applyLowerbodyHomePoseToData();
   }
 
   getTargetPosition(hand) {
@@ -466,6 +500,54 @@ export class DaruV4TorqueController {
     targetQuat.set(nextQuat);
   }
 
+  applyLowerbodyHomePoseToData() {
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const qposId = this.lowerbodyQposIds[index];
+      const dofId = this.lowerbodyDofIds[index];
+      if (qposId >= 0) {
+        this.data.qpos[qposId] = LOWERBODY_MODE1_HOME_POSE[index];
+      }
+      if (dofId >= 0) {
+        this.data.qvel[dofId] = 0.0;
+      }
+    }
+
+    this.mujoco.mj_forward(this.model, this.data);
+    this.alignRootFreeJointToFootAnchors();
+    this.updateLowerbodyCommands();
+    this.mujoco.mj_forward(this.model, this.data);
+  }
+
+  alignRootFreeJointToFootAnchors() {
+    const rootJointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, 'robot_anchor_free');
+    if (rootJointId < 0) {
+      return;
+    }
+
+    const leftAnkleBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, 'Lowerbody_L_Ankle_Roll_Link');
+    const rightAnkleBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, 'Lowerbody_R_Ankle_Roll_Link');
+    const leftAnchorBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, 'left_foot_anchor');
+    const rightAnchorBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, 'right_foot_anchor');
+    if (leftAnkleBodyId < 0 || rightAnkleBodyId < 0 || leftAnchorBodyId < 0 || rightAnchorBodyId < 0) {
+      return;
+    }
+
+    const qposId = this.model.jnt_qposadr[rootJointId];
+    const rootDofId = this.model.jnt_dofadr[rootJointId];
+    const delta = [0.0, 0.0, 0.0];
+    for (let axis = 0; axis < 3; axis += 1) {
+      const leftDelta = this.data.xpos[3 * leftAnchorBodyId + axis] - this.data.xpos[3 * leftAnkleBodyId + axis];
+      const rightDelta = this.data.xpos[3 * rightAnchorBodyId + axis] - this.data.xpos[3 * rightAnkleBodyId + axis];
+      delta[axis] = 0.5 * (leftDelta + rightDelta);
+      this.data.qpos[qposId + axis] += delta[axis];
+      this.data.qvel[rootDofId + axis] = 0.0;
+    }
+
+    for (let axis = 3; axis < 6; axis += 1) {
+      this.data.qvel[rootDofId + axis] = 0.0;
+    }
+  }
+
   dispose() {
     this.rbdl._free(this.qRefBuffer.pointer);
     this.rbdl._free(this.qdotBuffer.pointer);
@@ -534,6 +616,7 @@ export class DaruV4TorqueController {
         this.updateArmPdTorques();
         this.updateHeadPdTorques();
         this.updateHandCommands();
+        this.updateLowerbodyCommands();
       }
     }
 
@@ -574,6 +657,17 @@ export class DaruV4TorqueController {
 
       this.handPos[index] = this.data.qpos[qposId];
       this.handVel[index] = this.data.qvel[dofId];
+    }
+
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const qposId = this.lowerbodyQposIds[index];
+      const dofId = this.lowerbodyDofIds[index];
+      if (qposId < 0 || dofId < 0) {
+        continue;
+      }
+
+      this.lowerbodyPos[index] = this.data.qpos[qposId];
+      this.lowerbodyVel[index] = this.data.qvel[dofId];
     }
   }
 
@@ -810,6 +904,10 @@ export class DaruV4TorqueController {
     }
   }
 
+  updateLowerbodyCommands() {
+    this.lowerbodyDesPos.set(LOWERBODY_MODE1_HOME_POSE);
+  }
+
   applyCommands() {
     this.data.ctrl.fill(0.0);
     this.data.qfrc_applied.fill(0.0);
@@ -849,6 +947,18 @@ export class DaruV4TorqueController {
         this.data.ctrl[actuatorId] = this.handCmd[index];
       } else {
         this.data.qfrc_applied[dofId] += this.handCmd[index];
+      }
+    }
+
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const dofId = this.lowerbodyDofIds[index];
+      if (dofId < 0) {
+        continue;
+      }
+
+      const actuatorId = this.lowerbodyActuatorIds[index];
+      if (actuatorId >= 0) {
+        this.data.ctrl[actuatorId] = clampActuatorCommand(this.model, actuatorId, Math.PI, this.lowerbodyDesPos[index]);
       }
     }
   }

@@ -1,6 +1,6 @@
 <!-- DARU_NEW_260323 Model MJCF -->
 <mujoco model="DARU_NEW_260323">
-  <compiler angle="radian" autolimits="true"/>
+  <compiler angle="radian"/>
   <default>
     <joint armature="0.001" damping="0.01" />
   </default>
@@ -25,7 +25,7 @@
     <mesh name="HY_Link" content_type="model/stl" file="meshes/HY_Link.STL"/>
     <mesh name="HP_Link" content_type="model/stl" file="meshes/HP_Link.STL"/>
 
-    <material name="robot_mat" rgba="0.82 0.84 0.88 1"/>
+    <material name="robot_mat" rgba="0.22 0.22 0.22 1" specular="0.10" shininess="0.15"/>
   </asset>
 
   <worldbody>

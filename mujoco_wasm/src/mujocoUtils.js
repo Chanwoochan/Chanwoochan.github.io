@@ -1,10 +1,135 @@
 import * as THREE from 'three';
-import { Reflector  } from './utils/Reflector.js';
+import { STLLoader } from '../node_modules/three/examples/jsm/loaders/STLLoader.js';
 import { MuJoCoDemo } from './main.js';
+
+const SCENE_ASSET_VERSION = Date.now().toString();
+const TEXT_SCENE_ASSET_EXTENSIONS = new Set([".xml", ".mjcf", ".obj", ".mtl", ".txt", ".json"]);
+const XML_SCENE_ASSET_EXTENSIONS = new Set([".xml", ".mjcf"]);
+const loadedSceneFiles = new Set();
+const sceneTextCache = new Map();
+const lowerbodyVisualGeometryPromises = new Map();
+const lowerbodyVisualLoader = new STLLoader();
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0.18, 1.78, -2.45);
+const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0.10, 0.78, 0.0);
+
+function resetDefaultCamera(parentContext) {
+  parentContext.camera.position.copy(DEFAULT_CAMERA_POSITION);
+  parentContext.controls.target.copy(DEFAULT_CAMERA_TARGET);
+  parentContext.controls.update();
+}
+
+function normalizeScenePath(path) {
+  const parts = [];
+  for (const part of path.replace(/\\/g, "/").split("/")) {
+    if (!part || part === ".") { continue; }
+    if (part === "..") {
+      parts.pop();
+    } else {
+      parts.push(part);
+    }
+  }
+  return parts.join("/");
+}
+
+function sceneDirname(path) {
+  const normalized = normalizeScenePath(path);
+  const slashIndex = normalized.lastIndexOf("/");
+  return slashIndex === -1 ? "" : normalized.slice(0, slashIndex);
+}
+
+function resolveScenePath(baseDir, relativePath) {
+  return normalizeScenePath(`${baseDir ? `${baseDir}/` : ""}${relativePath}`);
+}
+
+function sceneAssetExtension(path) {
+  const dotIndex = path.lastIndexOf(".");
+  return dotIndex === -1 ? "" : path.slice(dotIndex).toLowerCase();
+}
+
+function isTextSceneAsset(path) {
+  return TEXT_SCENE_ASSET_EXTENSIONS.has(sceneAssetExtension(path));
+}
+
+function isXmlSceneAsset(path) {
+  return XML_SCENE_ASSET_EXTENSIONS.has(sceneAssetExtension(path));
+}
+
+function sceneAssetUrl(path) {
+  return `./assets/scenes/${path}?v=${SCENE_ASSET_VERSION}`;
+}
+
+function getXmlAttribute(tagText, attributeName) {
+  const escapedName = attributeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = tagText.match(new RegExp(`${escapedName}\\s*=\\s*["']([^"']+)["']`, "i"));
+  return match ? match[1] : "";
+}
+
+function ensureMujocoDirectory(mujoco, filePath) {
+  const split = filePath.split("/");
+  let working = "/working/";
+  for (let i = 0; i < split.length - 1; i++) {
+    working += split[i];
+    if (!mujoco.FS.analyzePath(working).exists) { mujoco.FS.mkdir(working); }
+    working += "/";
+  }
+}
+
+function getNameAtAddress(namesArray, textDecoder, startIndex) {
+  let endIndex = startIndex;
+  while (endIndex < namesArray.length && namesArray[endIndex] !== 0) {
+    endIndex++;
+  }
+  return textDecoder.decode(namesArray.subarray(startIndex, endIndex));
+}
+
+function transformLowerbodyStlGeometry(geometry, meshPosition, meshQuaternion) {
+  const meshOffset = new THREE.Vector3(meshPosition[0], meshPosition[1], meshPosition[2]);
+  const meshRotation = new THREE.Quaternion(
+    meshQuaternion[1],
+    meshQuaternion[2],
+    meshQuaternion[3],
+    meshQuaternion[0]
+  ).invert();
+  const position = geometry.getAttribute("position");
+  const vertex = new THREE.Vector3();
+
+  for (let i = 0; i < position.array.length; i += 3) {
+    vertex.set(position.array[i], position.array[i + 1], position.array[i + 2]);
+    vertex.sub(meshOffset).applyQuaternion(meshRotation);
+    position.array[i] = vertex.x;
+    position.array[i + 1] = vertex.z;
+    position.array[i + 2] = -vertex.y;
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+async function loadLowerbodyVisualGeometry(meshName, model, meshID) {
+  if (!meshName.startsWith("Lowerbody_")) { return null; }
+  const lowerbodyMeshName = meshName.slice("Lowerbody_".length);
+  if (!lowerbodyMeshName.endsWith("_Link")) { return null; }
+  if (!lowerbodyVisualGeometryPromises.has(lowerbodyMeshName)) {
+    const url = `./assets/scenes/lowerbody/meshes/${lowerbodyMeshName}.STL?v=${SCENE_ASSET_VERSION}`;
+    const meshPosition = Array.from(model.mesh_pos.slice(meshID * 3, (meshID + 1) * 3));
+    const meshQuaternion = Array.from(model.mesh_quat.slice(meshID * 4, (meshID + 1) * 4));
+    lowerbodyVisualGeometryPromises.set(
+      lowerbodyMeshName,
+      lowerbodyVisualLoader
+        .loadAsync(url)
+        .then((geometry) => transformLowerbodyStlGeometry(geometry, meshPosition, meshQuaternion))
+    );
+  }
+  return lowerbodyVisualGeometryPromises.get(lowerbodyMeshName);
+}
 
 export async function reloadFunc() {
   // Delete the old scene and load the new scene
   this.scene.remove(this.scene.getObjectByName("MuJoCo Root"));
+  await downloadExampleScenesFolder(this.mujoco, this.params.scene);
   [this.model, this.data, this.bodies, this.lights] =
     await loadSceneFromURL(this.mujoco, this.params.scene, this);
   this.mujoco.mj_forward(this.model, this.data);
@@ -28,10 +153,7 @@ export function setupGUI(parentContext) {
   // Make sure we reset the camera when the scene is changed or reloaded.
   parentContext.updateGUICallbacks.length = 0;
   parentContext.updateGUICallbacks.push((model, data, params) => {
-    // TODO: Use free camera parameters from MuJoCo
-    parentContext.camera.position.set(2.0, 1.7, 1.7);
-    parentContext.controls.target.set(0, 0.7, 0);
-    parentContext.controls.update(); });
+    resetDefaultCamera(parentContext); });
 
   // Add scene selection dropdown.
   let reload = reloadFunc.bind(parentContext);
@@ -229,10 +351,7 @@ export function setupGUI(parentContext) {
   // Can be triggered by pressing ctrl + A.
   document.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.code === 'KeyA') {
-      // TODO: Use free camera parameters from MuJoCo
-      parentContext.camera.position.set(2.0, 1.7, 1.7);
-      parentContext.controls.target.set(0, 0.7, 0);
-      parentContext.controls.update(); 
+      resetDefaultCamera(parentContext);
       event.preventDefault();
     }
   });
@@ -318,7 +437,10 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
       // Set the default geometry. In MuJoCo, this is a sphere.
       let geometry = new THREE.SphereGeometry(size[0] * 0.5);
       if (type == mujoco.mjtGeom.mjGEOM_PLANE.value) {
-        // Special handling for plane later.
+        const width = size[0] > 0 ? size[0] * 2.0 : 100.0;
+        const height = size[1] > 0 ? size[1] * 2.0 : 100.0;
+        geometry = new THREE.PlaneGeometry(width, height);
+        geometry.rotateX(-Math.PI / 2);
       } else if (type == mujoco.mjtGeom.mjGEOM_HFIELD.value) {
         // TODO: Implement this.
       } else if (type == mujoco.mjtGeom.mjGEOM_SPHERE.value) {
@@ -333,8 +455,12 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
         geometry = new THREE.BoxGeometry(size[0] * 2.0, size[2] * 2.0, size[1] * 2.0);
       } else if (type == mujoco.mjtGeom.mjGEOM_MESH.value) {
         let meshID = model.geom_dataid[g];
+        let meshName = getNameAtAddress(names_array, textDecoder, model.name_meshadr[meshID]);
+        let lowerbodyVisualGeometry = await loadLowerbodyVisualGeometry(meshName, model, meshID);
 
-        if (!(meshID in meshes)) {
+        if (lowerbodyVisualGeometry != null) {
+          geometry = lowerbodyVisualGeometry;
+        } else if (!(meshID in meshes)) {
           geometry = new THREE.BufferGeometry();
 
           let vertex_buffer = model.mesh_vert.subarray(
@@ -479,20 +605,14 @@ export async function loadSceneFromURL(mujoco, filename, parent) {
         map              : texture
       });
 
-      let mesh;// = new THREE.Mesh();
-      if (type == 0) {
-        mesh = new Reflector( new THREE.PlaneGeometry( 100, 100 ), { clipBias: 0.003, texture: texture } );
-        mesh.rotateX( - Math.PI / 2 );
-      } else {
-        mesh = new THREE.Mesh(geometry, currentMaterial);
-      }
+      let mesh = new THREE.Mesh(geometry, currentMaterial);
 
       mesh.castShadow = g == 0 ? false : true;
       mesh.receiveShadow = type != 7;
       mesh.bodyID = b;
       bodies[b].add(mesh);
       getPosition  (model.geom_pos, g, mesh.position  );
-      if (type != 0) { getQuaternion(model.geom_quat, g, mesh.quaternion); }
+      getQuaternion(model.geom_quat, g, mesh.quaternion);
       if (type == 4) { mesh.scale.set(size[0], size[2], size[1]); } // Stretch the Ellipsoid
     }
 
@@ -618,33 +738,80 @@ export function drawTendonsAndFlex(mujocoRoot, model, data) {
   }
 }
 
-/** Downloads the scenes/assets folder to MuJoCo's virtual filesystem
- * @param {mujoco} mujoco */
-export async function downloadExampleScenesFolder(mujoco) {
-  let indexResponse = await fetch("./assets/scenes/index.json");
-  if (!indexResponse.ok) {
-    throw new Error(`Failed to fetch assets/scenes/index.json: ${indexResponse.status}`);
+async function ensureSceneAsset(mujoco, filePath) {
+  const normalizedPath = normalizeScenePath(filePath);
+  if (loadedSceneFiles.has(normalizedPath)) {
+    return sceneTextCache.get(normalizedPath) ?? "";
   }
-  let allFiles = await indexResponse.json();
 
-  let requests = allFiles.map((url) => fetch("./assets/scenes/" + url));
-  let responses = await Promise.all(requests);
-  for (let i = 0; i < responses.length; i++) {
-      let split = allFiles[i].split("/");
-      let working = '/working/';
-      for (let f = 0; f < split.length - 1; f++) {
-          working += split[f];
-          if (!mujoco.FS.analyzePath(working).exists) { mujoco.FS.mkdir(working); }
-          working += "/";
-      }
-
-      let lowerName = allFiles[i].toLowerCase();
-      if (lowerName.endsWith(".png") || lowerName.endsWith(".stl") || lowerName.endsWith(".skn")) {
-          mujoco.FS.writeFile("/working/" + allFiles[i], new Uint8Array(await responses[i].arrayBuffer()));
-      } else {
-          mujoco.FS.writeFile("/working/" + allFiles[i], await responses[i].text());
-      }
+  const response = await fetch(sceneAssetUrl(normalizedPath), { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch assets/scenes/${normalizedPath}: ${response.status}`);
   }
+
+  ensureMujocoDirectory(mujoco, normalizedPath);
+  if (isTextSceneAsset(normalizedPath)) {
+    const text = await response.text();
+    mujoco.FS.writeFile(`/working/${normalizedPath}`, text);
+    if (isXmlSceneAsset(normalizedPath)) {
+      sceneTextCache.set(normalizedPath, text);
+    }
+  } else {
+    mujoco.FS.writeFile(`/working/${normalizedPath}`, new Uint8Array(await response.arrayBuffer()));
+  }
+
+  loadedSceneFiles.add(normalizedPath);
+  return sceneTextCache.get(normalizedPath) ?? "";
+}
+
+async function downloadSceneXmlDependencies(mujoco, xmlPath, contextDir, seenXmlContexts) {
+  const normalizedXmlPath = normalizeScenePath(xmlPath);
+  const normalizedContextDir = normalizeScenePath(contextDir ?? sceneDirname(normalizedXmlPath));
+  const contextKey = `${normalizedXmlPath}|${normalizedContextDir}`;
+  if (seenXmlContexts.has(contextKey)) { return; }
+  seenXmlContexts.add(contextKey);
+
+  const xmlText = await ensureSceneAsset(mujoco, normalizedXmlPath);
+  const compilerTag = xmlText.match(/<compiler\b[^>]*>/i)?.[0] ?? "";
+  const meshDir = getXmlAttribute(compilerTag, "meshdir");
+  const textureDir = getXmlAttribute(compilerTag, "texturedir");
+  const fileAttributeRegex = /<([A-Za-z0-9_:-]+)\b[^>]*\bfile\s*=\s*["']([^"']+)["'][^>]*>/g;
+
+  for (const match of xmlText.matchAll(fileAttributeRegex)) {
+    const tagName = match[1].toLowerCase();
+    const relativePath = match[2];
+    let baseDir = normalizedContextDir;
+    if ((tagName === "mesh" || tagName === "hfield" || tagName === "skin") && meshDir && !relativePath.includes("/")) {
+      baseDir = resolveScenePath(normalizedContextDir, meshDir);
+    } else if (tagName === "texture" && textureDir && !relativePath.includes("/")) {
+      baseDir = resolveScenePath(normalizedContextDir, textureDir);
+    }
+
+    const dependencyPath = resolveScenePath(baseDir, relativePath);
+    if (isXmlSceneAsset(dependencyPath)) {
+      const dependencyContextDir = tagName === "include"
+        ? normalizedContextDir
+        : sceneDirname(dependencyPath);
+      await downloadSceneXmlDependencies(mujoco, dependencyPath, dependencyContextDir, seenXmlContexts);
+    } else {
+      await ensureSceneAsset(mujoco, dependencyPath);
+    }
+  }
+}
+
+/** Downloads a scene and its direct XML/mesh/texture dependencies to MuJoCo's virtual filesystem.
+ * @param {mujoco} mujoco
+ * @param {string} sceneFile */
+export async function downloadExampleScenesFolder(mujoco, sceneFile) {
+  if (!sceneFile) {
+    throw new Error("downloadExampleScenesFolder requires a scene XML path.");
+  }
+  await downloadSceneXmlDependencies(
+    mujoco,
+    normalizeScenePath(sceneFile),
+    sceneDirname(sceneFile),
+    new Set()
+  );
 }
 
 /** Access the vector at index, swizzle for three.js, and apply to the target THREE.Vector3

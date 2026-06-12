@@ -15249,6 +15249,63 @@ var VectorKeyframeTrack = class extends KeyframeTrack {
   }
 };
 VectorKeyframeTrack.prototype.ValueTypeName = "vector";
+var Cache = {
+  /**
+   * Whether caching is enabled or not.
+   *
+   * @static
+   * @type {boolean}
+   * @default false
+   */
+  enabled: false,
+  /**
+   * A dictionary that holds cached files.
+   *
+   * @static
+   * @type {Object<string,Object>}
+   */
+  files: {},
+  /**
+   * Adds a cache entry with a key to reference the file. If this key already
+   * holds a file, it is overwritten.
+   *
+   * @static
+   * @param {string} key - The key to reference the cached file.
+   * @param {Object} file -  The file to be cached.
+   */
+  add: function(key, file) {
+    if (this.enabled === false) return;
+    this.files[key] = file;
+  },
+  /**
+   * Gets the cached value for the given key.
+   *
+   * @static
+   * @param {string} key - The key to reference the cached file.
+   * @return {Object|undefined} The cached file. If the key does not exist `undefined` is returned.
+   */
+  get: function(key) {
+    if (this.enabled === false) return;
+    return this.files[key];
+  },
+  /**
+   * Removes the cached file associated with the given key.
+   *
+   * @static
+   * @param {string} key - The key to reference the cached file.
+   */
+  remove: function(key) {
+    delete this.files[key];
+  },
+  /**
+   * Remove all values from the cache.
+   *
+   * @static
+   */
+  clear: function() {
+    this.files = {};
+  }
+};
 var LoadingManager = class {
   /**
    * Constructs a new loading manager.
@@ -15462,6 +15519,189 @@ var Loader = class {
   }
 };
 Loader.DEFAULT_MATERIAL_NAME = "__DEFAULT";
+var loading = {};
+var HttpError = class extends Error {
+  constructor(message, response) {
+    super(message);
+    this.response = response;
+  }
+};
+var FileLoader = class extends Loader {
+  /**
+   * Constructs a new file loader.
+   *
+   * @param {LoadingManager} [manager] - The loading manager.
+   */
+  constructor(manager) {
+    super(manager);
+    this.mimeType = "";
+    this.responseType = "";
+    this._abortController = new AbortController();
+  }
+  /**
+   * Starts loading from the given URL and pass the loaded response to the `onLoad()` callback.
+   *
+   * @param {string} url - The path/URL of the file to be loaded. This can also be a data URI.
+   * @param {function(any)} onLoad - Executed when the loading process has been finished.
+   * @param {onProgressCallback} [onProgress] - Executed while the loading is in progress.
+   * @param {onErrorCallback} [onError] - Executed when errors occur.
+   * @return {any|undefined} The cached resource if available.
+   */
+  load(url, onLoad, onProgress, onError) {
+    if (url === void 0) url = "";
+    if (this.path !== void 0) url = this.path + url;
+    url = this.manager.resolveURL(url);
+    const cached = Cache.get(`file:${url}`);
+    if (cached !== void 0) {
+      this.manager.itemStart(url);
+      setTimeout(() => {
+        if (onLoad) onLoad(cached);
+        this.manager.itemEnd(url);
+      }, 0);
+      return cached;
+    }
+    if (loading[url] !== void 0) {
+      loading[url].push({
+        onLoad,
+        onProgress,
+        onError
+      });
+      return;
+    }
+    loading[url] = [];
+    loading[url].push({
+      onLoad,
+      onProgress,
+      onError
+    });
+    const req = new Request(url, {
+      headers: new Headers(this.requestHeader),
+      credentials: this.withCredentials ? "include" : "same-origin",
+      signal: typeof AbortSignal.any === "function" ? AbortSignal.any([this._abortController.signal, this.manager.abortController.signal]) : this._abortController.signal
+    });
+    const mimeType = this.mimeType;
+    const responseType = this.responseType;
+    fetch(req).then((response) => {
+      if (response.status === 200 || response.status === 0) {
+        if (response.status === 0) {
+          warn("FileLoader: HTTP Status 0 received.");
+        }
+        if (typeof ReadableStream === "undefined" || response.body === void 0 || response.body.getReader === void 0) {
+          return response;
+        }
+        const callbacks = loading[url];
+        const reader = response.body.getReader();
+        const contentLength = response.headers.get("X-File-Size") || response.headers.get("Content-Length");
+        const total = contentLength ? parseInt(contentLength) : 0;
+        const lengthComputable = total !== 0;
+        let loaded = 0;
+        const stream = new ReadableStream({
+          start(controller) {
+            readData();
+            function readData() {
+              reader.read().then(({ done, value }) => {
+                if (done) {
+                  controller.close();
+                } else {
+                  loaded += value.byteLength;
+                  const event = new ProgressEvent("progress", { lengthComputable, loaded, total });
+                  for (let i2 = 0, il = callbacks.length; i2 < il; i2++) {
+                    const callback = callbacks[i2];
+                    if (callback.onProgress) callback.onProgress(event);
+                  }
+                  controller.enqueue(value);
+                  readData();
+                }
+              }, (e2) => {
+                controller.error(e2);
+              });
+            }
+          }
+        });
+        return new Response(stream);
+      } else {
+        throw new HttpError(`fetch for "${response.url}" responded with ${response.status}: ${response.statusText}`, response);
+      }
+    }).then((response) => {
+      switch (responseType) {
+        case "arraybuffer":
+          return response.arrayBuffer();
+        case "blob":
+          return response.blob();
+        case "document":
+          return response.text().then((text) => {
+            const parser = new DOMParser();
+            return parser.parseFromString(text, mimeType);
+          });
+        case "json":
+          return response.json();
+        default:
+          if (mimeType === "") {
+            return response.text();
+          } else {
+            const re = /charset="?([^;"\s]*)"?/i;
+            const exec = re.exec(mimeType);
+            const label = exec && exec[1] ? exec[1].toLowerCase() : void 0;
+            const decoder = new TextDecoder(label);
+            return response.arrayBuffer().then((ab) => decoder.decode(ab));
+          }
+      }
+    }).then((data) => {
+      Cache.add(`file:${url}`, data);
+      const callbacks = loading[url];
+      delete loading[url];
+      for (let i2 = 0, il = callbacks.length; i2 < il; i2++) {
+        const callback = callbacks[i2];
+        if (callback.onLoad) callback.onLoad(data);
+      }
+    }).catch((err) => {
+      const callbacks = loading[url];
+      if (callbacks === void 0) {
+        this.manager.itemError(url);
+        throw err;
+      }
+      delete loading[url];
+      for (let i2 = 0, il = callbacks.length; i2 < il; i2++) {
+        const callback = callbacks[i2];
+        if (callback.onError) callback.onError(err);
+      }
+      this.manager.itemError(url);
+    }).finally(() => {
+      this.manager.itemEnd(url);
+    });
+    this.manager.itemStart(url);
+  }
+  /**
+   * Sets the expected response type.
+   *
+   * @param {('arraybuffer'|'blob'|'document'|'json'|'')} value - The response type.
+   * @return {FileLoader} A reference to this file loader.
+   */
+  setResponseType(value) {
+    this.responseType = value;
+    return this;
+  }
+  /**
+   * Sets the expected mime type of the loaded file.
+   *
+   * @param {string} value - The mime type.
+   * @return {FileLoader} A reference to this file loader.
+   */
+  setMimeType(value) {
+    this.mimeType = value;
+    return this;
+  }
+  /**
+   * Aborts ongoing fetch requests.
+   *
+   * @return {FileLoader} A reference to this instance.
+   */
+  abort() {
+    this._abortController.abort();
+    this._abortController = new AbortController();
+    return this;
+  }
+};
 var Light = class extends Object3D {
   /**
    * Constructs a new light.
@@ -33395,10 +33635,39 @@ var HAND_JOINT_NAMES = [
   "lh_c_t_Motor_Linear_Joint",
   "lh_c_Motor_Linear_Joint"
 ];
+var LOWERBODY_JOINT_NAMES = [
+  "Lowerbody_L_Hip_Yaw_Joint",
+  "Lowerbody_L_Hip_Roll_Joint",
+  "Lowerbody_L_Hip_Pitch_Joint",
+  "Lowerbody_L_Knee_Pitch_Joint",
+  "Lowerbody_L_Ankle_Pitch_Joint",
+  "Lowerbody_L_Ankle_Roll_Joint",
+  "Lowerbody_R_Hip_Yaw_Joint",
+  "Lowerbody_R_Hip_Roll_Joint",
+  "Lowerbody_R_Hip_Pitch_Joint",
+  "Lowerbody_R_Knee_Pitch_Joint",
+  "Lowerbody_R_Ankle_Pitch_Joint",
+  "Lowerbody_R_Ankle_Roll_Joint"
+];
 var HAND_MOTORS_PER_SIDE = 6;
 var ARM_PD_LIMITS = [100, 60, 60, 60, 60, 10, 10, 10, 60, 60, 60, 60, 10, 10, 10];
 var CG_COMPENSATION_SCALE = 1.2;
 var HOME_MODE_END_COUNT = 6e3;
+var DEG_TO_RAD = Math.PI / 180;
+var LOWERBODY_MODE1_HOME_POSE = new Float64Array([
+  0,
+  0,
+  -20 * DEG_TO_RAD,
+  65 * DEG_TO_RAD,
+  -45 * DEG_TO_RAD,
+  0,
+  0,
+  0,
+  -20 * DEG_TO_RAD,
+  65 * DEG_TO_RAD,
+  -40 * DEG_TO_RAD,
+  0
+]);
 var DEFAULT_LEFT_POS = new Float64Array([0.293, 0.225, 0.0725]);
 var DEFAULT_RIGHT_POS = new Float64Array([0.293, -0.225, 0.0725]);
 var DEFAULT_LEFT_QUAT_WXYZ = new Float64Array([0.707, 0, -0.707, 0]);
@@ -33614,6 +33883,10 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     this.handQposIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handDofIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
     this.handActuatorIds = new Int32Array(HAND_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyJointIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyQposIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyDofIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
+    this.lowerbodyActuatorIds = new Int32Array(LOWERBODY_JOINT_NAMES.length).fill(-1);
     this.armPos = new Float64Array(ARM_JOINT_NAMES.length);
     this.armVel = new Float64Array(ARM_JOINT_NAMES.length);
     this.armVelOld = new Float64Array(ARM_JOINT_NAMES.length);
@@ -33631,6 +33904,9 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     this.handVel = new Float64Array(HAND_JOINT_NAMES.length);
     this.handDesPos = new Float64Array(HAND_JOINT_NAMES.length);
     this.handCmd = new Float64Array(HAND_JOINT_NAMES.length);
+    this.lowerbodyPos = new Float64Array(LOWERBODY_JOINT_NAMES.length);
+    this.lowerbodyVel = new Float64Array(LOWERBODY_JOINT_NAMES.length);
+    this.lowerbodyDesPos = new Float64Array(LOWERBODY_MODE1_HOME_POSE);
     this.leftPosTarget = new Float64Array(DEFAULT_LEFT_POS);
     this.rightPosTarget = new Float64Array(DEFAULT_RIGHT_POS);
     this.leftQuatTargetWxyz = new Float64Array(DEFAULT_LEFT_QUAT_WXYZ);
@@ -33695,6 +33971,16 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
       this.handDofIds[index] = this.model.jnt_dofadr[jointId];
       this.handActuatorIds[index] = findActuatorForJoint(this.model, jointId);
     }
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const jointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, LOWERBODY_JOINT_NAMES[index]);
+      if (jointId < 0) {
+        continue;
+      }
+      this.lowerbodyJointIds[index] = jointId;
+      this.lowerbodyQposIds[index] = this.model.jnt_qposadr[jointId];
+      this.lowerbodyDofIds[index] = this.model.jnt_dofadr[jointId];
+      this.lowerbodyActuatorIds[index] = findActuatorForJoint(this.model, jointId);
+    }
   }
   initializeRbdl() {
   }
@@ -33723,7 +34009,11 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     this.handVel.fill(0);
     this.handDesPos.fill(0);
     this.handCmd.fill(0);
+    this.lowerbodyPos.fill(0);
+    this.lowerbodyVel.fill(0);
+    this.lowerbodyDesPos.set(LOWERBODY_MODE1_HOME_POSE);
     this.setDefaultEeTargets();
+    this.applyLowerbodyHomePoseToData();
   }
   getTargetPosition(hand) {
     return hand === "left" ? this.leftPosTarget : this.rightPosTarget;
@@ -33788,6 +34078,48 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
     normalizeQuatWxyz(nextQuat);
     targetQuat.set(nextQuat);
   }
+  applyLowerbodyHomePoseToData() {
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const qposId = this.lowerbodyQposIds[index];
+      const dofId = this.lowerbodyDofIds[index];
+      if (qposId >= 0) {
+        this.data.qpos[qposId] = LOWERBODY_MODE1_HOME_POSE[index];
+      }
+      if (dofId >= 0) {
+        this.data.qvel[dofId] = 0;
+      }
+    }
+    this.mujoco.mj_forward(this.model, this.data);
+    this.alignRootFreeJointToFootAnchors();
+    this.updateLowerbodyCommands();
+    this.mujoco.mj_forward(this.model, this.data);
+  }
+  alignRootFreeJointToFootAnchors() {
+    const rootJointId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_JOINT.value, "robot_anchor_free");
+    if (rootJointId < 0) {
+      return;
+    }
+    const leftAnkleBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "Lowerbody_L_Ankle_Roll_Link");
+    const rightAnkleBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "Lowerbody_R_Ankle_Roll_Link");
+    const leftAnchorBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "left_foot_anchor");
+    const rightAnchorBodyId = this.mujoco.mj_name2id(this.model, this.mujoco.mjtObj.mjOBJ_BODY.value, "right_foot_anchor");
+    if (leftAnkleBodyId < 0 || rightAnkleBodyId < 0 || leftAnchorBodyId < 0 || rightAnchorBodyId < 0) {
+      return;
+    }
+    const qposId = this.model.jnt_qposadr[rootJointId];
+    const rootDofId = this.model.jnt_dofadr[rootJointId];
+    const delta = [0, 0, 0];
+    for (let axis = 0; axis < 3; axis += 1) {
+      const leftDelta = this.data.xpos[3 * leftAnchorBodyId + axis] - this.data.xpos[3 * leftAnkleBodyId + axis];
+      const rightDelta = this.data.xpos[3 * rightAnchorBodyId + axis] - this.data.xpos[3 * rightAnkleBodyId + axis];
+      delta[axis] = 0.5 * (leftDelta + rightDelta);
+      this.data.qpos[qposId + axis] += delta[axis];
+      this.data.qvel[rootDofId + axis] = 0;
+    }
+    for (let axis = 3; axis < 6; axis += 1) {
+      this.data.qvel[rootDofId + axis] = 0;
+    }
+  }
   dispose() {
     this.rbdl._free(this.qRefBuffer.pointer);
     this.rbdl._free(this.qdotBuffer.pointer);
@@ -33847,6 +34179,7 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
         this.updateArmPdTorques();
         this.updateHeadPdTorques();
         this.updateHandCommands();
+        this.updateLowerbodyCommands();
       }
     }
     this.applyCommands();
@@ -33880,6 +34213,15 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
       }
       this.handPos[index] = this.data.qpos[qposId];
       this.handVel[index] = this.data.qvel[dofId];
+    }
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const qposId = this.lowerbodyQposIds[index];
+      const dofId = this.lowerbodyDofIds[index];
+      if (qposId < 0 || dofId < 0) {
+        continue;
+      }
+      this.lowerbodyPos[index] = this.data.qpos[qposId];
+      this.lowerbodyVel[index] = this.data.qvel[dofId];
     }
   }
   setHomePose() {
@@ -34067,6 +34409,9 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
       this.handCmd[index] = clampActuatorCommand(this.model, this.handActuatorIds[index], fallbackLimit, forceCommand);
     }
   }
+  updateLowerbodyCommands() {
+    this.lowerbodyDesPos.set(LOWERBODY_MODE1_HOME_POSE);
+  }
   applyCommands() {
     this.data.ctrl.fill(0);
     this.data.qfrc_applied.fill(0);
@@ -34103,152 +34448,345 @@ var DaruV4TorqueController = class _DaruV4TorqueController {
         this.data.qfrc_applied[dofId] += this.handCmd[index];
       }
     }
+    for (let index = 0; index < LOWERBODY_JOINT_NAMES.length; index += 1) {
+      const dofId = this.lowerbodyDofIds[index];
+      if (dofId < 0) {
+        continue;
+      }
+      const actuatorId = this.lowerbodyActuatorIds[index];
+      if (actuatorId >= 0) {
+        this.data.ctrl[actuatorId] = clampActuatorCommand(this.model, actuatorId, Math.PI, this.lowerbodyDesPos[index]);
+      }
+    }
   }
 };
 
-// src/utils/Reflector.js
-var Reflector = class _Reflector extends Mesh {
-  constructor(geometry, options = {}) {
-    super(geometry);
-    this.isReflector = true;
-    this.type = "Reflector";
-    this.camera = new PerspectiveCamera();
+// node_modules/three/examples/jsm/loaders/STLLoader.js
+var STLLoader = class extends Loader {
+  /**
+   * Constructs a new STL loader.
+   *
+   * @param {LoadingManager} [manager] - The loading manager.
+   */
+  constructor(manager) {
+    super(manager);
+  }
+  /**
+   * Starts loading from the given URL and passes the loaded STL asset
+   * to the `onLoad()` callback.
+   *
+   * @param {string} url - The path/URL of the file to be loaded. This can also be a data URI.
+   * @param {function(BufferGeometry)} onLoad - Executed when the loading process has been finished.
+   * @param {onProgressCallback} onProgress - Executed while the loading is in progress.
+   * @param {onErrorCallback} onError - Executed when errors occur.
+   */
+  load(url, onLoad, onProgress, onError) {
     const scope = this;
-    const color = options.color !== void 0 ? new Color(options.color) : new Color(8355711);
-    const textureWidth = options.textureWidth || 1024;
-    const textureHeight = options.textureHeight || 1024;
-    const clipBias = options.clipBias || 0;
-    const shader = options.shader || _Reflector.ReflectorShader;
-    const multisample = options.multisample !== void 0 ? options.multisample : 4;
-    const blendTexture = options.texture || void 0;
-    const reflectorPlane = new Plane();
-    const normal = new Vector3();
-    const reflectorWorldPosition = new Vector3();
-    const cameraWorldPosition = new Vector3();
-    const rotationMatrix = new Matrix4();
-    const lookAtPosition = new Vector3(0, 0, -1);
-    const clipPlane = new Vector4();
-    const view = new Vector3();
-    const target = new Vector3();
-    const q = new Vector4();
-    const textureMatrix = new Matrix4();
-    const virtualCamera = this.camera;
-    const renderTarget = new WebGLRenderTarget(textureWidth, textureHeight, { samples: multisample, type: HalfFloatType });
-    this.material = new MeshPhysicalMaterial({ map: blendTexture });
-    this.material.uniforms = {
-      tDiffuse: { value: renderTarget.texture },
-      textureMatrix: { value: textureMatrix }
-    };
-    this.material.onBeforeCompile = (shader2) => {
-      let bodyStart = shader2.vertexShader.indexOf("void main() {");
-      shader2.vertexShader = shader2.vertexShader.slice(0, bodyStart) + "\nuniform mat4 textureMatrix;\nvarying vec4 vUv3;\n" + shader2.vertexShader.slice(bodyStart - 1, -1) + "	vUv3 = textureMatrix * vec4( position, 1.0 ); }";
-      bodyStart = shader2.fragmentShader.indexOf("void main() {");
-      shader2.fragmentShader = //'#define USE_UV\n' +
-      "\nuniform sampler2D tDiffuse; \n varying vec4 vUv3;\n" + shader2.fragmentShader.slice(0, bodyStart) + shader2.fragmentShader.slice(bodyStart - 1, -1) + `	gl_FragColor = vec4( mix( texture2DProj( tDiffuse,  vUv3 ).rgb, gl_FragColor.rgb , 0.5), 1.0 );
-				}`;
-      shader2.uniforms.tDiffuse = { value: renderTarget.texture };
-      shader2.uniforms.textureMatrix = { value: textureMatrix };
-      this.material.uniforms = shader2.uniforms;
-      this.material.userData.shader = shader2;
-    };
-    this.receiveShadow = true;
-    this.onBeforeRender = function(renderer, scene, camera) {
-      reflectorWorldPosition.setFromMatrixPosition(scope.matrixWorld);
-      cameraWorldPosition.setFromMatrixPosition(camera.matrixWorld);
-      rotationMatrix.extractRotation(scope.matrixWorld);
-      normal.set(0, 0, 1);
-      normal.applyMatrix4(rotationMatrix);
-      view.subVectors(reflectorWorldPosition, cameraWorldPosition);
-      if (view.dot(normal) > 0) return;
-      view.reflect(normal).negate();
-      view.add(reflectorWorldPosition);
-      rotationMatrix.extractRotation(camera.matrixWorld);
-      lookAtPosition.set(0, 0, -1);
-      lookAtPosition.applyMatrix4(rotationMatrix);
-      lookAtPosition.add(cameraWorldPosition);
-      target.subVectors(reflectorWorldPosition, lookAtPosition);
-      target.reflect(normal).negate();
-      target.add(reflectorWorldPosition);
-      virtualCamera.position.copy(view);
-      virtualCamera.up.set(0, 1, 0);
-      virtualCamera.up.applyMatrix4(rotationMatrix);
-      virtualCamera.up.reflect(normal);
-      virtualCamera.lookAt(target);
-      virtualCamera.far = camera.far;
-      virtualCamera.updateMatrixWorld();
-      virtualCamera.projectionMatrix.copy(camera.projectionMatrix);
-      textureMatrix.set(
-        0.5,
-        0,
-        0,
-        0.5,
-        0,
-        0.5,
-        0,
-        0.5,
-        0,
-        0,
-        0.5,
-        0.5,
-        0,
-        0,
-        0,
-        1
-      );
-      textureMatrix.multiply(virtualCamera.projectionMatrix);
-      textureMatrix.multiply(virtualCamera.matrixWorldInverse);
-      textureMatrix.multiply(scope.matrixWorld);
-      reflectorPlane.setFromNormalAndCoplanarPoint(normal, reflectorWorldPosition);
-      reflectorPlane.applyMatrix4(virtualCamera.matrixWorldInverse);
-      clipPlane.set(reflectorPlane.normal.x, reflectorPlane.normal.y, reflectorPlane.normal.z, reflectorPlane.constant);
-      const projectionMatrix = virtualCamera.projectionMatrix;
-      q.x = (Math.sign(clipPlane.x) + projectionMatrix.elements[8]) / projectionMatrix.elements[0];
-      q.y = (Math.sign(clipPlane.y) + projectionMatrix.elements[9]) / projectionMatrix.elements[5];
-      q.z = -1;
-      q.w = (1 + projectionMatrix.elements[10]) / projectionMatrix.elements[14];
-      clipPlane.multiplyScalar(2 / clipPlane.dot(q));
-      projectionMatrix.elements[2] = clipPlane.x;
-      projectionMatrix.elements[6] = clipPlane.y;
-      projectionMatrix.elements[10] = clipPlane.z + 1 - clipBias;
-      projectionMatrix.elements[14] = clipPlane.w;
-      scope.visible = false;
-      const currentRenderTarget = renderer.getRenderTarget();
-      const currentXrEnabled = renderer.xr.enabled;
-      const currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
-      const currentOutputEncoding = renderer.outputColorSpace;
-      const currentToneMapping = renderer.toneMapping;
-      renderer.xr.enabled = false;
-      renderer.shadowMap.autoUpdate = false;
-      renderer.outputColorSpace = LinearSRGBColorSpace;
-      renderer.toneMapping = NoToneMapping;
-      renderer.setRenderTarget(renderTarget);
-      renderer.state.buffers.depth.setMask(true);
-      if (renderer.autoClear === false) renderer.clear();
-      renderer.render(scene, virtualCamera);
-      renderer.xr.enabled = currentXrEnabled;
-      renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
-      renderer.outputColorSpace = currentOutputEncoding;
-      renderer.toneMapping = currentToneMapping;
-      renderer.setRenderTarget(currentRenderTarget);
-      const viewport = camera.viewport;
-      if (viewport !== void 0) {
-        renderer.state.viewport(viewport);
+    const loader = new FileLoader(this.manager);
+    loader.setPath(this.path);
+    loader.setResponseType("arraybuffer");
+    loader.setRequestHeader(this.requestHeader);
+    loader.setWithCredentials(this.withCredentials);
+    loader.load(url, function(text) {
+      try {
+        onLoad(scope.parse(text));
+      } catch (e2) {
+        if (onError) {
+          onError(e2);
+        } else {
+          console.error(e2);
+        }
+        scope.manager.itemError(url);
       }
-      scope.visible = true;
-    };
-    this.getRenderTarget = function() {
-      return renderTarget;
-    };
-    this.dispose = function() {
-      renderTarget.dispose();
-      scope.material.dispose();
-    };
+    }, onProgress, onError);
+  }
+  /**
+   * Parses the given STL data and returns the resulting geometry.
+   *
+   * @param {ArrayBuffer} data - The raw STL data as an array buffer.
+   * @return {BufferGeometry} The parsed geometry.
+   */
+  parse(data) {
+    function isBinary(data2) {
+      const reader = new DataView(data2);
+      const face_size = 32 / 8 * 3 + 32 / 8 * 3 * 3 + 16 / 8;
+      const n_faces = reader.getUint32(80, true);
+      const expect = 80 + 32 / 8 + n_faces * face_size;
+      if (expect === reader.byteLength) {
+        return true;
+      }
+      const solid = [115, 111, 108, 105, 100];
+      for (let off = 0; off < 5; off++) {
+        if (matchDataViewAt(solid, reader, off)) return false;
+      }
+      return true;
+    }
+    function matchDataViewAt(query, reader, offset) {
+      for (let i2 = 0, il = query.length; i2 < il; i2++) {
+        if (query[i2] !== reader.getUint8(offset + i2)) return false;
+      }
+      return true;
+    }
+    function parseBinary(data2) {
+      const reader = new DataView(data2);
+      const faces = reader.getUint32(80, true);
+      let r2, g2, b, hasColors = false, colors;
+      let defaultR, defaultG, defaultB, alpha;
+      for (let index = 0; index < 80 - 10; index++) {
+        if (reader.getUint32(index, false) == 1129270351 && reader.getUint8(index + 4) == 82 && reader.getUint8(index + 5) == 61) {
+          hasColors = true;
+          colors = new Float32Array(faces * 3 * 3);
+          defaultR = reader.getUint8(index + 6) / 255;
+          defaultG = reader.getUint8(index + 7) / 255;
+          defaultB = reader.getUint8(index + 8) / 255;
+          alpha = reader.getUint8(index + 9) / 255;
+        }
+      }
+      const dataOffset = 84;
+      const faceLength = 12 * 4 + 2;
+      const geometry = new BufferGeometry();
+      const vertices = new Float32Array(faces * 3 * 3);
+      const normals = new Float32Array(faces * 3 * 3);
+      const color = new Color();
+      for (let face = 0; face < faces; face++) {
+        const start = dataOffset + face * faceLength;
+        const normalX = reader.getFloat32(start, true);
+        const normalY = reader.getFloat32(start + 4, true);
+        const normalZ = reader.getFloat32(start + 8, true);
+        if (hasColors) {
+          const packedColor = reader.getUint16(start + 48, true);
+          if ((packedColor & 32768) === 0) {
+            r2 = (packedColor & 31) / 31;
+            g2 = (packedColor >> 5 & 31) / 31;
+            b = (packedColor >> 10 & 31) / 31;
+          } else {
+            r2 = defaultR;
+            g2 = defaultG;
+            b = defaultB;
+          }
+        }
+        for (let i2 = 1; i2 <= 3; i2++) {
+          const vertexstart = start + i2 * 12;
+          const componentIdx = face * 3 * 3 + (i2 - 1) * 3;
+          vertices[componentIdx] = reader.getFloat32(vertexstart, true);
+          vertices[componentIdx + 1] = reader.getFloat32(vertexstart + 4, true);
+          vertices[componentIdx + 2] = reader.getFloat32(vertexstart + 8, true);
+          normals[componentIdx] = normalX;
+          normals[componentIdx + 1] = normalY;
+          normals[componentIdx + 2] = normalZ;
+          if (hasColors) {
+            color.setRGB(r2, g2, b, SRGBColorSpace);
+            colors[componentIdx] = color.r;
+            colors[componentIdx + 1] = color.g;
+            colors[componentIdx + 2] = color.b;
+          }
+        }
+      }
+      geometry.setAttribute("position", new BufferAttribute(vertices, 3));
+      geometry.setAttribute("normal", new BufferAttribute(normals, 3));
+      if (hasColors) {
+        geometry.setAttribute("color", new BufferAttribute(colors, 3));
+        geometry.hasColors = true;
+        geometry.alpha = alpha;
+      }
+      return geometry;
+    }
+    function parseASCII(data2) {
+      const geometry = new BufferGeometry();
+      const patternSolid = /solid([\s\S]*?)endsolid/g;
+      const patternFace = /facet([\s\S]*?)endfacet/g;
+      const patternName = /solid\s(.+)/;
+      let faceCounter = 0;
+      const patternFloat = /[\s]+([+-]?(?:\d*)(?:\.\d*)?(?:[eE][+-]?\d+)?)/.source;
+      const patternVertex = new RegExp("vertex" + patternFloat + patternFloat + patternFloat, "g");
+      const patternNormal = new RegExp("normal" + patternFloat + patternFloat + patternFloat, "g");
+      const vertices = [];
+      const normals = [];
+      const groupNames = [];
+      const normal = new Vector3();
+      let result;
+      let groupCount = 0;
+      let startVertex = 0;
+      let endVertex = 0;
+      while ((result = patternSolid.exec(data2)) !== null) {
+        startVertex = endVertex;
+        const solid = result[0];
+        const name = (result = patternName.exec(solid)) !== null ? result[1] : "";
+        groupNames.push(name);
+        while ((result = patternFace.exec(solid)) !== null) {
+          let vertexCountPerFace = 0;
+          let normalCountPerFace = 0;
+          const text = result[0];
+          while ((result = patternNormal.exec(text)) !== null) {
+            normal.x = parseFloat(result[1]);
+            normal.y = parseFloat(result[2]);
+            normal.z = parseFloat(result[3]);
+            normalCountPerFace++;
+          }
+          while ((result = patternVertex.exec(text)) !== null) {
+            vertices.push(parseFloat(result[1]), parseFloat(result[2]), parseFloat(result[3]));
+            normals.push(normal.x, normal.y, normal.z);
+            vertexCountPerFace++;
+            endVertex++;
+          }
+          if (normalCountPerFace !== 1) {
+            console.error("THREE.STLLoader: Something isn't right with the normal of face number " + faceCounter);
+          }
+          if (vertexCountPerFace !== 3) {
+            console.error("THREE.STLLoader: Something isn't right with the vertices of face number " + faceCounter);
+          }
+          faceCounter++;
+        }
+        const start = startVertex;
+        const count = endVertex - startVertex;
+        geometry.userData.groupNames = groupNames;
+        geometry.addGroup(start, count, groupCount);
+        groupCount++;
+      }
+      geometry.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+      geometry.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+      return geometry;
+    }
+    function ensureString(buffer) {
+      if (typeof buffer !== "string") {
+        return new TextDecoder().decode(buffer);
+      }
+      return buffer;
+    }
+    function ensureBinary(buffer) {
+      if (typeof buffer === "string") {
+        const array_buffer = new Uint8Array(buffer.length);
+        for (let i2 = 0; i2 < buffer.length; i2++) {
+          array_buffer[i2] = buffer.charCodeAt(i2) & 255;
+        }
+        return array_buffer.buffer || array_buffer;
+      } else {
+        return buffer;
+      }
+    }
+    const binData = ensureBinary(data);
+    return isBinary(binData) ? parseBinary(binData) : parseASCII(ensureString(data));
   }
 };
 
 // src/mujocoUtils.js
+var SCENE_ASSET_VERSION = Date.now().toString();
+var TEXT_SCENE_ASSET_EXTENSIONS = /* @__PURE__ */ new Set([".xml", ".mjcf", ".obj", ".mtl", ".txt", ".json"]);
+var XML_SCENE_ASSET_EXTENSIONS = /* @__PURE__ */ new Set([".xml", ".mjcf"]);
+var loadedSceneFiles = /* @__PURE__ */ new Set();
+var sceneTextCache = /* @__PURE__ */ new Map();
+var lowerbodyVisualGeometryPromises = /* @__PURE__ */ new Map();
+var lowerbodyVisualLoader = new STLLoader();
+var DEFAULT_CAMERA_POSITION = new Vector3(0.18, 1.78, -2.45);
+var DEFAULT_CAMERA_TARGET = new Vector3(0.1, 0.78, 0);
+function resetDefaultCamera(parentContext) {
+  parentContext.camera.position.copy(DEFAULT_CAMERA_POSITION);
+  parentContext.controls.target.copy(DEFAULT_CAMERA_TARGET);
+  parentContext.controls.update();
+}
+function normalizeScenePath(path) {
+  const parts = [];
+  for (const part of path.replace(/\\/g, "/").split("/")) {
+    if (!part || part === ".") {
+      continue;
+    }
+    if (part === "..") {
+      parts.pop();
+    } else {
+      parts.push(part);
+    }
+  }
+  return parts.join("/");
+}
+function sceneDirname(path) {
+  const normalized = normalizeScenePath(path);
+  const slashIndex = normalized.lastIndexOf("/");
+  return slashIndex === -1 ? "" : normalized.slice(0, slashIndex);
+}
+function resolveScenePath(baseDir, relativePath) {
+  return normalizeScenePath(`${baseDir ? `${baseDir}/` : ""}${relativePath}`);
+}
+function sceneAssetExtension(path) {
+  const dotIndex = path.lastIndexOf(".");
+  return dotIndex === -1 ? "" : path.slice(dotIndex).toLowerCase();
+}
+function isTextSceneAsset(path) {
+  return TEXT_SCENE_ASSET_EXTENSIONS.has(sceneAssetExtension(path));
+}
+function isXmlSceneAsset(path) {
+  return XML_SCENE_ASSET_EXTENSIONS.has(sceneAssetExtension(path));
+}
+function sceneAssetUrl(path) {
+  return `./assets/scenes/${path}?v=${SCENE_ASSET_VERSION}`;
+}
+function getXmlAttribute(tagText, attributeName) {
+  const escapedName = attributeName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = tagText.match(new RegExp(`${escapedName}\\s*=\\s*["']([^"']+)["']`, "i"));
+  return match ? match[1] : "";
+}
+function ensureMujocoDirectory(mujoco2, filePath) {
+  const split = filePath.split("/");
+  let working = "/working/";
+  for (let i2 = 0; i2 < split.length - 1; i2++) {
+    working += split[i2];
+    if (!mujoco2.FS.analyzePath(working).exists) {
+      mujoco2.FS.mkdir(working);
+    }
+    working += "/";
+  }
+}
+function getNameAtAddress(namesArray, textDecoder, startIndex) {
+  let endIndex = startIndex;
+  while (endIndex < namesArray.length && namesArray[endIndex] !== 0) {
+    endIndex++;
+  }
+  return textDecoder.decode(namesArray.subarray(startIndex, endIndex));
+}
+function transformLowerbodyStlGeometry(geometry, meshPosition, meshQuaternion) {
+  const meshOffset = new Vector3(meshPosition[0], meshPosition[1], meshPosition[2]);
+  const meshRotation = new Quaternion(
+    meshQuaternion[1],
+    meshQuaternion[2],
+    meshQuaternion[3],
+    meshQuaternion[0]
+  ).invert();
+  const position = geometry.getAttribute("position");
+  const vertex2 = new Vector3();
+  for (let i2 = 0; i2 < position.array.length; i2 += 3) {
+    vertex2.set(position.array[i2], position.array[i2 + 1], position.array[i2 + 2]);
+    vertex2.sub(meshOffset).applyQuaternion(meshRotation);
+    position.array[i2] = vertex2.x;
+    position.array[i2 + 1] = vertex2.z;
+    position.array[i2 + 2] = -vertex2.y;
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+async function loadLowerbodyVisualGeometry(meshName, model, meshID) {
+  if (!meshName.startsWith("Lowerbody_")) {
+    return null;
+  }
+  const lowerbodyMeshName = meshName.slice("Lowerbody_".length);
+  if (!lowerbodyMeshName.endsWith("_Link")) {
+    return null;
+  }
+  if (!lowerbodyVisualGeometryPromises.has(lowerbodyMeshName)) {
+    const url = `./assets/scenes/lowerbody/meshes/${lowerbodyMeshName}.STL?v=${SCENE_ASSET_VERSION}`;
+    const meshPosition = Array.from(model.mesh_pos.slice(meshID * 3, (meshID + 1) * 3));
+    const meshQuaternion = Array.from(model.mesh_quat.slice(meshID * 4, (meshID + 1) * 4));
+    lowerbodyVisualGeometryPromises.set(
+      lowerbodyMeshName,
+      lowerbodyVisualLoader.loadAsync(url).then((geometry) => transformLowerbodyStlGeometry(geometry, meshPosition, meshQuaternion))
+    );
+  }
+  return lowerbodyVisualGeometryPromises.get(lowerbodyMeshName);
+}
 async function reloadFunc() {
   this.scene.remove(this.scene.getObjectByName("MuJoCo Root"));
+  await downloadExampleScenesFolder(this.mujoco, this.params.scene);
   [this.model, this.data, this.bodies, this.lights] = await loadSceneFromURL(this.mujoco, this.params.scene, this);
   this.mujoco.mj_forward(this.model, this.data);
   if (this.configureSceneController) {
@@ -34267,9 +34805,7 @@ async function reloadFunc() {
 function setupGUI(parentContext) {
   parentContext.updateGUICallbacks.length = 0;
   parentContext.updateGUICallbacks.push((model, data, params) => {
-    parentContext.camera.position.set(2, 1.7, 1.7);
-    parentContext.controls.target.set(0, 0.7, 0);
-    parentContext.controls.update();
+    resetDefaultCamera(parentContext);
   });
   let reload = reloadFunc.bind(parentContext);
   parentContext.gui.add(parentContext.params, "scene", {
@@ -34432,9 +34968,7 @@ function setupGUI(parentContext) {
   keyInnerHTML += "Backspace<br>";
   document.addEventListener("keydown", (event) => {
     if (event.ctrlKey && event.code === "KeyA") {
-      parentContext.camera.position.set(2, 1.7, 1.7);
-      parentContext.controls.target.set(0, 0.7, 0);
-      parentContext.controls.update();
+      resetDefaultCamera(parentContext);
       event.preventDefault();
     }
   });
@@ -34489,6 +35023,10 @@ async function loadSceneFromURL(mujoco2, filename, parent) {
     }
     let geometry = new SphereGeometry(size[0] * 0.5);
     if (type == mujoco2.mjtGeom.mjGEOM_PLANE.value) {
+      const width = size[0] > 0 ? size[0] * 2 : 100;
+      const height = size[1] > 0 ? size[1] * 2 : 100;
+      geometry = new PlaneGeometry(width, height);
+      geometry.rotateX(-Math.PI / 2);
     } else if (type == mujoco2.mjtGeom.mjGEOM_HFIELD.value) {
     } else if (type == mujoco2.mjtGeom.mjGEOM_SPHERE.value) {
       geometry = new SphereGeometry(size[0]);
@@ -34502,7 +35040,11 @@ async function loadSceneFromURL(mujoco2, filename, parent) {
       geometry = new BoxGeometry(size[0] * 2, size[2] * 2, size[1] * 2);
     } else if (type == mujoco2.mjtGeom.mjGEOM_MESH.value) {
       let meshID = model.geom_dataid[g2];
-      if (!(meshID in meshes)) {
+      let meshName = getNameAtAddress(names_array, textDecoder, model.name_meshadr[meshID]);
+      let lowerbodyVisualGeometry = await loadLowerbodyVisualGeometry(meshName, model, meshID);
+      if (lowerbodyVisualGeometry != null) {
+        geometry = lowerbodyVisualGeometry;
+      } else if (!(meshID in meshes)) {
         geometry = new BufferGeometry();
         let vertex_buffer = model.mesh_vert.subarray(
           model.mesh_vertadr[meshID] * 3,
@@ -34636,21 +35178,13 @@ async function loadSceneFromURL(mujoco2, filename, parent) {
       //model.mat_metallic   [model.geom_matid[g]]
       map: texture
     });
-    let mesh;
-    if (type == 0) {
-      mesh = new Reflector(new PlaneGeometry(100, 100), { clipBias: 3e-3, texture });
-      mesh.rotateX(-Math.PI / 2);
-    } else {
-      mesh = new Mesh(geometry, currentMaterial);
-    }
+    let mesh = new Mesh(geometry, currentMaterial);
     mesh.castShadow = g2 == 0 ? false : true;
     mesh.receiveShadow = type != 7;
     mesh.bodyID = b;
     bodies[b].add(mesh);
     getPosition(model.geom_pos, g2, mesh.position);
-    if (type != 0) {
-      getQuaternion(model.geom_quat, g2, mesh.quaternion);
-    }
+    getQuaternion(model.geom_quat, g2, mesh.quaternion);
     if (type == 4) {
       mesh.scale.set(size[0], size[2], size[1]);
     }
@@ -34775,31 +35309,69 @@ function drawTendonsAndFlex(mujocoRoot, model, data) {
     mujocoRoot.spheres.instanceMatrix.needsUpdate = true;
   }
 }
-async function downloadExampleScenesFolder(mujoco2) {
-  let indexResponse = await fetch("./assets/scenes/index.json");
-  if (!indexResponse.ok) {
-    throw new Error(`Failed to fetch assets/scenes/index.json: ${indexResponse.status}`);
+async function ensureSceneAsset(mujoco2, filePath) {
+  const normalizedPath = normalizeScenePath(filePath);
+  if (loadedSceneFiles.has(normalizedPath)) {
+    return sceneTextCache.get(normalizedPath) ?? "";
   }
-  let allFiles = await indexResponse.json();
-  let requests = allFiles.map((url) => fetch("./assets/scenes/" + url));
-  let responses = await Promise.all(requests);
-  for (let i2 = 0; i2 < responses.length; i2++) {
-    let split = allFiles[i2].split("/");
-    let working = "/working/";
-    for (let f = 0; f < split.length - 1; f++) {
-      working += split[f];
-      if (!mujoco2.FS.analyzePath(working).exists) {
-        mujoco2.FS.mkdir(working);
-      }
-      working += "/";
+  const response = await fetch(sceneAssetUrl(normalizedPath), { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch assets/scenes/${normalizedPath}: ${response.status}`);
+  }
+  ensureMujocoDirectory(mujoco2, normalizedPath);
+  if (isTextSceneAsset(normalizedPath)) {
+    const text = await response.text();
+    mujoco2.FS.writeFile(`/working/${normalizedPath}`, text);
+    if (isXmlSceneAsset(normalizedPath)) {
+      sceneTextCache.set(normalizedPath, text);
     }
-    let lowerName = allFiles[i2].toLowerCase();
-    if (lowerName.endsWith(".png") || lowerName.endsWith(".stl") || lowerName.endsWith(".skn")) {
-      mujoco2.FS.writeFile("/working/" + allFiles[i2], new Uint8Array(await responses[i2].arrayBuffer()));
+  } else {
+    mujoco2.FS.writeFile(`/working/${normalizedPath}`, new Uint8Array(await response.arrayBuffer()));
+  }
+  loadedSceneFiles.add(normalizedPath);
+  return sceneTextCache.get(normalizedPath) ?? "";
+}
+async function downloadSceneXmlDependencies(mujoco2, xmlPath, contextDir, seenXmlContexts) {
+  const normalizedXmlPath = normalizeScenePath(xmlPath);
+  const normalizedContextDir = normalizeScenePath(contextDir ?? sceneDirname(normalizedXmlPath));
+  const contextKey = `${normalizedXmlPath}|${normalizedContextDir}`;
+  if (seenXmlContexts.has(contextKey)) {
+    return;
+  }
+  seenXmlContexts.add(contextKey);
+  const xmlText = await ensureSceneAsset(mujoco2, normalizedXmlPath);
+  const compilerTag = xmlText.match(/<compiler\b[^>]*>/i)?.[0] ?? "";
+  const meshDir = getXmlAttribute(compilerTag, "meshdir");
+  const textureDir = getXmlAttribute(compilerTag, "texturedir");
+  const fileAttributeRegex = /<([A-Za-z0-9_:-]+)\b[^>]*\bfile\s*=\s*["']([^"']+)["'][^>]*>/g;
+  for (const match of xmlText.matchAll(fileAttributeRegex)) {
+    const tagName = match[1].toLowerCase();
+    const relativePath = match[2];
+    let baseDir = normalizedContextDir;
+    if ((tagName === "mesh" || tagName === "hfield" || tagName === "skin") && meshDir && !relativePath.includes("/")) {
+      baseDir = resolveScenePath(normalizedContextDir, meshDir);
+    } else if (tagName === "texture" && textureDir && !relativePath.includes("/")) {
+      baseDir = resolveScenePath(normalizedContextDir, textureDir);
+    }
+    const dependencyPath = resolveScenePath(baseDir, relativePath);
+    if (isXmlSceneAsset(dependencyPath)) {
+      const dependencyContextDir = tagName === "include" ? normalizedContextDir : sceneDirname(dependencyPath);
+      await downloadSceneXmlDependencies(mujoco2, dependencyPath, dependencyContextDir, seenXmlContexts);
     } else {
-      mujoco2.FS.writeFile("/working/" + allFiles[i2], await responses[i2].text());
+      await ensureSceneAsset(mujoco2, dependencyPath);
     }
   }
+}
+async function downloadExampleScenesFolder(mujoco2, sceneFile) {
+  if (!sceneFile) {
+    throw new Error("downloadExampleScenesFolder requires a scene XML path.");
+  }
+  await downloadSceneXmlDependencies(
+    mujoco2,
+    normalizeScenePath(sceneFile),
+    sceneDirname(sceneFile),
+    /* @__PURE__ */ new Set()
+  );
 }
 function getPosition(buffer, index, target, swizzle = true) {
   if (swizzle) {
@@ -41779,6 +42351,8 @@ var MJDSBL_CONTACT = 1 << 4;
 var MJDSBL_ACTUATION = 1 << 11;
 var RIGHT_TARGET_POSITION_SPEED = 0.2;
 var RIGHT_TARGET_ROTATION_SPEED = Math.PI * 0.75;
+var DEFAULT_CAMERA_POSITION2 = [0.18, 1.78, -2.45];
+var DEFAULT_CAMERA_TARGET2 = [0.1, 0.78, 0];
 var ACTIVE_TARGET_HAND_TOGGLE_KEY = "KeyT";
 var ACTIVE_TARGET_HAND_GRIP_TOGGLE_COUNT = 5;
 var RIGHT_TARGET_INPUT_KEYS = /* @__PURE__ */ new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF"]);
@@ -41873,7 +42447,7 @@ var MuJoCoDemo = class {
     this.scene.name = "scene";
     this.camera = new PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1e-3, 100);
     this.camera.name = "PerspectiveCamera";
-    this.camera.position.set(2, 1.7, 1.7);
+    this.camera.position.set(...DEFAULT_CAMERA_POSITION2);
     this.scene.add(this.camera);
     this.scene.background = new Color(0.15, 0.25, 0.35);
     this.scene.fog = new Fog(this.scene.background, 15, 25.5);
@@ -41909,7 +42483,7 @@ var MuJoCoDemo = class {
     this.container.appendChild(this.debugOverlay);
     this.container.appendChild(this.rightTargetPad);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 0.7, 0);
+    this.controls.target.set(...DEFAULT_CAMERA_TARGET2);
     this.controls.panSpeed = 2;
     this.controls.zoomSpeed = 1;
     this.controls.enableDamping = true;
@@ -42145,7 +42719,7 @@ var MuJoCoDemo = class {
     this.handGripToggleButton.textContent = `Finger 1-5 ${handLabel} -> ${nextLabel}`;
   }
   async init() {
-    await downloadExampleScenesFolder(mujoco);
+    await downloadExampleScenesFolder(mujoco, initialScene);
     [this.model, this.data, this.bodies, this.lights] = await loadSceneFromURL(mujoco, initialScene, this);
     this.mujoco.mj_forward(this.model, this.data);
     await this.configureSceneController();

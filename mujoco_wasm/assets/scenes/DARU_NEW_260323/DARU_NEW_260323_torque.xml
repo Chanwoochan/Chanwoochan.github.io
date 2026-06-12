@@ -20,5 +20,37 @@
     <motor name="LWP_Joint_motor" joint="LWP_Joint" ctrlrange="-10 10" gear="1" ctrllimited="true"/>
     <motor name="HY_Joint_motor" joint="HY_Joint" ctrlrange="-7 7" gear="1" ctrllimited="true"/>
     <motor name="HP_Joint_motor" joint="HP_Joint" ctrlrange="-7 7" gear="1" ctrllimited="true"/>
+
+    <position name="Lowerbody_L_Hip_Yaw_Joint_pos" joint="Lowerbody_L_Hip_Yaw_Joint"
+              kp="40000" kv="250" />
+    <position name="Lowerbody_L_Hip_Roll_Joint_pos" joint="Lowerbody_L_Hip_Roll_Joint"
+              kp="40000" kv="250" />
+    <position name="Lowerbody_L_Hip_Pitch_Joint_pos" joint="Lowerbody_L_Hip_Pitch_Joint"
+              kp="60000" kv="300" />
+    <position name="Lowerbody_L_Knee_Pitch_Joint_pos" joint="Lowerbody_L_Knee_Pitch_Joint"
+              kp="60000" kv="300" ctrlrange="0 2.617"
+              ctrllimited="true" />
+    <position name="Lowerbody_L_Ankle_Pitch_Joint_pos" joint="Lowerbody_L_Ankle_Pitch_Joint"
+              kp="35000" kv="220" ctrlrange="-0.8 0.8"
+              ctrllimited="true" />
+    <position name="Lowerbody_L_Ankle_Roll_Joint_pos" joint="Lowerbody_L_Ankle_Roll_Joint"
+              kp="35000" kv="220" ctrlrange="-0.8 0.8"
+              ctrllimited="true" />
+
+    <position name="Lowerbody_R_Hip_Yaw_Joint_pos" joint="Lowerbody_R_Hip_Yaw_Joint"
+              kp="40000" kv="250" />
+    <position name="Lowerbody_R_Hip_Roll_Joint_pos" joint="Lowerbody_R_Hip_Roll_Joint"
+              kp="40000" kv="250" />
+    <position name="Lowerbody_R_Hip_Pitch_Joint_pos" joint="Lowerbody_R_Hip_Pitch_Joint"
+              kp="60000" kv="300" />
+    <position name="Lowerbody_R_Knee_Pitch_Joint_pos" joint="Lowerbody_R_Knee_Pitch_Joint"
+              kp="60000" kv="300" ctrlrange="0 2.617"
+              ctrllimited="true" />
+    <position name="Lowerbody_R_Ankle_Pitch_Joint_pos" joint="Lowerbody_R_Ankle_Pitch_Joint"
+              kp="35000" kv="220" ctrlrange="-0.8 0.8"
+              ctrllimited="true" />
+    <position name="Lowerbody_R_Ankle_Roll_Joint_pos" joint="Lowerbody_R_Ankle_Roll_Joint"
+              kp="35000" kv="220" ctrlrange="-0.8 0.8"
+              ctrllimited="true" />
   </actuator>
 </mujoco>

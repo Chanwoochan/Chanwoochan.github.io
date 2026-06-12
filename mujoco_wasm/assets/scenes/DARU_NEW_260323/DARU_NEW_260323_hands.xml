@@ -1,6 +1,6 @@
 <!-- DARU_NEW_260323 Model MJCF -->
 <mujoco model="DARU_NEW_260323_hands">
-  <compiler angle="radian" autolimits="true"/>
+  <compiler angle="radian"/>
 
   <asset>
     <mesh name="Base" content_type="model/stl" file="meshes/Base.STL"/>
@@ -24,13 +24,16 @@
 
     <model name="ROUGH_R_hand" file="../ROUGH_R/ROUGH_R.xml"/>
     <model name="ROUGH_L_hand" file="../ROUGH_L/ROUGH_L.xml"/>
+    <model name="Lowerbody" file="../lowerbody/lowerbody.xml"/>
 
-    <material name="robot_mat" rgba="0.82 0.84 0.88 1"/>
+    <material name="robot_mat" rgba="0.32 0.32 0.32 1" specular="0.10" shininess="0.15"/>
   </asset>
 
   <worldbody>
     <body name="Base">
-      <geom type="mesh" material="robot_mat" mesh="Base"/>
+      <body name="Lowerbody_Mount" pos="0 0 -0.0175">
+        <attach model="Lowerbody" prefix="Lowerbody_"/>
+      </body>
       <body name="UB_Link">
       <inertial pos="-0.0507646 2.076e-05 0.269453" quat="0.999045 0.000129377 0.0436833 -0.000203278" mass="14.7807" diaginertia="0.274438 0.254941 0.146742"/>
       <joint name="Waist_Joint" pos="0 0 0" axis="0 0 1" range="-3.14 3.14" actuatorfrcrange="-150 150" frictionloss="0.5"/>
@@ -66,6 +69,10 @@
                     <body name="R_Hand_Mount" pos="0 -0.0045 -0.0255" euler="0 3.142 1.571">
                       <attach model="ROUGH_R_hand" prefix="rh_"/>
                     </body>
+                    <camera name="R_wrist_cam"
+                        pos="0.082 -0.006 -0.038"
+                        euler="0.2618 0.3918 0"
+                        fovy="58"/>
                   </body>
                 </body>
               </body>
@@ -104,6 +111,10 @@
                     <body name="L_Hand_Mount" pos="0 0.0045 -0.0255" euler="0 3.142 -1.571">
                       <attach model="ROUGH_L_hand" prefix="lh_"/>
                     </body>
+                    <camera name="L_wrist_cam"
+                        pos="0.082 0.006 -0.038"
+                        euler="-0.2618 0.3918 0"
+                        fovy="58"/>
                   </body>
                 </body>
               </body>
@@ -119,6 +130,14 @@
           <inertial pos="0.0113946 -0.00069587 0.032575" quat="0.935722 0.00167622 -0.35249 -0.0131194" mass="0.94946" diaginertia="0.00662813 0.00602591 0.00512292"/>
           <joint name="HP_Joint" pos="0 0 0" axis="0 1 0" range="-0.785 0.349" actuatorfrcrange="-7 7"/>
           <geom type="mesh" material="robot_mat" mesh="HP_Link"/>
+          <camera name="L_front_cam"
+              pos="0.1 0.0325 -0.1"
+              euler="0 -0.7854 -1.5708"
+              fovy="60"/>
+          <camera name="R_front_cam"
+              pos="0.1 -0.0325 -0.1"
+              euler="0 -0.7854 -1.5708"
+              fovy="60"/>
         </body>
       </body>
     </body>
