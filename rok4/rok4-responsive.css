@@ -59,9 +59,9 @@ body {
 }
 
 .spec-card {
-  width: 340px;
-  padding: 18px 20px;
-  border-radius: 20px;
+  width: 300px;
+  padding: 14px 16px;
+  border-radius: 18px;
 }
 
 .spec-card:nth-child(1) {
@@ -69,11 +69,11 @@ body {
 }
 
 .spec-card:nth-child(2) {
-  top: 242px;
+  top: 220px;
 }
 
 .spec-card:nth-child(3) {
-  top: 520px;
+  top: 464px;
 }
 
 .spec-card:nth-child(4) {
@@ -81,23 +81,25 @@ body {
 }
 
 .spec-card.left-stack:nth-child(5) {
-  top: 290px;
+  top: 220px;
 }
 
 .spec-card.left-stack:nth-child(6) {
-  top: 530px;
+  top: 388px;
 }
 
 .spec-card h2 {
-  font-size: 54px;
+  margin-bottom: 8px;
+  font-size: 42px;
 }
 
 .spec-card p {
-  font-size: 20px;
+  font-size: 16px;
+  line-height: 1.36;
 }
 
 .spec-card p:last-child {
-  font-size: 28px;
+  font-size: 22px;
 }
 
 .content-section {
@@ -230,4 +232,49 @@ body {
 
 .body-figure span {
   font-size: 22px;
+}
+
+@media (max-width: 720px) {
+  .spec-card {
+    width: 300px;
+    right: 5vw;
+    padding: 14px 16px;
+    border-radius: 18px;
+  }
+
+  .spec-card.left-stack {
+    left: 5vw;
+  }
+
+  .spec-card:nth-child(1),
+  .spec-card:nth-child(4) {
+    top: 52px;
+  }
+
+  .spec-card:nth-child(2),
+  .spec-card.left-stack:nth-child(5) {
+    top: 220px;
+  }
+
+  .spec-card.left-stack:nth-child(6) {
+    top: 388px;
+  }
+
+  .spec-card:nth-child(3) {
+    top: 464px;
+  }
+
+  .spec-card h2 {
+    margin-bottom: 8px;
+    font-size: 42px;
+  }
+
+  .spec-card p {
+    font-size: 16px;
+    line-height: 1.36;
+  }
+
+  .spec-card p:last-child {
+    font-size: 22px;
+  }
 }
