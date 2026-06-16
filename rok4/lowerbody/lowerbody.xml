@@ -1,0 +1,167 @@
+<mujoco model="rok_4_wholebody">
+  <compiler angle="radian"/>
+
+  <default>
+    <geom contype="0" conaffinity="2"/>
+    <joint armature="100" frictionloss="10" damping="1000"/>
+  </default>
+
+  <asset>
+    <mesh name="Base_Link" content_type="model/stl" file="meshes/Base_Link.STL"/>
+    <mesh name="L_Hip_Yaw_Link" content_type="model/stl" file="meshes/L_Hip_Yaw_Link.STL"/>
+    <mesh name="L_Hip_Roll_Link" content_type="model/stl" file="meshes/L_Hip_Roll_Link.STL"/>
+    <mesh name="L_Thigh_Link" content_type="model/stl" file="meshes/L_Thigh_Link.STL"/>
+    <mesh name="L_Knee_Crank_Link" content_type="model/stl" file="meshes/L_Knee_Crank_Link.STL"/>
+    <mesh name="L_Knee_Rod_Link" content_type="model/stl" file="meshes/L_Knee_Rod_Link.STL"/>
+    <mesh name="L_Motor_5_Output_Link" content_type="model/stl" file="meshes/L_Motor_5_Output_Link.STL"/>
+    <mesh name="L_Motor_5_Rod_Link" content_type="model/stl" file="meshes/L_Motor_5_Rod_Link.STL"/>
+    <mesh name="L_Motor_6_Output_Link" content_type="model/stl" file="meshes/L_Motor_6_Output_Link.STL"/>
+    <mesh name="L_Motor_6_Rod_Link" content_type="model/stl" file="meshes/L_Motor_6_Rod_Link.STL"/>
+    <mesh name="L_Motor_5_Mid_Rotator_Link" content_type="model/stl" file="meshes/L_Motor_5_Mid_Rotator_Link.STL"/>
+    <mesh name="L_Motor_5_Final_Rod_Link" content_type="model/stl" file="meshes/L_Motor_5_Final_Rod_Link.STL"/>
+    <mesh name="L_Motor_6_Mid_Rotator_Link" content_type="model/stl" file="meshes/L_Motor_6_Mid_Rotator_Link.STL"/>
+    <mesh name="L_Motor_6_Final_Rod_Link" content_type="model/stl" file="meshes/L_Motor_6_Final_Rod_Link.STL"/>
+    <mesh name="L_Ankle_Left_Crank_Link" content_type="model/stl" file="meshes/L_Ankle_Left_Crank_Link.STL"/>
+    <mesh name="L_Ankle_Left_Rod_Link" content_type="model/stl" file="meshes/L_Ankle_Left_Rod_Link.STL"/>
+    <mesh name="L_Ankle_Right_Crank_Link" content_type="model/stl" file="meshes/L_Ankle_Right_Crank_Link.STL"/>
+    <mesh name="L_Ankle_Right_Rod_Link" content_type="model/stl" file="meshes/L_Ankle_Right_Rod_Link.STL"/>
+    <mesh name="L_Calf_Link" content_type="model/stl" file="meshes/L_Calf_Link.STL"/>
+    <mesh name="L_Ankle_Pitch_Link" content_type="model/stl" file="meshes/L_Ankle_Pitch_Link.STL"/>
+    <mesh name="L_Ankle_Roll_Link" content_type="model/stl" file="meshes/L_Ankle_Roll_Link.STL"/>
+    <mesh name="L_Foot_Link" content_type="model/stl" file="meshes/L_Foot_Link.STL"/>
+    <mesh name="R_Hip_Yaw_Link" content_type="model/stl" file="meshes/R_Hip_Yaw_Link.STL"/>
+    <mesh name="R_Hip_Roll_Link" content_type="model/stl" file="meshes/R_Hip_Roll_Link.STL"/>
+    <mesh name="R_Thigh_Link" content_type="model/stl" file="meshes/R_Thigh_Link.STL"/>
+    <mesh name="R_Knee_Crank_Link" content_type="model/stl" file="meshes/R_Knee_Crank_Link.STL"/>
+    <mesh name="R_Knee_Rod_Link" content_type="model/stl" file="meshes/R_Knee_Rod_Link.STL"/>
+    <mesh name="R_Motor_5_Output_Link" content_type="model/stl" file="meshes/R_Motor_5_Output_Link.STL"/>
+    <mesh name="R_Motor_5_Rod_Link" content_type="model/stl" file="meshes/R_Motor_5_Rod_Link.STL"/>
+    <mesh name="R_Motor_6_Output_Link" content_type="model/stl" file="meshes/R_Motor_6_Output_Link.STL"/>
+    <mesh name="R_Motor_6_Rod_Link" content_type="model/stl" file="meshes/R_Motor_6_Rod_Link.STL"/>
+    <mesh name="R_Motor_5_Mid_Rotator_Link" content_type="model/stl" file="meshes/R_Motor_5_Mid_Rotator_Link.STL"/>
+    <mesh name="R_Motor_5_Final_Rod_Link" content_type="model/stl" file="meshes/R_Motor_5_Final_Rod_Link.STL"/>
+    <mesh name="R_Motor_6_Mid_Rotator_Link" content_type="model/stl" file="meshes/R_Motor_6_Mid_Rotator_Link.STL"/>
+    <mesh name="R_Motor_6_Final_Rod_Link" content_type="model/stl" file="meshes/R_Motor_6_Final_Rod_Link.STL"/>
+    <mesh name="R_Ankle_Left_Crank_Link" content_type="model/stl" file="meshes/R_Ankle_Left_Crank_Link.STL"/>
+    <mesh name="R_Ankle_Left_Rod_Link" content_type="model/stl" file="meshes/R_Ankle_Left_Rod_Link.STL"/>
+    <mesh name="R_Ankle_Right_Crank_Link" content_type="model/stl" file="meshes/R_Ankle_Right_Crank_Link.STL"/>
+    <mesh name="R_Ankle_Right_Rod_Link" content_type="model/stl" file="meshes/R_Ankle_Right_Rod_Link.STL"/>
+    <mesh name="R_Calf_Link" content_type="model/stl" file="meshes/R_Calf_Link.STL"/>
+    <mesh name="R_Ankle_Pitch_Link" content_type="model/stl" file="meshes/R_Ankle_Pitch_Link.STL"/>
+    <mesh name="R_Ankle_Roll_Link" content_type="model/stl" file="meshes/R_Ankle_Roll_Link.STL"/>
+    <mesh name="R_Foot_Link" content_type="model/stl" file="meshes/R_Foot_Link.STL"/>
+    <material name="robot_mat" rgba="0.32 0.32 0.32 1" specular="0.10" shininess="0.15"/>
+  </asset>
+
+  <worldbody>
+    <geom type="mesh" material="robot_mat" mesh="Base_Link" />
+    <body name="L_Hip_Yaw_Link" pos="-0.12235 0.105 -0.11365" quat="0.976296 0 0.216438 0">
+      <inertial pos="0.001493 0 0.0036736" quat="0.999987 1.11148e-05 -0.00501116 5.56988e-08" mass="1.7431" diaginertia="0.00257094 0.0020357 0.00113606"/>
+      <joint name="L_Hip_Yaw_Joint" pos="0 0 0" axis="0 0 1"/>
+      <geom type="mesh" material="robot_mat" mesh="L_Hip_Yaw_Link"/>
+      <body name="L_Hip_Roll_Link">
+        <inertial pos="0.12718 0 0.00050171" quat="0.511889 0.5119 -0.487816 0.487815" mass="3.9036" diaginertia="0.0118823 0.00961705 0.0055035"/>
+        <joint name="L_Hip_Roll_Joint" pos="0 0 0" axis="1 0 0"/>
+        <geom type="mesh" material="robot_mat" mesh="L_Hip_Roll_Link"/>
+        <body name="L_Thigh_Link" pos="0.135 0 0" quat="0.976296 0 -0.216438 0">
+          <inertial pos="-0.0137027 0.00366133 -0.141596" quat="0.677889 -0.0914716 -0.0766679 0.725411" mass="6.33627" diaginertia="0.10178 0.0901011 0.0275781"/>
+          <joint name="L_Hip_Pitch_Joint" pos="0 0 0" axis="0 1 0"/>
+          <geom type="mesh" material="robot_mat" mesh="L_Thigh_Link"/>
+          <geom pos="0.022206 0 -0.045723" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Knee_Crank_Link"/>
+          <geom pos="0.035583 0 0.002454" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Knee_Rod_Link"/>
+          <geom pos="0 0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_5_Output_Link"/>
+          <geom pos="0.021 0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_5_Rod_Link"/>
+          <geom pos="0 -0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_6_Output_Link"/>
+          <geom pos="0.021 -0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_6_Rod_Link"/>
+          <geom pos="0 0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_5_Mid_Rotator_Link"/>
+          <geom pos="-0.021 0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_5_Final_Rod_Link"/>
+          <geom pos="0 -0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_6_Mid_Rotator_Link"/>
+          <geom pos="-0.021 -0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Motor_6_Final_Rod_Link"/>
+          <body name="L_Calf_Link" pos="0 0 -0.35">
+            <inertial pos="0.0058669 0.0153681 -0.118842" quat="0.795421 0.0350867 -0.0222093 0.604632" mass="2.85284" diaginertia="0.0454291 0.0443219 0.0055501"/>
+            <joint name="L_Knee_Pitch_Joint" pos="0 0 0" axis="0 1 0" range="0.0 2.617"/>
+            <geom type="mesh" material="robot_mat" mesh="L_Calf_Link"/>
+            <geom pos="0 0.029425 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Ankle_Left_Crank_Link"/>
+            <geom pos="0.06 0.049225 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Ankle_Left_Rod_Link" conaffinity="0"/>
+            <geom pos="0 -0.029425 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Ankle_Right_Crank_Link"/>
+            <geom pos="0.06 -0.049225 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Ankle_Right_Rod_Link" conaffinity="0"/>
+            <body name="L_Ankle_Pitch_Link" pos="0 0 -0.35">
+              <inertial pos="0 0 -0.00029455" quat="0 0.707107 0 0.707107" mass="0.080333" diaginertia="1.81e-05 1.605e-05 9.23e-06"/>
+              <joint name="L_Ankle_Pitch_Joint" pos="0 0 0" axis="0 1 0" range="-0.8 0.8"/>
+              <geom type="mesh" material="robot_mat" mesh="L_Ankle_Pitch_Link"/>
+              <body name="L_Ankle_Roll_Link">
+                <inertial pos="0.009759 0 0.00569521" quat="0 0.730273 0 0.683155" mass="1.14203" diaginertia="0.00486512 0.00433532 0.00139502"/>
+                <joint name="L_Ankle_Roll_Joint" pos="0 0 0" axis="1 0 0" range="-0.8 0.8"/>
+                <geom type="mesh" material="robot_mat" mesh="L_Ankle_Roll_Link"/>
+                <geom pos="0 0 -0.049" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="L_Foot_Link"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <body name="R_Hip_Yaw_Link" pos="-0.12235 -0.105 -0.11365" quat="0.976296 0 0.216438 0">
+      <inertial pos="0.001493 0 0.0036736" quat="0.999987 1.11148e-05 -0.00501116 5.56988e-08" mass="1.7431" diaginertia="0.00257094 0.0020357 0.00113606"/>
+      <joint name="R_Hip_Yaw_Joint" pos="0 0 0" axis="0 0 1"/>
+      <geom type="mesh" material="robot_mat" mesh="R_Hip_Yaw_Link"/>
+      <body name="R_Hip_Roll_Link">
+        <inertial pos="0.12718 0 0.00050171" quat="0.511889 0.5119 -0.487816 0.487815" mass="3.9036" diaginertia="0.0118823 0.00961705 0.0055035"/>
+        <joint name="R_Hip_Roll_Joint" pos="0 0 0" axis="1 0 0"/>
+        <geom type="mesh" material="robot_mat" mesh="R_Hip_Roll_Link"/>
+        <body name="R_Thigh_Link" pos="0.135 0 0" quat="0.976296 0 -0.216438 0">
+          <inertial pos="-0.0137027 0.00366133 -0.141596" quat="0.677889 -0.0914716 -0.0766679 0.725411" mass="6.33627" diaginertia="0.10178 0.0901011 0.0275781"/>
+          <joint name="R_Hip_Pitch_Joint" pos="0 0 0" axis="0 1 0"/>
+          <geom type="mesh" material="robot_mat" mesh="R_Thigh_Link"/>
+          <geom pos="0.022206 0 -0.045723" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Knee_Crank_Link"/>
+          <geom pos="0.035583 0 0.002454" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Knee_Rod_Link"/>
+          <geom pos="0 0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_5_Output_Link"/>
+          <geom pos="0.021 0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_5_Rod_Link"/>
+          <geom pos="0 -0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_6_Output_Link"/>
+          <geom pos="0.021 -0.012675 -0.125" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_6_Rod_Link"/>
+          <geom pos="0 0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_5_Mid_Rotator_Link"/>
+          <geom pos="-0.021 0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_5_Final_Rod_Link"/>
+          <geom pos="0 -0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_6_Mid_Rotator_Link"/>
+          <geom pos="-0.021 -0.029425 -0.23" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Motor_6_Final_Rod_Link"/>
+          <body name="R_Calf_Link" pos="0 0 -0.35">
+            <inertial pos="0.0058669 0.0153681 -0.118842" quat="0.795421 0.0350867 -0.0222093 0.604632" mass="2.85284" diaginertia="0.0454291 0.0443219 0.0055501"/>
+            <joint name="R_Knee_Pitch_Joint" pos="0 0 0" axis="0 1 0" range="0.0 2.617"/>
+            <geom type="mesh" material="robot_mat" mesh="R_Calf_Link"/>
+            <geom pos="0 0.029425 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Ankle_Left_Crank_Link"/>
+            <geom pos="0.06 0.049225 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Ankle_Left_Rod_Link" conaffinity="0"/>
+            <geom pos="0 -0.029425 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Ankle_Right_Crank_Link"/>
+            <geom pos="0.06 -0.049225 0" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Ankle_Right_Rod_Link" conaffinity="0"/>
+            <body name="R_Ankle_Pitch_Link" pos="0 0 -0.35">
+              <inertial pos="0 0 -0.00029455" quat="0 0.707107 0 0.707107" mass="0.080333" diaginertia="1.81e-05 1.605e-05 9.23e-06"/>
+              <joint name="R_Ankle_Pitch_Joint" pos="0 0 0" axis="0 1 0" range="-0.8 0.8"/>
+              <geom type="mesh" material="robot_mat" mesh="R_Ankle_Pitch_Link"/>
+              <body name="R_Ankle_Roll_Link">
+                <inertial pos="0.009759 0 0.00569521" quat="0 0.730273 0 0.683155" mass="1.14203" diaginertia="0.00486512 0.00433532 0.00139502"/>
+                <joint name="R_Ankle_Roll_Joint" pos="0 0 0" axis="1 0 0" range="-0.8 0.8"/>
+                <geom type="mesh" material="robot_mat" mesh="R_Ankle_Roll_Link"/>
+                <geom pos="0 0 -0.049" quat="1 0 0 0" type="mesh" material="robot_mat" mesh="R_Foot_Link"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+<!-- 
+  <equality>
+    <joint joint1="L_Hip_Yaw_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="L_Hip_Roll_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="L_Hip_Pitch_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="L_Knee_Pitch_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="L_Ankle_Pitch_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="L_Ankle_Roll_Joint" polycoef="0 0 0 0 0"/>
+
+    <joint joint1="R_Hip_Yaw_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="R_Hip_Roll_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="R_Hip_Pitch_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="R_Knee_Pitch_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="R_Ankle_Pitch_Joint" polycoef="0 0 0 0 0"/>
+    <joint joint1="R_Ankle_Roll_Joint" polycoef="0 0 0 0 0"/>
+  </equality> -->
+
+</mujoco>

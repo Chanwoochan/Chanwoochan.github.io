@@ -1,0 +1,119 @@
+<!-- DARU_NEW_260323 scene with front desk and overhead light -->
+<mujoco model="DARU_NEW_260323_scene">
+<option timestep="0.002" solver="Newton" iterations="20"
+  noslip_iterations="50"/>
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="grab">
+      <joint limited="false" margin="0.01" armature="0.001" damping="0" frictionloss="0.001"/>
+      <geom type="mesh" rgba=".93 .99 .97 1.0"/>
+      <site size="0.005 0 0" rgba="0.4 0.9 0.4 1"/>
+      <default class="object_col">
+        <geom type="mesh" density="1250" contype="3" conaffinity="3"
+              friction="1 0.5 0.01" margin="0.0005" condim="4"
+              rgba=".3 .4 .5 1" group="3"/>
+      </default>
+    </default>
+  </default>
+
+  <!-- <visual>
+    <headlight ambient="0.18 0.18 0.18" diffuse="0.55 0.55 0.55" specular="0.18 0.18 0.18"/>
+    <rgba haze="0.08 0.10 0.12 1"/>
+    <global azimuth="150" elevation="-18" offwidth="340" offheight="180"/>
+  </visual> -->
+  <include file="../furniture_sim/bin/bin_asset.xml"/>
+  <include file="../furniture_sim/studyTable/studyTable_asset.xml"/>
+  <include file="../object_sim/cup/assets.xml"/>
+  <asset>
+    <model name="DARU_robot" file="DARU_NEW_260323_torque.xml"/>
+    <model name="desk" file="../furniture_sim/studyTable.xml"/>
+    <texture name="scene_checker" type="2d" builtin="checker" rgb1="0.18 0.20 0.22" rgb2="0.12 0.14 0.16"
+             width="512" height="512"/>
+    <texture name="desk_wood_tex" type="cube" file="../furniture_sim/common/textures/wood1.png"
+             width="2" height="2"/>
+    <texture name="tray_stone_tex" type="cube" file="../furniture_sim/common/textures/metal3.png"
+             width="2" height="2"/>
+    <texture name="box_cube_tex" type="cube" file="textures/cube_puzzle.png"
+             width="2" height="2"/>
+    <texture name="wall_frame_art_tex" type="2d" file="../furniture_sim/pic.png"/>
+    <material name="floor_mat" texture="scene_checker" texrepeat="6 6" texuniform="true"
+              reflectance="0.02" rgba="1 1 1 1"/>
+    <material name="desk_top_mat" texture="desk_wood_tex" texrepeat="2.5 2.5" texuniform="false"
+              rgba="0.98 0.92 0.84 1" reflectance="0.0" specular="0.0" shininess="0.0"/>
+    <material name="desk_leg_mat" texture="desk_wood_tex" texrepeat="4.0 4.0" texuniform="false"
+              rgba="0.84 0.74 0.60 1" reflectance="0.10" specular="0.08" shininess="0.10"/>
+    <material name="tray_mat" texture="tray_stone_tex" texrepeat="1.5 1.5" texuniform="false"
+              rgba="0.96 0.96 0.94 1" reflectance="0.18" specular="0.12" shininess="0.18"/>
+    <material name="box_cube_mat" texture="box_cube_tex" texrepeat="1 1" texuniform="false"
+              rgba="1 1 1 1" reflectance="0.12" specular="0.10" shininess="0.08"/>
+    <material name="wall_frame_art_mat" texture="wall_frame_art_tex" texrepeat="3.5 3.5" texuniform="true"
+              rgba="1 1 1 1" reflectance="0" specular="0" shininess="0"/>
+    <material name="wall_frame_border_mat" rgba="0.10 0.08 0.06 1"
+              reflectance="0.03" specular="0.02" shininess="0.02"/>
+    <material name="peg_mat" rgba="0.82 0.30 0.22 1" reflectance="0.14" specular="0.18" shininess="0.18"/>
+    <material name="hole_mat" rgba="0.20 0.42 0.78 1" reflectance="0.14" specular="0.18" shininess="0.18"/>
+  </asset>
+
+  <worldbody>
+    <!-- <light name="overhead_key" pos="0.55 0 2.45" dir="0 0 -1" directional="true"
+           diffuse="0.95 0.95 0.92" specular="0.20 0.20 0.20" castshadow="true"/> -->
+
+    <geom name="floor" type="box" pos="0 0 -0.005" size="1.2 1.2 0.01" material="desk_top_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_front_NL" type="box" pos="0.73 0 1.2" size="0.01 1.2 1.2" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_left_NL" type="box" pos="0 1.2 1.2" size="1.2 0.01 1.2" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_right_NL" type="box" pos="0 -1.2 1.2" size="1.2 0.01 1.2" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="ceiling_NL" type="box" pos="0 0 2.4" size="1.2 1.2 0.01" material="tray_mat" contype="2" conaffinity="2"/>
+    <geom name="wall_frame_border_NL" type="box" pos="0.709 -0.6 1.6" size="0.012 0.31 0.24"
+          material="wall_frame_border_mat" contype="0" conaffinity="0"/>
+    <geom name="wall_frame_art_NL"
+      type="plane"
+      pos="0.696 -0.6 1.6"
+      size="0.27 0.20 0.001"
+      material="wall_frame_art_mat"
+      euler="0 -1.576 -1.576"
+      contype="0"
+      conaffinity="0"/>
+
+    <light 
+      pos="-0.4 -0.8 2.35"  
+      dir="0 0 -1"      
+      diffuse="2 2 2"
+      ambient="0.3 0.3 0.3"
+      directional="false"
+      castshadow="true"/>
+    <geom type="box" pos="-0.4 -0.8 2.4"  size="0.1 0.1 0.05"
+          rgba="3 3 3 1" contype="0" conaffinity="0"/>
+    <light 
+      pos="-0.4 0.8 2.35"  
+      dir="0 0 -1"      
+      diffuse="2 2 2"
+      ambient="0.3 0.3 0.3"
+      directional="false"
+      castshadow="true"/>
+    <geom type="box" pos="-0.4 0.8 2.4"  size="0.1 0.1 0.05"
+          rgba="3 3 3 1" contype="0" conaffinity="0"/>
+
+    <body name="robot_anchor" pos="-0.1 0 0.94">
+      <freejoint name="robot_anchor_free"/>
+      <attach model="DARU_robot" prefix=""/>
+    </body>
+
+    <body name="left_foot_anchor" pos="-0.10 0.105 0"/>
+    <body name="right_foot_anchor" pos="-0.10 -0.105 0"/>
+
+    <body name="desk_" pos="0.44 0 0" euler="0 0 -1.57">
+      <attach model="desk" prefix="de_"/>
+    </body>
+
+    <body name="desk_cup_RAND_1" pos="0.35 0.0 0.8" euler="0 0 0">
+      <freejoint/>
+      <include file="../object_sim/cup/body.xml"/>
+    </body>
+  </worldbody>
+
+  <equality>
+    <weld body1="Lowerbody_L_Ankle_Roll_Link" body2="left_foot_anchor" solimp="0.999 0.9999 0.00001 0.5 2" />
+    <weld body1="Lowerbody_R_Ankle_Roll_Link" body2="right_foot_anchor" solimp="0.999 0.9999 0.00001 0.5 2" />
+  </equality>
+</mujoco>

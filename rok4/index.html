@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>RoK-4 Scroll Motion</title>
+    <script type="module" crossorigin src="/rok4/assets/index-DEw2y2TK.js"></script>
+    <link rel="stylesheet" crossorigin href="/rok4/assets/index-Dc51oV3p.css">
+  </head>
+
+  <body>
+    <main id="app">
+      <section class="stage">
+        <canvas id="robot-canvas" aria-label="ROK-4 robot 3D viewer"></canvas>
+        <div id="loading-cover">
+          <div class="loading-text">Loading RoK-4</div>
+        </div>
+
+        <div class="hud">
+          <div class="brand">RoK-4</div>
+        </div>
+
+        <div id="spec-overlay">
+          <div class="spec-card" data-start="0.08">
+            <p class="eyebrow">Technical Specification</p>
+            <h2>Size</h2>
+            <p>330 × 545 × 1,670 mm</p>
+          </div>
+
+          <div class="spec-card" data-start="0.25">
+            <p class="eyebrow">Degrees of Freedom</p>
+            <h2>39 DoF</h2>
+            <p>Arm 7×2 / Hand 6×2 / Leg 6×2 / Waist 1 / Neck 2</p>
+          </div>
+
+          <div class="spec-card" data-start="0.35">
+            <p class="eyebrow">Power</p>
+            <h2>48 VDC</h2>
+            <p>Battery 48V 15Ah × 2</p>
+          </div>
+
+          <div class="spec-card" data-start="0.45">
+            <p class="eyebrow">Hardware</p>
+            <h2>Weight</h2>
+            <p>약 65 kg</p>
+          </div>
+
+          <div class="spec-card left-stack" data-start="0.54">
+            <p class="eyebrow">Leg</p>
+            <h2>300 Nm</h2>
+            <p>Joint Maximum Torque</p>
+          </div>
+
+          <div class="spec-card left-stack" data-start="0.68">
+            <p class="eyebrow">Arm Range</p>
+            <h2>Shoulder Pitch</h2>
+            <p>-85° ~ 215°</p>
+          </div>
+
+          <div class="spec-card left-stack" data-start="0.80">
+            <p class="eyebrow">Payload</p>
+            <h2>10 kg</h2>
+            <p>Maximum Lift Weight per Arm</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="scroll-space"></section>
+
+      <section class="content-section mechanism-section" aria-labelledby="mechanism-title">
+        <div class="content-shell slide-layout">
+          <div class="slide-panel slide-panel-dark slide-panel-leg">
+            <figure class="slide-backdrop">
+              <img src="/rok4/pdf-assets/leg-cutaway-cutout.png" alt="Differential mechanism leg cutaway render" />
+            </figure>
+
+            <div class="slide-copy-block">
+              <p class="slide-mark">RoK-4</p>
+              <h2 id="mechanism-title">MECHANISM</h2>
+
+              <div class="mini-feature-card">
+                <div>
+                  <h3>Differential Gear Mechanism Leg</h3>
+                </div>
+                <img src="/rok4/pdf-assets/leg-cutaway-cutout.png" alt="Differential gear mechanism leg render" />
+              </div>
+
+              <p class="slide-body">
+                본 로봇은 Hip Pitch와 Knee의 차동 메커니즘 조합을 통해 고속 고토크 관절 구동이 가능하며, 무릎 및 발목 구동기를 모두 고관절에 가깝게 배치하는 설계를 통해 다리의 관성 모멘트를 크게 감소시켰다.
+              </p>
+              <p class="slide-body">
+                이를 통해 고속 이동 및 점프와 같은 역동적 동작 수행에 있어 유리하다.
+              </p>
+            </div>
+          </div>
+
+          <div class="slide-panel slide-panel-light">
+            <h3 class="slide-panel-title">RoK-4 Leg Motion Video</h3>
+
+            <div class="doc-stack">
+              <figure class="doc-video">
+                <iframe
+                  src="https://www.youtube-nocookie.com/embed/GmNEJuUdM_s?rel=0"
+                  title="RoK-4 leg kick motion video"
+                  loading="lazy"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>
+              </figure>
+              <figure class="doc-video">
+                <iframe
+                  src="https://www.youtube-nocookie.com/embed/laiFjDIiSv0?rel=0"
+                  title="RoK-4 leg jump motion video"
+                  loading="lazy"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>
+              </figure>
+            </div>
+
+            <p class="slide-caption">
+              설계된 메커니즘의 동적 성능 검증 실험으로 차동 메커니즘을 통해 다리 관절의 고속 고토크 출력이 필요한 강한 킥 및 제자리 높이 뛰기 동작을 안정적으로 수행했다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section" aria-labelledby="locomotion-title">
+        <div class="content-shell slide-layout">
+          <div class="slide-panel slide-panel-dark slide-panel-leg">
+            <figure class="slide-backdrop">
+              <img src="/rok4/pdf-assets/leg-cutaway-cutout.png" alt="Leg cutaway backdrop for locomotion section" />
+            </figure>
+
+            <div class="slide-copy-block">
+              <p class="slide-mark">RoK-4</p>
+              <h2 id="locomotion-title">LOCOMOTION</h2>
+
+              <div class="mode-card-row">
+                <article class="mode-card">
+                  <h3 class="mode-card-title">Model Based</h3>
+                  <div class="mode-card-visual">
+                    <img
+                      class="mode-card-robot"
+                      src="/rok4/pdf-assets/upperbody-render-cutout.png"
+                      alt="RoK-4 robot render for model based locomotion"
+                    />
+                    <div class="mode-diagram-panel" aria-hidden="true">
+                      <svg class="mode-diagram-svg" viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M26 98H154" class="diagram-stroke diagram-stroke-soft" />
+                        <rect x="58" y="74" width="54" height="18" rx="5" class="diagram-fill diagram-fill-soft" />
+                        <circle cx="70" cy="98" r="8" class="diagram-stroke" />
+                        <circle cx="100" cy="98" r="8" class="diagram-stroke" />
+                        <path d="M85 74L102 24" class="diagram-stroke diagram-stroke-accent" />
+                        <circle cx="85" cy="74" r="4" class="diagram-fill diagram-fill-dark" />
+                        <circle cx="102" cy="24" r="11" class="diagram-fill diagram-fill-accent" />
+                        <path d="M102 24V10" class="diagram-stroke diagram-stroke-soft" />
+                        <path d="M93 16L102 8L111 16" class="diagram-stroke diagram-stroke-soft" />
+                      </svg>
+                    </div>
+                  </div>
+                </article>
+                <article class="mode-card">
+                  <h3 class="mode-card-title">RL Based</h3>
+                  <div class="mode-card-visual">
+                    <img
+                      class="mode-card-robot"
+                      src="/rok4/pdf-assets/upperbody-render-cutout.png"
+                      alt="RoK-4 robot render for reinforcement learning locomotion"
+                    />
+                    <div class="mode-diagram-panel" aria-hidden="true">
+                      <svg class="mode-diagram-svg" viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M46 24L92 34L136 24" class="diagram-stroke diagram-stroke-soft" />
+                        <path d="M46 60L92 60L136 60" class="diagram-stroke diagram-stroke-soft" />
+                        <path d="M46 96L92 86L136 96" class="diagram-stroke diagram-stroke-soft" />
+                        <path d="M46 24L92 60L136 24" class="diagram-stroke" />
+                        <path d="M46 24L92 86L136 96" class="diagram-stroke" />
+                        <path d="M46 60L92 34L136 60" class="diagram-stroke diagram-stroke-accent" />
+                        <path d="M46 96L92 60L136 24" class="diagram-stroke" />
+                        <path d="M46 96L92 34L136 60" class="diagram-stroke" />
+                        <circle cx="46" cy="24" r="9" class="diagram-fill diagram-fill-dark" />
+                        <circle cx="46" cy="60" r="9" class="diagram-fill diagram-fill-dark" />
+                        <circle cx="46" cy="96" r="9" class="diagram-fill diagram-fill-dark" />
+                        <circle cx="92" cy="34" r="9" class="diagram-fill diagram-fill-accent" />
+                        <circle cx="92" cy="60" r="9" class="diagram-fill diagram-fill-accent" />
+                        <circle cx="92" cy="86" r="9" class="diagram-fill diagram-fill-accent" />
+                        <circle cx="136" cy="24" r="9" class="diagram-fill diagram-fill-dark" />
+                        <circle cx="136" cy="60" r="9" class="diagram-fill diagram-fill-dark" />
+                        <circle cx="136" cy="96" r="9" class="diagram-fill diagram-fill-dark" />
+                      </svg>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <p class="slide-body">
+                RoK-4는 최적화 제어 및 강화 학습을 통한 보행 및 다양한 모션 생성 및 구현이 가능하다.
+              </p>
+            </div>
+          </div>
+
+          <div class="slide-panel slide-panel-light">
+            <h3 class="slide-panel-title">Model Based Locomotion Video</h3>
+            <div class="locomotion-grid">
+              <figure class="doc-shot doc-shot-wide">
+                <img src="/rok4/pdf-assets/sim-leg-test.jpg" alt="Model based locomotion simulation image" />
+              </figure>
+              <figure class="doc-shot doc-shot-tall">
+                <img src="/rok4/pdf-assets/real-leg-test.jpg" alt="Model based locomotion real robot test image" />
+              </figure>
+            </div>
+            <p class="slide-caption">최적화 제어 기반 보행 시뮬레이션 및 실제 실험 영상</p>
+
+            <h3 class="slide-panel-title slide-panel-title-secondary">Reinforcement Learning Based Locomotion Video</h3>
+            <figure class="doc-video">
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/dDEMlLqxbOc?rel=0"
+                title="Reinforcement learning based locomotion video"
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>
+            </figure>
+            <p class="slide-caption">강화학습 기반 Up & Down 모션 시뮬레이션 및 실제 실험 영상</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section" aria-labelledby="teleop-title">
+        <div class="content-shell slide-layout">
+          <div class="slide-panel slide-panel-dark slide-panel-leg">
+            <figure class="slide-backdrop">
+              <img src="/rok4/pdf-assets/leg-cutaway-cutout.png" alt="Leg cutaway backdrop for teleoperation section" />
+            </figure>
+
+            <div class="slide-copy-block">
+              <p class="slide-mark">RoK-4</p>
+              <h2 id="teleop-title">TELEOPERATION</h2>
+
+              <div class="teleop-link">
+                <figure class="media-card media-float media-device">
+                  <img src="/rok4/pdf-assets/meta-quest-3-cutout.png" alt="Meta Quest 3 headset from the original presentation" />
+                </figure>
+                <div class="teleop-dots" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+                <figure class="media-card media-float teleop-link-robot">
+                  <img src="/rok4/pdf-assets/upperbody-render-cutout.png" alt="RoK-4 upper body render" />
+                </figure>
+              </div>
+
+              <p class="slide-body">
+                Meta Quest3 XR장비만을 사용하여 허리를 포함한 29자유도의 상체를 직접 교시할 수 있다. 민첩하고 역 구동성을 가진 QDD를 통해 사람의 빠르고 민첩한 모션을 모사할 수 있다.
+              </p>
+
+              <h2 class="slide-subtitle">PHYSICAL AI</h2>
+              <p class="slide-body">
+                보행용 상체는 빠르고 민첩한 움직임을 제공하고, 추론용 상체는 4개의 머리 및 손목 카메라와 Jetson Thor를 포함하여 장소 제한 없이 큰 파라미터의 AI 모델 추론을 목표로 한다.
+              </p>
+
+              <div class="body-compare">
+                <div class="body-figure">
+                  <figure class="media-card media-float body-compare-card">
+                    <img src="/rok4/pdf-assets/upperbody-render-cutout.png" alt="Walking upper body render" />
+                  </figure>
+                  <span>보행용 상체</span>
+                </div>
+                <div class="body-figure">
+                  <figure class="media-card media-float body-compare-card">
+                    <img src="/rok4/pdf-assets/inference-body-cutout.png" alt="Inference upper body render" />
+                  </figure>
+                  <span>추론용 상체</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="slide-panel slide-panel-light">
+            <h3 class="slide-panel-title">Teleoperation Video</h3>
+            <div class="teleop-photo-grid">
+              <figure class="doc-shot">
+                <img src="/rok4/pdf-assets/teleop-demo.jpg" alt="Teleoperation video still" />
+              </figure>
+              <figure class="doc-shot">
+                <img src="/rok4/pdf-assets/physical-ai-robot.jpg" alt="Physical AI manipulation demo still" />
+              </figure>
+            </div>
+            <p class="slide-caption">로봇 머리에 부착된 스테레오 카메라를 통해 시연전문가는 깊이감이 있는 로봇 시점을 참고하여 로봇을 조작할 수 있다.</p>
+
+            <h3 class="slide-panel-title slide-panel-title-secondary">Vision-Language-Action Model Inference</h3>
+            <figure class="doc-video">
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/ne_7mhUsGBE?rel=0"
+                title="Vision-language-action model inference video"
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>
+            </figure>
+            <p class="slide-caption">텔레오퍼레이션을 통해 로봇의 관절 상태, 머리, 손목카메라 정보와 시연 데이터를 수집하여 VLA 등 모방학습 모델을 사용한 자율 작업 수행을 목표로 한다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section specs-section" aria-labelledby="detail-spec-title">
+        <div class="content-shell">
+          <div class="section-heading">
+            <p class="eyebrow">Technical Detail</p>
+            <h2 id="detail-spec-title">Additional Specifications</h2>
+          </div>
+
+          <div class="spec-table">
+            <div>
+              <span>Exterior Materials</span>
+              <strong>Aluminum, PLA</strong>
+            </div>
+            <div>
+              <span>Hip Yaw</span>
+              <strong>-30° ~ 100°</strong>
+            </div>
+            <div>
+              <span>Hip Roll</span>
+              <strong>-35° ~ 95°</strong>
+            </div>
+            <div>
+              <span>Hip Pitch</span>
+              <strong>-140° ~ 50°</strong>
+            </div>
+            <div>
+              <span>Knee Pitch</span>
+              <strong>0° ~ 150°</strong>
+            </div>
+            <div>
+              <span>Ankle Pitch</span>
+              <strong>-85° ~ 85°</strong>
+            </div>
+            <div>
+              <span>Ankle Roll</span>
+              <strong>-40° ~ -40°</strong>
+            </div>
+            <div>
+              <span>Shoulder Roll</span>
+              <strong>-20° ~ 200°</strong>
+            </div>
+            <div>
+              <span>Shoulder Yaw</span>
+              <strong>-165° ~ 165°</strong>
+            </div>
+            <div>
+              <span>Elbow Pitch</span>
+              <strong>-135° ~ 0°</strong>
+            </div>
+            <div>
+              <span>Elbow Yaw</span>
+              <strong>-90° ~ 90°</strong>
+            </div>
+            <div>
+              <span>Wrist Roll</span>
+              <strong>-60° ~ 60°</strong>
+            </div>
+            <div>
+              <span>Wrist Pitch</span>
+              <strong>-30° ~ 30°</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section contributors-section" aria-labelledby="contributors-title">
+        <div class="content-shell">
+          <div class="section-heading contributors-heading">
+            <p class="eyebrow">Contributors</p>
+            <h2 id="contributors-title">Research Team</h2>
+          </div>
+
+          <div class="contributors-grid">
+            <article class="contributor-card">
+              <figure class="contributor-photo">
+                <img src="/rok4/assets/1-BmD2KP0-.jpg" alt="Portrait of Yunho Han" />
+              </figure>
+              <div class="contributor-body">
+                <h3>Yunho, Han <span>(한윤호)</span></h3>
+                <p class="contributor-label">Research Field</p>
+                <p class="contributor-meta">Humanoid Robot, Locomotion</p>
+                <a class="contributor-email" href="mailto:93yunho@gmail.com">93yunho@gmail.com</a>
+              </div>
+            </article>
+
+            <article class="contributor-card">
+              <figure class="contributor-photo">
+                <img src="/rok4/assets/2-uuRo6q7B.jpg" alt="Portrait of Minho Park" />
+              </figure>
+              <div class="contributor-body">
+                <h3>Minho, Park <span>(박민호)</span></h3>
+                <p class="contributor-label">Research Field</p>
+                <p class="contributor-meta">Humanoid Robot</p>
+                <a class="contributor-email" href="mailto:onim97@kookmin.ac.kr">onim97@kookmin.ac.kr</a>
+              </div>
+            </article>
+
+            <article class="contributor-card">
+              <figure class="contributor-photo">
+                <img src="/rok4/assets/3-DEuK99lK.jpg" alt="Portrait of Chanwoo Kim" />
+              </figure>
+              <div class="contributor-body">
+                <h3>Chanwoo, Kim <span>(김찬우)</span></h3>
+                <p class="contributor-label">Research Field</p>
+                <p class="contributor-meta">Humanoid upper-body, Manipulation</p>
+                <a class="contributor-email" href="mailto:kcwjoma@kookmin.ac.kr">kcwjoma@kookmin.ac.kr</a>
+              </div>
+            </article>
+
+            <article class="contributor-card">
+              <figure class="contributor-photo">
+                <img src="/rok4/assets/4-BvCT_a7k.jpg" alt="Portrait of Jiyong Jeong" />
+              </figure>
+              <div class="contributor-body">
+                <h3>Jiyong, Jeong <span>(정지용)</span></h3>
+                <p class="contributor-label">Research Field</p>
+                <p class="contributor-meta">Humanoid robot, Manipulation</p>
+                <a class="contributor-email" href="mailto:skjy717@gmail.com">skjy717@gmail.com</a>
+              </div>
+            </article>
+
+            <article class="contributor-card">
+              <figure class="contributor-photo">
+                <img src="/rok4/assets/5-BdLobFBN.jpg" alt="Portrait of Kyeongmin Kim" />
+              </figure>
+              <div class="contributor-body">
+                <h3>Kyeongmin, Kim <span>(김경민)</span></h3>
+                <p class="contributor-label">Research Field</p>
+                <p class="contributor-meta">Humanoid robot</p>
+                <a class="contributor-email" href="mailto:kkmin1007@kookmin.ac.kr">kkmin1007@kookmin.ac.kr</a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="site-logos" aria-label="Affiliated logos">
+      <div class="site-logo-badge site-logo-badge-dark">
+        <img src="/rok4/assets/robotics-control-lab-cutout-B6Xei30Y.png" alt="Robotics and Control Laboratory logo" />
+      </div>
+      <div class="site-logo-badge site-logo-badge-light">
+        <img src="/rok4/assets/swan-robotics-cutout-CgYddmuq.png" alt="Swan Robotics logo" />
+      </div>
+    </div>
+
+  </body>
+</html>
