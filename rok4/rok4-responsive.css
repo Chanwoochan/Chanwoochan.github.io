@@ -1,7 +1,7 @@
 :root {
   --rok4-frame-w: 100vw;
   --rok4-frame-h: calc(var(--rok4-frame-w) * 9 / 16);
-  --rok4-u: calc(var(--rok4-frame-w) / 1920);
+  --rok4-u: calc(var(--rok4-frame-w) / 1200);
 }
 
 html,
