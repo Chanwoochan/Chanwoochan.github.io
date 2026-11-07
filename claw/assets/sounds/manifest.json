@@ -1,0 +1,59 @@
+{
+  "source_url": "https://www.youtube.com/watch?v=9OQotazogk0",
+  "source_title": "SEGA UFO Catcher Excellent sound collection",
+  "source_machine": "UFO Catcher Excellent (1994), not UFO CATCHER 10",
+  "recording_uploader": "groove20002002",
+  "original_game_audio": "SEGA",
+  "assignment_note": "Actual recorded audio excerpts. The simulator assigns these excerpts to its own events; this does not reproduce the exact UFO CATCHER 10 sound sequence. Motion phases share one real-machine BGM excerpt.",
+  "production": "Trim, loudness normalization, short edge fades, PCM WAV conversion. No sound synthesis or app playback test.",
+  "clips": {
+    "ready": {
+      "file": "ready.wav",
+      "source_start_seconds": 500.0,
+      "duration_seconds": 3.85,
+      "description": "Real-machine preparation voice cue"
+    },
+    "move": {
+      "file": "operation.wav",
+      "source_start_seconds": 120.0,
+      "duration_seconds": 8.0,
+      "description": "Real-machine background music excerpt used for simulated motion"
+    },
+    "open": {
+      "file": "operation.wav",
+      "source_start_seconds": 120.0,
+      "duration_seconds": 8.0,
+      "description": "Real-machine background music excerpt used for simulated motion"
+    },
+    "lower": {
+      "file": "operation.wav",
+      "source_start_seconds": 120.0,
+      "duration_seconds": 8.0,
+      "description": "Real-machine background music excerpt used for simulated motion"
+    },
+    "close": {
+      "file": "operation.wav",
+      "source_start_seconds": 120.0,
+      "duration_seconds": 8.0,
+      "description": "Real-machine background music excerpt used for simulated motion"
+    },
+    "lift": {
+      "file": "operation.wav",
+      "source_start_seconds": 120.0,
+      "duration_seconds": 8.0,
+      "description": "Real-machine background music excerpt used for simulated motion"
+    },
+    "release": {
+      "file": "release.wav",
+      "source_start_seconds": 519.6,
+      "duration_seconds": 1.9,
+      "description": "Real-machine dropped-prize voice cue"
+    },
+    "win": {
+      "file": "win.wav",
+      "source_start_seconds": 521.45,
+      "duration_seconds": 2.6,
+      "description": "Real-machine congratulations voice cue"
+    }
+  }
+}

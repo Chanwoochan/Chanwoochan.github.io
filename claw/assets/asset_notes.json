@@ -1,0 +1,25 @@
+{
+  "tool": "built-in image_gen",
+  "mode": "reference image edit / identity-preserving package illustration",
+  "asset": "cygnus_box_front_v1.png",
+  "prompt_file": "cygnus_prompt_v1.txt",
+  "prompt_summary": "Portrait flat package print for CYGNUS / 시그너스, based on official SWAN Robotics humanoid photographs. Preserve white shell, black rounded-square face, vertical white eyes, exposed mechanical joints and long white legs. White/navy/ice-blue package with SWAN ROBOTICS branding.",
+  "robot_name": "CYGNUS / 시그너스 (name provided by the user)",
+  "robot_references": [
+    "https://www.swanrobotics.co.kr/",
+    "https://www.swanrobotics.co.kr/products/humanoids/",
+    "https://www.swanrobotics.co.kr/assets/humanoid-front-eyes-1280.webp",
+    "https://www.swanrobotics.co.kr/assets/humanoid-angle-eyes-1280.webp"
+  ],
+  "local_reference_images": [
+    "references/humanoid-front-eyes-1280.webp",
+    "references/humanoid-angle-eyes-1280.webp"
+  ],
+  "cabinet_references": [
+    "https://www.sega.jp/arcade/detail/ufo-catcher-10/",
+    "https://www.sega.co.jp/release/images/230713_1/230713_1_02.jpg",
+    "https://cdn-ak.f.st-hatena.com/images/fotolife/m/midorinoza/20230831/20230831123423.jpg"
+  ],
+  "figure_design": "Native static geometry in appearance.py; six reference-based CYGNUS robot sculptures in standing, waving and greeting poses. Photo-based approximation, not official CAD.",
+  "implementation": "Cabinet surfaces are non-colliding visual geometry. The right booth is a fixed display. Left booth retains the physical game. No simulator or viewer is executed by this script."
+}
