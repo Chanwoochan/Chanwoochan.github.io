@@ -1,0 +1,16 @@
+{
+  "start_x": 0.2,
+  "start_y": -0.23,
+  "home_height": 0.8,
+  "lower_height": 0.2,
+  "move_speed": 0.12,
+  "z_load_threshold": 10.0,
+  "contact_hold_time": 0.02,
+  "open_duration": 1.8,
+  "close_duration": 1.8,
+  "release_duration": 0.5,
+  "release_x": 0.0,
+  "release_y": 0.0,
+  "open_angle": 0.65,
+  "closed_angle": 0.0
+}
