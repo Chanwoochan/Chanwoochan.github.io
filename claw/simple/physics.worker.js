@@ -81,7 +81,7 @@ class Simulation {
     const p = this.prize * 3, r = this.prize * 9, c = this.config;
     const top = this.data.xpos[p + 2] + (Math.abs(this.data.xmat[r + 6]) * c.box_width +
       Math.abs(this.data.xmat[r + 7]) * c.box_length + Math.abs(this.data.xmat[r + 8]) * c.box_height) / 2;
-    return top < -.02 && Math.abs(this.data.xpos[p]) < .335 && Math.abs(this.data.xpos[p + 1]) < .320;
+    return top < -.02 && Math.abs(this.data.xpos[p]) < .335 && Math.abs(this.data.xpos[p + 1]) < .335;
   }
   tune(values) {
     const m = this.model;

@@ -5,6 +5,10 @@
     "depth": 1050,
     "height": 1998
   },
+  "chute_opening_mm": {
+    "width": 670,
+    "depth": 670
+  },
   "dimensions_include": "Two booths and the front control-deck projection; floor excluded.",
   "sources": [
     "https://am.sega.jp/cad/prize_game/29588",

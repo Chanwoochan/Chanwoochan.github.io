@@ -37,7 +37,7 @@ class Config:
 
     @property
     def chute_half_y(self):
-        return 0.32
+        return 0.335
 
     def validate(self):
         bounds = {'gap_12': (0.02, 0.35), 'gap_34': (0.02, 0.35), 'rod_radius': (0.004, 0.02), 'box_mass': (0.05, 2), 'box_contact_timeconst': (0.004, 0.1), 'box_contact_width': (0.0001, 0.01), 'tip_friction': (0, 2), 'arm_friction': (0, 2), 'rail_friction': (0, 2), 'inner_rail_friction': (0, 5), 'grip_torque': (0.005, 0.8), 'grip_kp': (0, 100), 'timestep': (0.00025, 0.002), 'z_force_limit': (20, 150), 'head_stiffness': (0, 30), 'head_damping': (0, 3), 'head_limit_deg': (1, 25), 'claw_scale': (0.65, 1.1)}
