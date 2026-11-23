@@ -1,4 +1,4 @@
-import {DualRenderer} from './renderer.js';
+import {DualRenderer} from './outline-renderer.js?v=20261123-ink';
 import {Sounds} from './audio.js';
 import {labels} from './cycle.js';
 

@@ -147,6 +147,7 @@ export class DualRenderer {
       }
       let geometry = makeGeometry(g, description.meshes);
       if (!geometry) continue;
+      geometry.name = g.name;
       geometry.applyMatrix4(compose(g.pos, g.quat));
       const body = dynamic.has(g.body) ? g.body : 0;
       // Bake fixed-body poses when the first coherent snapshot arrives.
