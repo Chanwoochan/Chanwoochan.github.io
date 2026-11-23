@@ -41,7 +41,7 @@
       </aside>
     </div>
     <section class="settings-panel" id="settings-panel" hidden aria-label="물리와 동작 설정">
-      <div class="settings-heading"><div><h2>기기 설정</h2><p>치수·동작을 적용하면 새 판을 시작합니다. P게인과 마찰 등은 즉시 반영됩니다.</p></div><button id="settings-close" class="quiet">닫기</button></div>
+      <div class="settings-heading"><div><h2>기기 설정</h2><p>봉 탄성·치수·동작은 새 판에 적용됩니다. P게인과 마찰은 즉시 반영됩니다.</p></div><button id="settings-close" class="quiet">닫기</button></div>
       <form id="settings-form"><div class="settings-grid" id="settings-fields"></div><div class="settings-actions"><button type="submit" class="primary" id="apply-settings">설정 적용 · 새 판</button><button type="button" id="save-settings" class="secondary">기본값으로 저장</button><button type="button" id="restore-settings" class="quiet">배포 기본값</button><button type="button" id="export-settings" class="quiet">JSON 내보내기</button><label class="quiet file-label">JSON 가져오기<input id="import-settings" type="file" accept="application/json,.json" hidden></label></div></form>
       <p class="settings-note">이 버전의 기본값은 이 기기 브라우저에 따로 저장됩니다. 기기 외곽 크기는 설정에 따라 늘어나지 않습니다.</p>
     </section>
@@ -49,6 +49,6 @@
   </main>
   <div id="toast" class="toast" hidden role="status"></div>
   <noscript>이 게임을 실행하려면 브라우저의 JavaScript를 켜주세요.</noscript>
-  <script type="module" src="./app.js?v=20261123-stiff-rods"></script>
+  <script type="module" src="./app.js?v=20261123-rod-settings"></script>
 </body>
 </html>

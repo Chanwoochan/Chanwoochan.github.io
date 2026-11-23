@@ -24,5 +24,10 @@
   "head_damping": 0.25,
   "head_limit_deg": 8.0,
   "claw_scale": 1.0,
-  "timestep": 0.0005
+  "timestep": 0.0005,
+  "rod_bending_rigidity": 0.96,
+  "rod_bending_damping": 0.00035,
+  "rod_tension": 576.0,
+  "rod_axial_rigidity": 12000.0,
+  "rod_axial_damping": 0.25
 }

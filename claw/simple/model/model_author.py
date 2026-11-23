@@ -34,13 +34,18 @@ class Config:
     head_limit_deg: float = 8.0
     claw_scale: float = 0.9
     timestep: float = 0.0005
+    rod_bending_rigidity: float = 0.96
+    rod_bending_damping: float = 0.00035
+    rod_tension: float = 576.0
+    rod_axial_rigidity: float = 12000.0
+    rod_axial_damping: float = 0.25
 
     @property
     def chute_half_y(self):
         return 0.247
 
     def validate(self):
-        bounds = {'gap_12': (0.02, 0.35), 'gap_34': (0.02, 0.35), 'rod_radius': (0.004, 0.02), 'box_mass': (0.05, 2), 'box_contact_timeconst': (0.004, 0.1), 'box_contact_width': (0.0001, 0.01), 'tip_friction': (0, 2), 'arm_friction': (0, 2), 'rail_friction': (0, 2), 'inner_rail_friction': (0, 5), 'grip_torque': (0.005, 0.8), 'grip_kp': (0, 100), 'timestep': (0.00025, 0.002), 'z_force_limit': (20, 150), 'head_stiffness': (0, 30), 'head_damping': (0, 3), 'head_limit_deg': (1, 25), 'claw_scale': (0.65, 1.1)}
+        bounds = {'gap_12': (0.02, 0.35), 'gap_34': (0.02, 0.35), 'rod_radius': (0.004, 0.02), 'box_mass': (0.05, 2), 'box_contact_timeconst': (0.004, 0.1), 'box_contact_width': (0.0001, 0.01), 'tip_friction': (0, 2), 'arm_friction': (0, 2), 'rail_friction': (0, 2), 'inner_rail_friction': (0, 5), 'grip_torque': (0.005, 0.8), 'grip_kp': (0, 100), 'timestep': (0.00025, 0.002), 'z_force_limit': (20, 150), 'head_stiffness': (0, 30), 'head_damping': (0, 3), 'head_limit_deg': (1, 25), 'claw_scale': (0.65, 1.1), 'rod_bending_rigidity': (0.0, 5.0), 'rod_bending_damping': (0.0, 0.02), 'rod_tension': (0.0, 2000.0), 'rod_axial_rigidity': (1.0, 60000.0), 'rod_axial_damping': (0.0, 5.0)}
         for name, (lo, hi) in bounds.items():
             value = getattr(self, name)
             if not math.isfinite(value) or not lo <= value <= hi:
@@ -54,6 +59,8 @@ class Config:
             raise ValueError('Centre of mass must stay inside the box (80% of its width/length).')
         if not all(map(math.isfinite, [self.inner_height, self.outer_height])):
             raise ValueError('봉 높이는 유한한 숫자로 입력해 주세요.')
+        if self.rod_tension >= self.rod_axial_rigidity:
+            raise ValueError('봉의 초기 장력은 인장 강성보다 작아야 합니다.')
 
 def scale_claw_xml(xml: str, scale: float) -> str:
     """Scale actual collision geometry and mass, preserving carriage travel."""

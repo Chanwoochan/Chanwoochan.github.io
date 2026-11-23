@@ -71,16 +71,22 @@ def configure_head_mount(root, gantry, head, config):
 def add_elastic_rod(bridge, deformable, tendons, rod, config):
     # Small-deflection string with bending stiffness. The intermediate nodes can
     # move sideways and vertically; the support nodes have no joint at all.
-    # Keep ten sections at the default step. Longer steps use longer sections
-    # to lower the highest bending frequency (proportional to 1/dx²).
-    segments = min(10, math.floor(10 * math.sqrt(.0005 / config.timestep)))
-    tension = 576.0          # N at the straight reference length
-    axial_rigidity = 12000.0 # EA, N; preserves the installed prestrain
-    bending_rigidity = .96   # EI, N m^2
-    line_mass = .20         # kg/m
+    line_mass = .20  # kg/m
     name = rod.get('name')
     left_x, y, z, right_x, _, _ = map(float, rod.get('fromto').split())
-    dx = (right_x-left_x) / segments
+    span = right_x - left_x
+    dt = config.timestep
+    segments = min(10, math.floor(10 * math.sqrt(.0005 / dt)))
+    # Estimate the highest transverse mode of the tensioned beam. Use longer
+    # sections for stiffer or heavily damped rods at a given integration step.
+    while segments > 2:
+        dx = span / segments
+        tension_freq_sq = 4 * config.rod_tension / (line_mass * dx**2)
+        bend_freq_sq = 16 * config.rod_bending_rigidity / (line_mass * dx**4)
+        if dt**2 * (tension_freq_sq + bend_freq_sq) + 2 * dt * config.rod_bending_damping * bend_freq_sq <= 3:
+            break
+        segments -= 1
+    dx = span / segments
     mass = line_mass * dx
     radius = float(rod.get('size'))
     nodes = []
@@ -95,9 +101,10 @@ def add_elastic_rod(bridge, deformable, tendons, rod, config):
                           diaginertia=f'{inertia} {inertia} {inertia}')
         ET.SubElement(body, 'site', name=node+'_end', size='.001', rgba='0 0 0 0')
         if nodes:
-            stiffness = axial_rigidity / dx
-            spring = ET.SubElement(tendons, 'spatial', stiffness=str(stiffness), damping='.25',
-                                   springlength=str(dx-tension/stiffness), rgba='0 0 0 0')
+            stiffness = config.rod_axial_rigidity / dx
+            spring = ET.SubElement(tendons, 'spatial', stiffness=str(stiffness),
+                                   damping=str(config.rod_axial_damping),
+                                   springlength=str(dx-config.rod_tension/stiffness), rgba='0 0 0 0')
             ET.SubElement(spring, 'site', site=nodes[-1]+'_end')
             ET.SubElement(spring, 'site', site=node+'_end')
         nodes.append(node)
@@ -108,8 +115,8 @@ def add_elastic_rod(bridge, deformable, tendons, rod, config):
                   friction=rod.get('friction'), solref=f'{config.box_contact_timeconst} 1',
                   solimp=f'.90 .98 {config.box_contact_width}')
     # The flex material damps bending. Its free vertex slide joints must be undamped.
-    ET.SubElement(flex, 'elasticity', young=str(bending_rigidity / (math.pi*radius**4/4)),
-                  damping='.00035')
+    ET.SubElement(flex, 'elasticity', young=str(config.rod_bending_rigidity / (math.pi*radius**4/4)),
+                  damping=str(config.rod_bending_damping))
 
 
 def decorate_cabinet(root, config, geom, box, face, quad):

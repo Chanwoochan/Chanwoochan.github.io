@@ -27,6 +27,11 @@ const schema = [
   ['봉 간격과 높이', 'inner_height', '2·3번 봉 높이 (mm)', 1000, 1],
   ['봉 간격과 높이', 'outer_height', '1·4번 봉 높이 (mm)', 1000, 1],
   ['봉 간격과 높이', 'rod_radius', '봉 반지름 (mm)', 1000, .5, 4, 20],
+  ["봉 탄성 (1~4번 공통)", "rod_bending_rigidity", "굽힘 강성 (N·m²)", 1, 0.1, 0, 5],
+  ["봉 탄성 (1~4번 공통)", "rod_bending_damping", "굽힘 감쇠 계수 (ms)", 1000, 0.05, 0, 20],
+  ["봉 탄성 (1~4번 공통)", "rod_tension", "초기 장력 (N)", 1, 10, 0, 2000],
+  ["봉 탄성 (1~4번 공통)", "rod_axial_rigidity", "인장 강성 (N)", 1, 100, 1, 60000],
+  ["봉 탄성 (1~4번 공통)", "rod_axial_damping", "구간 인장 감쇠 (N·s/m)", 1, 0.05, 0, 5],
   ['집게 힘과 마찰', 'grip_kp', '집게 P게인 (N·m/rad)', 1, .1, 0, 100, true],
   ['집게 힘과 마찰', 'grip_torque', '팔 모터 토크 (N·m)', 1, .005, .005, .8, true],
   ['집게 힘과 마찰', 'z_force_limit', 'Z 모터 최대 힘 (N)', 1, 1, 20, 150, true],
@@ -264,7 +269,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-stiff-rods', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-rod-settings', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;
