@@ -79,6 +79,8 @@ def configure_head_mount(root, gantry, head, config):
     mount = gantry.find("geom[@name='head_mount']")
     gantry.remove(mount)
     mount.set('mass', str(.030 * config.claw_scale**3))
+    mount.attrib.pop('rgba', None)
+    mount.set('material', 'ufo_chrome')
     head.append(mount)
 
     # Retain the circular tilt stop even when both pitch and roll are active.
