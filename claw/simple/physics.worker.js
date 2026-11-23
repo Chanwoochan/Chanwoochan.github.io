@@ -103,8 +103,15 @@ class Simulation {
         this.config[key] = v;
       } else if (['tip_friction', 'arm_friction', 'rail_friction', 'inner_rail_friction'].includes(key)) {
         const v = clip(value, 0, key === 'inner_rail_friction' ? 5 : 2);
-        const rods = key === 'rail_friction' ? [1, 4] : key === 'inner_rail_friction' ? [2, 3] : [];
-        const geoms = new Set(rods.map(n => id(m, 'mjOBJ_GEOM', `rod_${n}`)));
+        if (key === 'rail_friction' || key === 'inner_rail_friction') {
+          for (const rod of (key === 'rail_friction' ? [1, 4] : [2, 3])) {
+            const flex = id(m, 'mjOBJ_FLEX', 'rod_' + rod);
+            m.flex_friction[3 * flex] = v;
+          }
+          this.config[key] = v;
+          continue;
+        }
+        const geoms = new Set();
         for (let g = 0; g < m.ngeom; g++) {
           const n = name(m, 'mjOBJ_GEOM', g);
           if ((key === 'tip_friction' && /^(left|right)_tip/.test(n)) ||
@@ -141,7 +148,12 @@ class Simulation {
       material: m.geom_matid[i] < 0 ? '' : name(m, 'mjOBJ_MATERIAL', m.geom_matid[i]),
       rgba: Array.from(m.geom_rgba.subarray(i * 4, i * 4 + 4)),
     });
-    return {xml, geoms, meshes, nbody: m.nbody, dynamicBodies: [...this.clawBodies, this.prize]};
+    const rods = [1, 2, 3, 4].map(rod => {
+      const f = id(m, 'mjOBJ_FLEX', 'rod_' + rod), mat = m.flex_matid[f];
+      return {first: m.flex_vertadr[f], count: m.flex_vertnum[f], radius: m.flex_radius[f],
+        color: Array.from(m.mat_rgba.subarray(mat * 4, mat * 4 + 3)), metal: rod === 1 || rod === 4};
+    });
+    return {xml, geoms, meshes, rods, nbody: m.nbody, dynamicBodies: [...this.clawBodies, this.prize]};
   }
 }
 
@@ -207,11 +219,12 @@ function sendFrame() {
     transforms.set(q.subarray(b * 4, b * 4 + 4), b * 7 + 3);
   }
   const headVertical = d.xmat[9 * sim.tilt.body + 8];
-  const payload = {type: 'frame', revision, transforms, state: cycle.state, elapsed: d.time,
+  const rodPoints = new Float32Array(d.flexvert_xpos);
+  const payload = {type: 'frame', revision, transforms, rodPoints, state: cycle.state, elapsed: d.time,
     heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(sim.pose()),
     headAngle: Math.acos(clip(headVertical, -1, 1)) * 180 / Math.PI,
     reason: cycle.reason, paused: paused || hidden, winning: winAt !== null};
-  postMessage(payload, [transforms.buffer]);
+  postMessage(payload, [transforms.buffer, rodPoints.buffer]);
 }
 function tick() {
   if (!sim || busy) return;

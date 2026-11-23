@@ -68,6 +68,46 @@ def configure_head_mount(root, gantry, head, config):
         ET.SubElement(stop, 'site', site=name)
 
 
+def add_elastic_rod(bridge, deformable, tendons, rod, config):
+    # Small-deflection string with bending stiffness. The intermediate nodes can
+    # move sideways and vertically; the support nodes have no joint at all.
+    segments = 10
+    tension = 72.0          # N at the straight reference length
+    axial_rigidity = 1500.0 # EA, N
+    bending_rigidity = .12  # EI, N m^2
+    line_mass = .20         # kg/m
+    name = rod.get('name')
+    left_x, y, z, right_x, _, _ = map(float, rod.get('fromto').split())
+    dx = (right_x-left_x) / segments
+    mass = line_mass * dx
+    radius = float(rod.get('size'))
+    nodes = []
+    for i in range(segments + 1):
+        node = f'{name}_node_{i}'
+        body = ET.SubElement(bridge, 'body', name=node, pos=f'{left_x+i*dx} {y} {z}')
+        if 0 < i < segments:
+            for axis in ('0 1 0', '0 0 1'):
+                ET.SubElement(body, 'joint', type='slide', axis=axis, limited='false', damping='.20')
+            inertia = mass*dx**2/12
+            ET.SubElement(body, 'inertial', pos='0 0 0', mass=str(mass),
+                          diaginertia=f'{inertia} {inertia} {inertia}')
+        ET.SubElement(body, 'site', name=node+'_end', size='.001', rgba='0 0 0 0')
+        if nodes:
+            stiffness = axial_rigidity / dx
+            spring = ET.SubElement(tendons, 'spatial', stiffness=str(stiffness), damping='.25',
+                                   springlength=str(dx-tension/stiffness), rgba='0 0 0 0')
+            ET.SubElement(spring, 'site', site=nodes[-1]+'_end')
+            ET.SubElement(spring, 'site', site=node+'_end')
+        nodes.append(node)
+    flex = ET.SubElement(deformable, 'flex', name=name, dim='1', radius=str(radius),
+                         material=rod.get('material'), body=' '.join(nodes),
+                         element=' '.join(f'{i} {i+1}' for i in range(segments)))
+    ET.SubElement(flex, 'contact', selfcollide='none', priority='2', condim='3',
+                  friction=rod.get('friction'), solref=f'{config.box_contact_timeconst} 1',
+                  solimp=f'.90 .98 {config.box_contact_width}')
+    ET.SubElement(flex, 'elasticity', young=str(bending_rigidity / (math.pi*radius**4/4)))
+
+
 def decorate_cabinet(root, config, geom, box, face, quad):
     world = root.find('worldbody')
     assets = root.find('asset')
@@ -125,10 +165,15 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     # Keep the physical rod spacing local to one fixed bridge. The free parcel
     # starts over its inner pair, so resetData restores the same offset as well.
     bridge = ET.SubElement(world, 'body', name='bridge_rods', pos=f'0 {MOUTH_CENTER_Y} 0')
+    deformable = ET.SubElement(root, 'deformable')
+    contacts = root.find('contact')
+    rod_templates = []
     for i in range(1, 5):
         rod = world.find(f"geom[@name='rod_{i}']")
         world.remove(rod)
-        bridge.append(rod)
+        contacts.remove(contacts.find(f"pair[@geom2='rod_{i}']"))
+        rod_templates.append(rod)
+        add_elastic_rod(bridge, deformable, root.find('tendon'), rod, config)
     prize_z = prize.get('pos').split()[2]
     prize.set('pos', f'0 {MOUTH_CENTER_Y} {prize_z}')
     geom(world, 'arcade_floor', kind='plane', pos=f'0 0 {GROUND_Z}', size='5 5 .1', material='floor')
@@ -269,7 +314,7 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     # Fixed neighbouring booth, at the actual half-width bay pitch.
     display = ET.SubElement(world, 'body', name='display_station', pos=f'{BAY_PITCH} 0 0')
     display_bridge = ET.SubElement(display, 'body', name='display_bridge', pos=bridge.get('pos'))
-    for original in bridge.findall('geom'):
+    for original in rod_templates:
         copied = deepcopy(original)
         copied.set('name', 'display_'+original.get('name')); copied.set('class', 'decor')
         copied.set('contype', '0'); copied.set('conaffinity', '0'); copied.set('mass', '0')

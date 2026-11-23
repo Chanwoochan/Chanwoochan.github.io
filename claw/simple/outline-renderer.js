@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three/three.module.js';
 import {DualRenderer as SceneRenderer} from './renderer.js?v=20261123-ink';
+import {RodMesh, rodOutlineMaterial} from './rod-mesh.js';
 
 function outlined(name) {
   const part = name.replace(/^display_/, '');
@@ -105,6 +106,25 @@ export class DualRenderer extends SceneRenderer {
   constructor(canvas, panes) {
     super(canvas, panes);
     this.ink = outlineMaterial();
+    this.rodInk = rodOutlineMaterial();
+    this.rods = [];
+  }
+  async load(description, revision) {
+    await super.load(description, revision);
+    if (revision !== this.revision) return;
+    this.rods = description.rods.map(spec => new RodMesh(spec, this.rodInk));
+    for (const rod of this.rods) this.scene.add(rod.group);
+  }
+  update(frame) {
+    super.update(frame);
+    if (frame.revision === this.revision) {
+      for (const rod of this.rods) rod.update(frame.rodPoints);
+    }
+  }
+  clearGeometry() {
+    for (const rod of this.rods) rod.dispose();
+    this.rods = [];
+    super.clearGeometry();
   }
   addMerged(group, items, material) {
     const edges = outlineGeometry(items);
