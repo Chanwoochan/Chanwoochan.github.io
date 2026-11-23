@@ -10,7 +10,7 @@ const send = (type, payload = {}) => postMessage({type, ...payload});
 const phase = state => send('phase', {state});
 const clip = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 async function fetchFile(path, binary = false) {
-  const response = await fetch(path);
+  const response = await fetch(path, {cache: 'no-cache'});
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
   return binary ? new Uint8Array(await response.arrayBuffer()) : response.text();
 }

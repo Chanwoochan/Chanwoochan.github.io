@@ -13,9 +13,13 @@
   "sources": [
     "https://am.sega.jp/cad/prize_game/29588",
     "https://am.sega.jp/wp-content/uploads/2023/06/UCX_1_100.pdf",
-    "https://am-j.co.jp/newmachine/top2308.html"
+    "https://am-j.co.jp/newmachine/top2308.html",
+    "https://www.sega.co.jp/release/230713_1.html",
+    "https://www.sega.co.jp/release/images/230713_1/230713_1_02.jpg",
+    "https://am.sega.jp/wp-content/uploads/2023/11/421-14056-36_2310_amt.pdf",
+    "https://arcadeheroes.com/2023/02/10/new-arcade-games-for-japan-jaepo-2023-round-up/"
   ],
-  "interior": "Internal window placement, 6 mm glass thickness, shelf and play-field layout are approximations; not manufacturer mechanical CAD.",
+  "interior": "Low rear display field and shallow back-row riser, raised open field frame, deep white prize-chute liners, receiving floor and clear recessed front flap. Shapes follow official cabinet photos and the official UFO10 terminal-fitting service photos; dimensions not supplied in those photographs remain approximations.",
   "contacts": "Four external glass faces, centre partition, and roof have native MuJoCo collision geoms. No prize attachment or injected motion.",
   "assets": "Original plain DUMMY text graphics, authored with Pillow; no robot/figure illustrations.",
   "validation": "File authoring only; no model compilation, simulation, playback, or browser QA."

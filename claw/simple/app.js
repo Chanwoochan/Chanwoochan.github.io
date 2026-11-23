@@ -248,7 +248,7 @@ $('import-settings').addEventListener('change', async event => {
 
 async function boot() {
   if (!window.WebAssembly || !window.Worker) throw new Error('WebAssembly와 Web Worker를 지원하는 브라우저가 필요합니다.');
-  const fetchJSON = async path => { const r = await fetch(path); if (!r.ok) throw new Error(`설정 불러오기 실패: ${r.status}`); return r.json(); };
+  const fetchJSON = async path => { const r = await fetch(path, {cache: 'no-cache'}); if (!r.ok) throw new Error(`설정 불러오기 실패: ${r.status}`); return r.json(); };
   const [c, s, audio] = await Promise.all(['config.json', 'cycle_config.json', 'audio_config.json'].map(f => fetchJSON('./model/' + f)));
   base = {config: c, cycle: s, audio}; let values = clone(base);
   try { const saved = localStorage.getItem(STORAGE); if (saved) values = normalise(JSON.parse(saved)); }
@@ -257,7 +257,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-interior2', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;
