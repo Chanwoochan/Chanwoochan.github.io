@@ -13,7 +13,7 @@ class Config:
     gap_34: float = 0.178
     rod_radius: float = 0.009
     inner_height: float = 0.22
-    outer_height: float = 0.28
+    outer_height: float = 0.26
     box_width: float = 0.15
     box_length: float = 0.3
     box_height: float = 0.075
@@ -34,11 +34,11 @@ class Config:
     head_limit_deg: float = 8.0
     claw_scale: float = 0.9
     timestep: float = 0.0005
-    rod_bending_rigidity: float = 0.96
-    rod_bending_damping: float = 0.00035
-    rod_tension: float = 576.0
-    rod_axial_rigidity: float = 12000.0
-    rod_axial_damping: float = 0.25
+    rod_bending_rigidity: float = 2.0
+    rod_bending_damping: float = 0.005
+    rod_tension: float = 1000.0
+    rod_axial_rigidity: float = 20000.0
+    rod_axial_damping: float = 2.0
 
     @property
     def chute_half_y(self):

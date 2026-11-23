@@ -4,7 +4,7 @@
   "gap_34": 0.08,
   "rod_radius": 0.009,
   "inner_height": 0.22,
-  "outer_height": 0.28,
+  "outer_height": 0.26,
   "box_width": 0.18,
   "box_length": 0.25,
   "box_height": 0.1,
@@ -25,9 +25,9 @@
   "head_limit_deg": 8.0,
   "claw_scale": 1.0,
   "timestep": 0.0005,
-  "rod_bending_rigidity": 0.96,
-  "rod_bending_damping": 0.00035,
-  "rod_tension": 576.0,
-  "rod_axial_rigidity": 12000.0,
-  "rod_axial_damping": 0.25
+  "rod_bending_rigidity": 2.0,
+  "rod_bending_damping": 0.005,
+  "rod_tension": 1000.0,
+  "rod_axial_rigidity": 20000.0,
+  "rod_axial_damping": 2.0
 }
