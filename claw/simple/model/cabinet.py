@@ -28,6 +28,8 @@ CHUTE_HALF_Y = (MOUTH_BACK_Y - MOUTH_FRONT_Y) / 2
 MOUTH_CENTER_Y = (MOUTH_FRONT_Y + MOUTH_BACK_Y) / 2
 HOME_Y = -.330
 GANTRY_MIN_Y = -.345
+CEILING_RAIL_Z = 1.174
+SWIVEL_Z = CEILING_RAIL_Z - .049
 HEAD_YAW_LIMIT_DEG = 15
 HEAD_PITCH_LIMIT_DEG = 5
 
@@ -54,23 +56,31 @@ def add_room_views(world):
 
 
 def configure_head_mount(root, gantry, head, config):
-    # All three rotations share the scaled shaft-top pivot. Intrinsic Z-Y-X
-    # makes the first hinge the head's yaw in the cabinet frame.
-    old_pivot = head.find("joint[@name='head_pivot']")
-    pivot = old_pivot.get('pos')
-    head.remove(old_pivot)
+    # The XY carriage carries the ceiling bearing. The Z slide travels in the
+    # rotated bearing frame, so its stroke changes the lever arm under load.
+    neutral_head_z = float(gantry.get('pos').split()[2])
+    gantry.set('pos', f'0 0 {SWIVEL_Z}')
+    gantry.find('inertial').set('pos', '0 0 0')
     gantry.remove(gantry.find("joint[@name='gantry_yaw']"))
+    slide = gantry.find("joint[@name='gantry_z']")
+    gantry.remove(slide)
+    gantry.remove(head)
+    head.remove(head.find("joint[@name='head_pivot']"))
+    swivel = ET.SubElement(gantry, 'body', name='ceiling_swivel')
+    head.set('pos', f'0 0 {neutral_head_z-SWIVEL_Z}')
+    head.insert(0, slide)
+
     yaw_limit = math.radians(HEAD_YAW_LIMIT_DEG)
     yaw_range = f'{-yaw_limit} {yaw_limit}'
-    ET.SubElement(head, 'joint', name='head_swivel_yaw', type='hinge', axis='0 0 1',
-                  pos=pivot, limited='true', range=yaw_range, solreflimit='.004 1',
+    ET.SubElement(swivel, 'joint', name='head_swivel_yaw', type='hinge', axis='0 0 1',
+                  limited='true', range=yaw_range, solreflimit='.004 1',
                   solimplimit='.99 .999 .001', armature='.0001')
     pitch_limit = math.radians(HEAD_PITCH_LIMIT_DEG)
-    ET.SubElement(head, 'joint', name='head_pitch', type='hinge', axis='0 1 0', pos=pivot,
+    ET.SubElement(swivel, 'joint', name='head_pitch', type='hinge', axis='0 1 0',
                   limited='true', range=f'{-pitch_limit} {pitch_limit}', springref='0',
                   stiffness=str(config.pitch_stiffness), damping=str(config.pitch_damping),
                   solreflimit='.004 1', solimplimit='.99 .999 .001', armature='.0001')
-    ET.SubElement(head, 'joint', name='head_roll', type='hinge', axis='1 0 0', pos=pivot,
+    ET.SubElement(swivel, 'joint', name='head_roll', type='hinge', axis='1 0 0',
                   limited='false', stiffness=str(config.head_stiffness),
                   damping=str(config.head_damping), armature='.0001')
     motor = root.find("./actuator/position[@name='yaw_motor']")
@@ -78,23 +88,24 @@ def configure_head_mount(root, gantry, head, config):
                         kp=str(config.yaw_kp), kv=str(config.yaw_kd), forcerange='-.5 .5')
     mount = gantry.find("geom[@name='head_mount']")
     gantry.remove(mount)
-    mount.set('mass', str(.030 * config.claw_scale**3))
+    mount.attrib.update(name='ceiling_bearing', pos='0 0 0', mass=str(.030 * config.claw_scale**3))
     mount.attrib.pop('rgba', None)
     mount.set('material', 'ufo_chrome')
-    head.append(mount)
+    swivel.append(mount)
 
     # Retain the circular tilt stop even when both pitch and roll are active.
     # The separation of two axial sites depends on total tilt, independent of yaw.
-    pivot_z = float(pivot.split()[2])
-    a = pivot_z / 2
+    a = .095 * config.claw_scale
     b = a + .001
     separation = math.hypot(b-a, 2*math.sqrt(a*b)*math.sin(math.radians(config.head_limit_deg)/2))
     tendon = ET.SubElement(root, 'tendon')
     stop = ET.SubElement(tendon, 'spatial', name='head_tilt_stop', limited='true',
                          range=f'0 {separation}', rgba='0 0 0 0', solreflimit='.004 1')
-    for body, name, radius in ((gantry, 'tilt_anchor', a), (head, 'tilt_tip', b)):
-        ET.SubElement(body, 'site', name=name, pos=f'0 0 {pivot_z-radius}', size='.001', rgba='0 0 0 0')
+    for body, name, radius in ((gantry, 'tilt_anchor', a), (swivel, 'tilt_tip', b)):
+        ET.SubElement(body, 'site', name=name, pos=f'0 0 {-radius}', size='.001', rgba='0 0 0 0')
         ET.SubElement(stop, 'site', site=name)
+    swivel.append(head)
+    return swivel
 
 
 def shape_finger_tip(finger, side, contacts):
@@ -186,7 +197,7 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     assets = root.find('asset')
     gantry = world.find("body[@name='gantry']")
     head = gantry.find("body[@name='claw_head']")
-    configure_head_mount(root, gantry, head, config)
+    swivel = configure_head_mount(root, gantry, head, config)
     contacts = root.find('contact')
     for side in ('left', 'right'):
         finger = head.find(f"body[@name='{side}_finger']")
@@ -402,7 +413,7 @@ def decorate_cabinet(root, config, geom, box, face, quad):
         box(world, f'track_{bay}', f'{x} 0 1.194', '.365 .370 .012', 'ufo_pearl')
         for sign in (-1, 1):
             geom(world, f'ceiling_rail_{bay}_{sign}', kind='cylinder',
-                 fromto=f'{x+sign*.335} -.38 1.174 {x+sign*.335} .38 1.174', size='.006', material='steel')
+                 fromto=f'{x+sign*.335} -.38 {CEILING_RAIL_Z} {x+sign*.335} .38 {CEILING_RAIL_Z}', size='.006', material='steel')
         box(world, f'white_light_{bay}', f'{x} {back-.025} 1.150', '.350 .006 .006', 'showcase_light')
 
         # The rear platform itself forms the back edge of the playable opening.
@@ -431,7 +442,7 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     copied_floor = deepcopy(receiving_floor)
     copied_floor.set('name', 'display_chute_bottom')
     display.append(copied_floor)
-    ghost = deepcopy(head); ghost.set('name', 'display_head'); ghost.set('pos', f'0 {MOUTH_CENTER_Y} .80')
+    ghost = deepcopy(swivel); ghost.set('name', 'display_swivel'); ghost.set('pos', f'0 {MOUTH_CENTER_Y} {SWIVEL_Z}')
     for element in ghost.iter():
         for child in list(element):
             if child.tag in ('joint', 'freejoint', 'inertial'):

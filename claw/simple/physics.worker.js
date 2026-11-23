@@ -25,6 +25,8 @@ class Simulation {
     this.gantry = id(model, 'mjOBJ_BODY', 'gantry');
     this.prize = id(model, 'mjOBJ_BODY', 'prize');
     this.tilt = new HeadTilt(model, id);
+    this.strokeAddress = this.qadr('gantry_z');
+    this.drivePosition = new Float64Array(3);
     this.target = new Float64Array(6); this.force = new mj.DoubleBuffer(6);
     this.clawBodies = new Set();
     for (let b = 1; b < model.nbody; b++) {
@@ -40,7 +42,13 @@ class Simulation {
   }
   dispose() { this.force.delete(); this.data.delete(); this.model.delete(); }
   qadr(joint) { return this.model.jnt_qposadr[id(this.model, 'mjOBJ_JOINT', joint)]; }
-  pose() { return this.data.xpos.subarray(this.gantry * 3, this.gantry * 3 + 3); }
+  pose() {
+    const i = this.gantry * 3, xyz = this.data.xpos;
+    this.drivePosition[0] = xyz[i];
+    this.drivePosition[1] = xyz[i + 1];
+    this.drivePosition[2] = .8 + this.data.qpos[this.strokeAddress];
+    return this.drivePosition;
+  }
   reset(s) {
     mj.mj_resetData(this.model, this.data);
     const q = this.data.qpos;
@@ -226,7 +234,7 @@ function sendFrame() {
   const headVertical = d.xmat[9 * sim.tilt.body + 8];
   const rodPoints = new Float32Array(d.flexvert_xpos);
   const payload = {type: 'frame', revision, transforms, rodPoints, state: cycle.state, elapsed: d.time,
-    heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(sim.pose()),
+    heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(d.xpos.subarray(3 * sim.tilt.body, 3 * sim.tilt.body + 3)),
     headAngle: Math.acos(clip(headVertical, -1, 1)) * 180 / Math.PI,
     reason: cycle.reason, paused: paused || hidden, winning: winAt !== null};
   postMessage(payload, [transforms.buffer, rodPoints.buffer]);
