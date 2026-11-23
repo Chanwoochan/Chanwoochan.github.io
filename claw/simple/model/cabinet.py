@@ -26,8 +26,6 @@ MOUTH_BACK_Y = DISPLAY_FRONT_Y
 CHUTE_HALF_X = .335
 CHUTE_HALF_Y = (MOUTH_BACK_Y - MOUTH_FRONT_Y) / 2
 MOUTH_CENTER_Y = (MOUTH_FRONT_Y + MOUTH_BACK_Y) / 2
-# The rods stay at their established button-side position as the shelf retreats.
-BRIDGE_CENTER_Y = -.170
 HOME_Y = -.330
 GANTRY_MIN_Y = -.345
 
@@ -99,13 +97,13 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     world.find("geom[@name='floor']").set('rgba', '0 0 0 0')
     # Keep the physical rod spacing local to one fixed bridge. The free parcel
     # starts over its inner pair, so resetData restores the same offset as well.
-    bridge = ET.SubElement(world, 'body', name='bridge_rods', pos=f'0 {BRIDGE_CENTER_Y} 0')
+    bridge = ET.SubElement(world, 'body', name='bridge_rods', pos=f'0 {MOUTH_CENTER_Y} 0')
     for i in range(1, 5):
         rod = world.find(f"geom[@name='rod_{i}']")
         world.remove(rod)
         bridge.append(rod)
     prize_z = prize.get('pos').split()[2]
-    prize.set('pos', f'0 {BRIDGE_CENTER_Y} {prize_z}')
+    prize.set('pos', f'0 {MOUTH_CENTER_Y} {prize_z}')
     geom(world, 'arcade_floor', kind='plane', pos=f'0 0 {GROUND_Z}', size='5 5 .1', material='floor')
     material('showcase_light', '.94 .98 1 1', emission='.75')
     material('outlet_glass', '.86 .94 1 .085', specular='.75', shininess='.9')
@@ -252,7 +250,7 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     copied_floor = deepcopy(receiving_floor)
     copied_floor.set('name', 'display_chute_bottom')
     display.append(copied_floor)
-    ghost = deepcopy(head); ghost.set('name', 'display_head'); ghost.set('pos', f'0 {BRIDGE_CENTER_Y} .80')
+    ghost = deepcopy(head); ghost.set('name', 'display_head'); ghost.set('pos', f'0 {MOUTH_CENTER_Y} .80')
     for element in ghost.iter():
         for child in list(element):
             if child.tag in ('joint', 'freejoint', 'inertial'):

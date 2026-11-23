@@ -125,9 +125,12 @@ function normalise(values) {
       result[group][key] = values[group][key];
     }
   }
-  if ((values.version ?? 1) === 1) {
+  const version = values.version ?? 1;
+  if (version === 1) {
     if (values.cycle.start_y === -.23) result.cycle.start_y = base.cycle.start_y;
     if (values.cycle.release_y === 0) result.cycle.release_y = base.cycle.release_y;
+  } else if (version === 2 && values.cycle.release_y === -.17) {
+    result.cycle.release_y = base.cycle.release_y;
   }
   if (values.audio) {
     result.audio.enabled = typeof values.audio.enabled === 'boolean' ? values.audio.enabled : result.audio.enabled;
@@ -239,7 +242,7 @@ $('save-settings').addEventListener('click', () => { const v = collect(); if (v)
 $('restore-settings').addEventListener('click', () => { if (base) { populate(base); configure(clone(base)); } });
 $('export-settings').addEventListener('click', () => {
   const values = collect(); if (!values) return;
-  const file = new Blob([JSON.stringify({version: 2, ...values}, null, 2)], {type: 'application/json'});
+  const file = new Blob([JSON.stringify({version: 3, ...values}, null, 2)], {type: 'application/json'});
   const url = URL.createObjectURL(file), a = document.createElement('a'); a.href = url; a.download = 'ufo-catcher-settings.json'; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
@@ -261,7 +264,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-swivel', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-center', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;
@@ -281,7 +284,7 @@ async function boot() {
           setAudio(pending.audio); currentAudio = pending.audio;
           if (pending.save) {
             try {
-              localStorage.setItem(STORAGE, JSON.stringify({version: 2, config, cycle: settings, audio: currentAudio}));
+              localStorage.setItem(STORAGE, JSON.stringify({version: 3, config, cycle: settings, audio: currentAudio}));
               toast('기본값으로 저장했습니다. 다음 접속에도 적용됩니다.');
             } catch { toast('설정은 적용했지만 이 브라우저에 저장할 수 없습니다. JSON 내보내기를 이용하세요.', true); }
           } else toast('설정을 적용했습니다. 새 판을 시작합니다.');

@@ -15,7 +15,7 @@ class CycleSettings:
     close_duration: float = 1.8
     release_duration: float = 0.5
     release_x: float = 0.0
-    release_y: float = -0.17
+    release_y: float = -0.128
     open_angle: float = 0.65
     closed_angle: float = 0.0
 
