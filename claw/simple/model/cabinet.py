@@ -120,6 +120,7 @@ def add_elastic_rod(bridge, deformable, tendons, rod, config):
 
 
 def decorate_cabinet(root, config, geom, box, face, quad):
+    root.find('option').set('noslip_iterations', '2')
     world = root.find('worldbody')
     assets = root.find('asset')
     gantry = world.find("body[@name='gantry']")

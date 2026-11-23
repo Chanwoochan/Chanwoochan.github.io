@@ -33,7 +33,7 @@ class Config:
     head_damping: float = 0.25
     head_limit_deg: float = 8.0
     claw_scale: float = 0.9
-    timestep: float = 0.0005
+    timestep: float = 0.00025
     rod_bending_rigidity: float = 2.0
     rod_bending_damping: float = 0.005
     rod_tension: float = 1000.0
