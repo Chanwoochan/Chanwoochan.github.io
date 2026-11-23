@@ -87,7 +87,7 @@ def add_elastic_rod(bridge, deformable, tendons, rod, config):
         body = ET.SubElement(bridge, 'body', name=node, pos=f'{left_x+i*dx} {y} {z}')
         if 0 < i < segments:
             for axis in ('0 1 0', '0 0 1'):
-                ET.SubElement(body, 'joint', type='slide', axis=axis, limited='false', damping='.20')
+                ET.SubElement(body, 'joint', type='slide', axis=axis, limited='false')
             inertia = mass*dx**2/12
             ET.SubElement(body, 'inertial', pos='0 0 0', mass=str(mass),
                           diaginertia=f'{inertia} {inertia} {inertia}')
@@ -105,7 +105,9 @@ def add_elastic_rod(bridge, deformable, tendons, rod, config):
     ET.SubElement(flex, 'contact', selfcollide='none', priority='2', condim='3',
                   friction=rod.get('friction'), solref=f'{config.box_contact_timeconst} 1',
                   solimp=f'.90 .98 {config.box_contact_width}')
-    ET.SubElement(flex, 'elasticity', young=str(bending_rigidity / (math.pi*radius**4/4)))
+    # The flex material damps bending. Its free vertex slide joints must be undamped.
+    ET.SubElement(flex, 'elasticity', young=str(bending_rigidity / (math.pi*radius**4/4)),
+                  damping='.001')
 
 
 def decorate_cabinet(root, config, geom, box, face, quad):

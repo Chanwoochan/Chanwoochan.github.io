@@ -163,7 +163,7 @@ async function initRuntimes() {
   const [engine, python, sources, assets] = await Promise.all([
     loadMujoco({locateFile: file => new URL(`../vendor/mujoco/${file}`, import.meta.url).href}),
     loadPyodide({indexURL: new URL('../vendor/pyodide/', import.meta.url).href}),
-    Promise.all(files.map(file => fetchFile(`./model/${file}`))),
+    Promise.all(files.map(file => fetchFile(`./model/${file}${new URL(import.meta.url).search}`))),
     fetchFile('./assets/manifest.json').then(JSON.parse),
   ]);
   mj = engine; py = python;
