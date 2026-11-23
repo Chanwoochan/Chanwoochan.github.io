@@ -16,9 +16,18 @@ GROUND_Z = -.720
 ROOF_Z = GROUND_Z + HEIGHT
 BODY_HALF_DEPTH = .435
 DECK_FRONT_Y = BODY_HALF_DEPTH - DEPTH
-CHUTE_HALF_X = .335
-CHUTE_HALF_Y = .335
 GLASS_THICKNESS = .006
+FIELD_REAR_Y = .415
+FIELD_FRONT_Y = -FIELD_REAR_Y
+DISPLAY_DEPTH = .380
+DISPLAY_FRONT_Y = round(FIELD_REAR_Y - DISPLAY_DEPTH, 3)
+MOUTH_FRONT_Y = -.375
+MOUTH_BACK_Y = DISPLAY_FRONT_Y
+CHUTE_HALF_X = .335
+CHUTE_HALF_Y = (MOUTH_BACK_Y - MOUTH_FRONT_Y) / 2
+BRIDGE_CENTER_Y = round((MOUTH_FRONT_Y + MOUTH_BACK_Y) / 2, 3)
+HOME_Y = -.330
+GANTRY_MIN_Y = -.345
 
 
 def decorate_cabinet(root, config, geom, box, face, quad):
@@ -46,6 +55,10 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     def solid(name, pos, size, material_name='ufo_glass', **attrs):
         return collider(name, pos=pos, size=size, material_name=material_name, **attrs)
 
+    def field_block(name, x, half_width, y0, y1, z0, z1):
+        return solid(name, f'{x} {(y0+y1)/2} {(z0+z1)/2}',
+                     f'{half_width} {(y1-y0)/2} {(z1-z0)/2}', 'ufo_white')
+
     def plate(name, vertices, thickness=.006, material_name='ufo_white'):
         # A finite, convex plate is both the visible liner and its real collider.
         a = [vertices[1][i]-vertices[0][i] for i in range(3)]
@@ -67,12 +80,18 @@ def decorate_cabinet(root, config, geom, box, face, quad):
         quad(body, name+'_top', [(-.065,-.032,.1003),(.065,-.032,.1003),(.065,.032,.1003),(-.065,.032,.1003)], 'package_short')
 
     for old in list(world.findall('geom')):
-        if old.get('material') == 'frame':
+        if old.get('material') == 'frame' or old.get('name', '').startswith('tray_'):
             world.remove(old)
     world.find("geom[@name='floor']").set('rgba', '0 0 0 0')
-    for old in world.findall('geom'):
-        if old.get('name', '').startswith('tray_'):
-            old.set('rgba', '.94 .95 .96 1')
+    # Keep the physical rod spacing local to one fixed bridge. The free parcel
+    # starts over its inner pair, so resetData restores the same offset as well.
+    bridge = ET.SubElement(world, 'body', name='bridge_rods', pos=f'0 {BRIDGE_CENTER_Y} 0')
+    for i in range(1, 5):
+        rod = world.find(f"geom[@name='rod_{i}']")
+        world.remove(rod)
+        bridge.append(rod)
+    prize_z = prize.get('pos').split()[2]
+    prize.set('pos', f'0 {BRIDGE_CENTER_Y} {prize_z}')
     geom(world, 'arcade_floor', kind='plane', pos=f'0 0 {GROUND_Z}', size='5 5 .1', material='floor')
     material('showcase_light', '.94 .98 1 1', emission='.75')
     material('outlet_glass', '.86 .94 1 .085', specular='.75', shininess='.9')
@@ -147,27 +166,28 @@ def decorate_cabinet(root, config, geom, box, face, quad):
                  quat=orientation, size='.025 .004', material='ufo_white')
 
         # Raised, open-centre field frame and the lower light bar seen on UFO10.
-        for label, y in (('front', -.375), ('rear', .375)):
-            solid(f'field_frame_{label}_{bay}', f'{x} {y} .105', '.375 .040 .040', 'ufo_white')
+        field_block(f'field_frame_front_{bay}', x, .375, FIELD_FRONT_Y, MOUTH_FRONT_Y, .015, .145)
         for sign in (-1, 1):
-            solid(f'field_side_frame_{bay}_{sign}', f'{x+sign*.355} 0 .105', '.020 .335 .040', 'ufo_white')
-            box(world, f'field_top_side_{bay}_{sign}', f'{x+sign*.355} 0 .146', '.018 .333 .001', 'ufo_pearl')
+            field_block(f'field_side_frame_{bay}_{sign}', x+sign*.355, .020, MOUTH_FRONT_Y, MOUTH_BACK_Y, .015, .145)
+            box(world, f'field_top_side_{bay}_{sign}', f'{x+sign*.355} {BRIDGE_CENTER_Y} .146',
+                f'.018 {CHUTE_HALF_Y-.002} .001', 'ufo_pearl')
         box(world, f'lower_light_{bay}', f'{x} -.416 .109', '.330 .002 .004', 'field_lamp')
         box(world, f'lower_light_cover_{bay}', f'{x} -.419 .109', '.343 .001 .012', 'ufo_glass')
         for side in (-1, 1):
-            for y in (-.375, .375):
+            for y in (MOUTH_FRONT_Y+.012, MOUTH_BACK_Y-.012):
                 geom(world, f'field_fastener_{bay}_{side}_{y}', kind='cylinder', pos=f'{x+side*.349} {y} .147',
                      size='.004 .001', material='ufo_chrome')
 
         # Deep white prize chute: real fixed liner plates, rather than a black sign.
-        # Plates leave the complete 670 mm square mouth open below the bridge.
-        plate(f'chute_back_liner_{bay}', [(x-.335,.335,.064),(x+.335,.335,.064),
-              (x+.315,.060,-.575),(x-.315,.060,-.575)])
+        rear_tray_y = -.055
+        plate(f'chute_back_liner_{bay}', [(x+CHUTE_HALF_X,MOUTH_BACK_Y,.015),(x-CHUTE_HALF_X,MOUTH_BACK_Y,.015),
+              (x-.315,rear_tray_y,-.575),(x+.315,rear_tray_y,-.575)])
         for sign in (-1, 1):
-            plate(f'chute_side_liner_{bay}_{sign}', [(x+sign*.335,-.335,.064),(x+sign*.335,.335,.064),
-                  (x+sign*.315,.135,-.575),(x+sign*.315,-.415,-.575)])
-        plate(f'chute_front_inside_{bay}', [(x-.335,-.415,.064),(x+.335,-.415,.064),
-              (x+.325,-.315,-.160),(x-.325,-.315,-.160)])
+            side_vertices = [(x+sign*CHUTE_HALF_X,MOUTH_FRONT_Y,.015),(x+sign*CHUTE_HALF_X,MOUTH_BACK_Y,.015),
+                             (x+sign*.315,rear_tray_y,-.575),(x+sign*.315,-.415,-.575)]
+            plate(f'chute_side_liner_{bay}_{sign}', side_vertices if sign > 0 else side_vertices[::-1])
+        plate(f'chute_front_inside_{bay}', [(x-CHUTE_HALF_X,MOUTH_FRONT_Y,.015),(x+CHUTE_HALF_X,MOUTH_FRONT_Y,.015),
+              (x+.330,-.315,-.160),(x-.330,-.315,-.160)])
         # The receiving tray is open to the clear flap; front and side lips are low.
         solid(f'receiving_tray_lip_{bay}', f'{x} {front+.018} -.565', '.315 .008 .012', 'ufo_white')
         for sign in (-1, 1):
@@ -192,13 +212,13 @@ def decorate_cabinet(root, config, geom, box, face, quad):
                  fromto=f'{x+sign*.335} -.38 1.174 {x+sign*.335} .38 1.174', size='.006', material='steel')
         box(world, f'white_light_{bay}', f'{x} {back-.025} 1.150', '.350 .006 .006', 'showcase_light')
 
-        # Low, full-width rear display field, with a shallow riser for the back row.
-        # This replaces the invented tall two-level bookcase.
+        # The rear platform itself forms the back edge of the playable opening.
         showcase = ET.SubElement(world, 'body', name=f'dummy_showcase_{bay}', pos=f'{x} 0 0')
-        solid(f'display_field_base_{bay}', f'{x} .3375 .1975', '.350 .0775 .0525', 'ufo_white')
-        solid(f'display_field_riser_{bay}', f'{x} .3725 .275', '.350 .0425 .025', 'ufo_white')
-        box(showcase, f'display_front_lip_{bay}', '0 .259 .255', '.350 .002 .008', 'ufo_pearl')
-        for row, (y, z) in enumerate(((.295, .250), (.373, .300))):
+        field_block(f'display_field_base_{bay}', x, .375, DISPLAY_FRONT_Y, FIELD_REAR_Y, .015, .250)
+        riser_front_y = DISPLAY_FRONT_Y + DISPLAY_DEPTH / 2
+        field_block(f'display_field_riser_{bay}', x, .350, riser_front_y, FIELD_REAR_Y, .250, .300)
+        box(showcase, f'display_front_lip_{bay}', f'0 {DISPLAY_FRONT_Y+.002} .255', '.350 .002 .005', 'ufo_pearl')
+        for row, (y, z) in enumerate(((DISPLAY_FRONT_Y+.072, .250), (riser_front_y+.082, .300))):
             for column, bx in enumerate((-.240, -.080, .080, .240)):
                 dummy(showcase, f'dummy_box_{bay}_{row}_{column}', bx, y, z)
         for sign in (-1, 1):
@@ -210,17 +230,16 @@ def decorate_cabinet(root, config, geom, box, face, quad):
 
     # Fixed neighbouring booth, at the actual half-width bay pitch.
     display = ET.SubElement(world, 'body', name='display_station', pos=f'{BAY_PITCH} 0 0')
-    for rod in range(1, 5):
-        copied = deepcopy(world.find(f"geom[@name='rod_{rod}']"))
-        copied.set('name', f'display_rod_{rod}'); copied.set('class', 'decor')
+    display_bridge = ET.SubElement(display, 'body', name='display_bridge', pos=bridge.get('pos'))
+    for original in bridge.findall('geom'):
+        copied = deepcopy(original)
+        copied.set('name', 'display_'+original.get('name')); copied.set('class', 'decor')
         copied.set('contype', '0'); copied.set('conaffinity', '0'); copied.set('mass', '0')
-        display.append(copied)
-    for name in ('tray_front', 'tray_back', 'tray_left', 'tray_right', 'chute_bottom'):
-        copied = deepcopy(world.find(f"geom[@name='{name}']"))
-        copied.set('name', 'display_'+name); copied.set('class', 'decor')
-        copied.set('contype', '0'); copied.set('conaffinity', '0'); copied.set('mass', '0')
-        display.append(copied)
-    ghost = deepcopy(head); ghost.set('name', 'display_head'); ghost.set('pos', '0 0 .80')
+        display_bridge.append(copied)
+    copied_floor = deepcopy(receiving_floor)
+    copied_floor.set('name', 'display_chute_bottom')
+    display.append(copied_floor)
+    ghost = deepcopy(head); ghost.set('name', 'display_head'); ghost.set('pos', f'0 {BRIDGE_CENTER_Y} .80')
     for element in ghost.iter():
         for child in list(element):
             if child.tag in ('joint', 'freejoint', 'inertial'):

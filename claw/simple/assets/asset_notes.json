@@ -7,8 +7,10 @@
   },
   "chute_opening_mm": {
     "width": 670,
-    "depth": 670
+    "depth": 410
   },
+  "rear_display_depth_mm": 380,
+  "bridge_centre_y_mm": -170,
   "dimensions_include": "Two booths and the front control-deck projection; floor excluded.",
   "sources": [
     "https://am.sega.jp/cad/prize_game/29588",
@@ -19,7 +21,7 @@
     "https://am.sega.jp/wp-content/uploads/2023/11/421-14056-36_2310_amt.pdf",
     "https://arcadeheroes.com/2023/02/10/new-arcade-games-for-japan-jaepo-2023-round-up/"
   ],
-  "interior": "Low rear display field and shallow back-row riser, raised open field frame, deep white prize-chute liners, receiving floor and clear recessed front flap. Shapes follow official cabinet photos and the official UFO10 terminal-fitting service photos; dimensions not supplied in those photographs remain approximations.",
+  "interior": "Rear platform depth and forward bridge position follow the supplied side-view sketch. The chute liners lead from the forward opening to the receiving floor and recessed clear flap.",
   "contacts": "Four external glass faces, centre partition, and roof have native MuJoCo collision geoms. No prize attachment or injected motion.",
   "assets": "Original plain DUMMY text graphics, authored with Pillow; no robot/figure illustrations.",
   "validation": "File authoring only; no model compilation, simulation, playback, or browser QA."

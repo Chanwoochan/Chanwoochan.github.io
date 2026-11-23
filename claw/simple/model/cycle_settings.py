@@ -5,7 +5,7 @@ import math
 @dataclass
 class CycleSettings:
     start_x: float = 0.20
-    start_y: float = -0.23
+    start_y: float = -0.33
     home_height: float = 0.8
     lower_height: float = 0.2
     move_speed: float = 0.12
@@ -15,12 +15,12 @@ class CycleSettings:
     close_duration: float = 1.8
     release_duration: float = 0.5
     release_x: float = 0.0
-    release_y: float = 0.0
+    release_y: float = -0.17
     open_angle: float = 0.65
     closed_angle: float = 0.0
 
     def validate(self):
-        bounds = {'start_x': (-0.24, 0.24), 'start_y': (-0.27, 0.27), 'home_height': (0.65, 0.95), 'lower_height': (0.2, 0.75), 'move_speed': (0.01, 0.14), 'z_load_threshold': (0.1, 30.0), 'contact_hold_time': (0.0, 0.2), 'open_duration': (0.0, 10.0), 'close_duration': (0.2, 5.0), 'release_duration': (0.0, 3.0), 'release_x': (-0.24, 0.24), 'release_y': (-0.27, 0.27), 'open_angle': (0.0, 0.8), 'closed_angle': (0.0, 0.8)}
+        bounds = {'start_x': (-0.24, 0.24), 'start_y': (-0.345, 0.27), 'home_height': (0.65, 0.95), 'lower_height': (0.2, 0.75), 'move_speed': (0.01, 0.14), 'z_load_threshold': (0.1, 30.0), 'contact_hold_time': (0.0, 0.2), 'open_duration': (0.0, 10.0), 'close_duration': (0.2, 5.0), 'release_duration': (0.0, 3.0), 'release_x': (-0.24, 0.24), 'release_y': (-0.345, 0.27), 'open_angle': (0.0, 0.8), 'closed_angle': (0.0, 0.8)}
         for name, (lo, hi) in bounds.items():
             value = getattr(self, name)
             if not math.isfinite(value) or not lo <= value <= hi:
