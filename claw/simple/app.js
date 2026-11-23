@@ -42,8 +42,10 @@ const schema = [
   ['헤드와 계산', 'claw_scale', '집게 전체 크기 (%)', 100, 1, 65, 110],
   ["헤드와 계산", "yaw_kp", "Yaw P게인 (N·m/rad)", 1, 0.1, 0, 50, true],
   ["헤드와 계산", "yaw_kd", "Yaw D게인 (N·m·s/rad)", 1, 0.01, 0, 5, true],
-  ['헤드와 계산', 'head_stiffness', '헤드 복원 강성 (N·m/rad)', 1, .1, 0, 30, true],
-  ['헤드와 계산', 'head_damping', '헤드 감쇠 (N·m·s/rad)', 1, .01, 0, 3, true],
+  ["헤드와 계산", "pitch_stiffness", "피치 복원 강성 (N·m/rad)", 1, 0.1, 0, 30, true],
+  ["헤드와 계산", "pitch_damping", "피치 감쇠 (N·m·s/rad)", 1, 0.01, 0, 3, true],
+  ['헤드와 계산', 'head_stiffness', '롤 복원 강성 (N·m/rad)', 1, .1, 0, 30, true],
+  ['헤드와 계산', 'head_damping', '롤 감쇠 (N·m·s/rad)', 1, .01, 0, 3, true],
   ['헤드와 계산', 'head_limit_deg', '헤드 최대 꺾임 (°)', 1, .5, 1, 25, true],
   ['헤드와 계산', 'timestep', '물리 계산 간격 (ms)', 1000, .05, .25, 2],
   ['자동 집기 동작', 'move_speed', 'XY 이동 속도 (mm/s)', 1000, 1, 10, 140],
@@ -275,7 +277,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-white-room', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-passive-pitch', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

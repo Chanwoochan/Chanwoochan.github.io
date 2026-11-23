@@ -6,9 +6,10 @@ export class HeadTilt {
     this.model = model;
     this.yawMotor = id(model, 'mjOBJ_ACTUATOR', 'yaw_motor');
     this.body = id(model, 'mjOBJ_BODY', 'claw_head');
-    this.joints = ['head_pitch', 'head_roll'].map(name => id(model, 'mjOBJ_JOINT', name));
+    this.pitch = id(model, 'mjOBJ_JOINT', 'head_pitch');
+    this.roll = id(model, 'mjOBJ_JOINT', 'head_roll');
     this.stop = id(model, 'mjOBJ_TENDON', 'head_tilt_stop');
-    const pivotZ = model.jnt_pos[3 * this.joints[0] + 2];
+    const pivotZ = model.jnt_pos[3 * this.pitch + 2];
     const radius = name => pivotZ - model.site_pos[3 * id(model, 'mjOBJ_SITE', name) + 2];
     const a = radius('tilt_anchor'), b = radius('tilt_tip');
     this.axialGap = b - a;
@@ -28,14 +29,15 @@ export class HeadTilt {
       m.actuator_biasprm[10 * this.yawMotor + 2] = -kd;
       return kd;
     }
-    if (key === 'head_stiffness') {
+    if (key === 'pitch_stiffness' || key === 'head_stiffness') {
       const stiffness = Math.max(0, Math.min(30, value));
-      for (const joint of this.joints) m.jnt_stiffness[joint] = stiffness;
+      m.jnt_stiffness[key === 'pitch_stiffness' ? this.pitch : this.roll] = stiffness;
       return stiffness;
     }
-    if (key === 'head_damping') {
+    if (key === 'pitch_damping' || key === 'head_damping') {
       const damping = Math.max(0, Math.min(3, value));
-      for (const joint of this.joints) m.dof_damping[m.jnt_dofadr[joint]] = damping;
+      const joint = key === 'pitch_damping' ? this.pitch : this.roll;
+      m.dof_damping[m.jnt_dofadr[joint]] = damping;
       return damping;
     }
     const degrees = Math.max(1, Math.min(25, value));

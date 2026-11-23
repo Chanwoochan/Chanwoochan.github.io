@@ -31,5 +31,7 @@
   "rod_axial_rigidity": 60000.0,
   "rod_axial_damping": 5.0,
   "yaw_kp": 8.0,
-  "yaw_kd": 0.4
+  "yaw_kd": 0.4,
+  "pitch_stiffness": 4.0,
+  "pitch_damping": 0.25
 }

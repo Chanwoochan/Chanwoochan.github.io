@@ -1,4 +1,4 @@
-import {HeadTilt} from './head-tilt.js?v=20261123-yaw-contact';
+import {HeadTilt} from './head-tilt.js?v=20261123-passive-pitch';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
 import {BridgeCycle as Cycle} from './rod-recovery.js?v=20261123-yaw-contact';
@@ -127,7 +127,7 @@ class Simulation {
           m.pair_friction[p * 5] = m.pair_friction[p * 5 + 1] = v;
         }
         this.config[key] = v;
-      } else if (['yaw_kp', 'yaw_kd', 'head_stiffness', 'head_damping', 'head_limit_deg'].includes(key)) {
+      } else if (['yaw_kp', 'yaw_kd', 'pitch_stiffness', 'pitch_damping', 'head_stiffness', 'head_damping', 'head_limit_deg'].includes(key)) {
         this.config[key] = this.tilt.tune(key, value);
       }
     }
