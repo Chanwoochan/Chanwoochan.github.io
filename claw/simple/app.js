@@ -46,6 +46,7 @@ const schema = [
   ['헤드와 계산', 'timestep', '물리 계산 간격 (ms)', 1000, .05, .25, 2],
   ['자동 집기 동작', 'move_speed', 'XY 이동 속도 (mm/s)', 1000, 1, 10, 140],
   ['자동 집기 동작', 'lower_height', '하강 한계 높이 (mm)', 1000, 1, 200, 750],
+  ["자동 집기 동작", "descent_yaw_deg", "300 mm 하강 시 Yaw 회전각 (°)", 1, 0.1, -5, 5],
   ['자동 집기 동작', 'z_load_threshold', '하강 정지 Z 외력 (N)', 1, .1, .1, 30],
   ['자동 집기 동작', 'contact_hold_time', '외력 유지 시간 (ms)', 1000, 1, 0, 200],
   ['자동 집기 동작', 'open_duration', '벌림 고정 대기 (s)', 1, .1, 0, 10],
@@ -269,7 +270,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-noslip', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-descent-yaw', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

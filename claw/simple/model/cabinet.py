@@ -28,6 +28,7 @@ CHUTE_HALF_Y = (MOUTH_BACK_Y - MOUTH_FRONT_Y) / 2
 MOUTH_CENTER_Y = (MOUTH_FRONT_Y + MOUTH_BACK_Y) / 2
 HOME_Y = -.330
 GANTRY_MIN_Y = -.345
+HEAD_YAW_LIMIT_DEG = 5
 
 
 def configure_head_mount(root, gantry, head, config):
@@ -37,7 +38,7 @@ def configure_head_mount(root, gantry, head, config):
     pivot = old_pivot.get('pos')
     head.remove(old_pivot)
     gantry.remove(gantry.find("joint[@name='gantry_yaw']"))
-    yaw_limit = math.radians(5)
+    yaw_limit = math.radians(HEAD_YAW_LIMIT_DEG)
     yaw_range = f'{-yaw_limit} {yaw_limit}'
     ET.SubElement(head, 'joint', name='head_swivel_yaw', type='hinge', axis='0 0 1',
                   pos=pivot, limited='true', range=yaw_range, solreflimit='.004 1',

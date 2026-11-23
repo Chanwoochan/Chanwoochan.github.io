@@ -1,7 +1,7 @@
 import {HeadTilt} from './head-tilt.js';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
-import {Cycle} from './cycle.js';
+import {DescentYawCycle as Cycle} from './descent-yaw.js?v=20261123-descent-yaw';
 
 let mj, py, sim, cycle, paused = false, hidden = false, started = false;
 let timer, lastWall = 0, accumulator = 0, lastFrame = 0, winAt = null;
