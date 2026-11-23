@@ -169,8 +169,8 @@ def add_elastic_rod(bridge, deformable, tendons, rod, config):
     flex = ET.SubElement(deformable, 'flex', name=name, dim='1', radius=str(radius),
                          material=rod.get('material'), body=' '.join(nodes),
                          element=' '.join(f'{i} {i+1}' for i in range(segments)))
-    ET.SubElement(flex, 'contact', selfcollide='none', contype='2', conaffinity='3',
-                  priority='2', condim='3',
+    # Rod material takes precedence over the fingers (3) and parcel (1).
+    ET.SubElement(flex, 'contact', selfcollide='none', priority='4', condim='3',
                   friction=rod.get('friction'), solref=f'{config.box_contact_timeconst} 1',
                   solimp=f'.90 .98 {config.box_contact_width}')
     # The flex material damps bending. Its free vertex slide joints must be undamped.
@@ -185,9 +185,6 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     gantry = world.find("body[@name='gantry']")
     head = gantry.find("body[@name='claw_head']")
     configure_head_mount(root, gantry, head, config)
-    # Collision bits: 1 = cabinet/parcel, 2 = rods, 4 = fingers.
-    # Each finger has a massless rod-only surface so its friction against a
-    # rod is independent of both the box–rod and box–finger coefficients.
     contacts = root.find('contact')
     for side in ('left', 'right'):
         finger = head.find(f"body[@name='{side}_finger']")
@@ -197,14 +194,9 @@ def decorate_cabinet(root, config, geom, box, face, quad):
                 continue
             tip = surface.get('name').startswith(f'{side}_tip')
             friction = config.tip_friction if tip else config.arm_friction
-            surface.attrib.update(contype='4', conaffinity='5', priority='3', friction=f'{friction} 0 0',
+            surface.attrib.update(priority='3', friction=f'{friction} 0 0',
                                  solref=f'{config.box_contact_timeconst} 1',
                                  solimp=f'.90 .98 {config.box_contact_width}')
-            rod_surface = deepcopy(surface)
-            rod_surface.attrib.update(name='rod_contact_' + surface.get('name'), contype='0',
-                                      conaffinity='2', friction='2.0 0 0', mass='0', rgba='0 0 0 0')
-            rod_surface.attrib.pop('material', None)
-            finger.append(rod_surface)
     prize = world.find("body[@name='prize']")
     left = -BAY_PITCH / 2
     right = left + WIDTH
@@ -440,7 +432,7 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     ghost = deepcopy(head); ghost.set('name', 'display_head'); ghost.set('pos', f'0 {MOUTH_CENTER_Y} .80')
     for element in ghost.iter():
         for child in list(element):
-            if child.tag in ('joint', 'freejoint', 'inertial') or child.get('name', '').startswith('rod_contact_'):
+            if child.tag in ('joint', 'freejoint', 'inertial'):
                 element.remove(child)
         if element is not ghost and element.get('name'):
             element.set('name', 'display_'+element.get('name'))
