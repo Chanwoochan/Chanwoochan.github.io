@@ -49,7 +49,7 @@ def configure_head_mount(root, gantry, head, config):
                       damping=str(config.head_damping), armature='.0001')
     motor = root.find("./actuator/position[@name='yaw_motor']")
     motor.attrib.update(joint='head_swivel_yaw', ctrlrange=yaw_range,
-                        kp='36', kv='2.4', forcerange='-4 4')
+                        kp=str(config.yaw_kp), kv=str(config.yaw_kd), forcerange='-.5 .5')
     mount = gantry.find("geom[@name='head_mount']")
     gantry.remove(mount)
     mount.set('mass', str(.030 * config.claw_scale**3))
@@ -127,6 +127,17 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     gantry = world.find("body[@name='gantry']")
     head = gantry.find("body[@name='claw_head']")
     configure_head_mount(root, gantry, head, config)
+    # A rod (priority 2) sets friction against the carton (priority 1).
+    # The finger contact surfaces use their own sliding friction against rods.
+    for side in ('left', 'right'):
+        for surface in head.findall(f"body[@name='{side}_finger']/geom"):
+            if surface.get('class') == 'decor':
+                continue
+            tip = surface.get('name').startswith(f'{side}_tip')
+            friction = config.tip_friction if tip else config.arm_friction
+            surface.attrib.update(priority='3', friction=f'{friction} 0 0',
+                                 solref=f'{config.box_contact_timeconst} 1',
+                                 solimp=f'.90 .98 {config.box_contact_width}')
     prize = world.find("body[@name='prize']")
     left = -BAY_PITCH / 2
     right = left + WIDTH

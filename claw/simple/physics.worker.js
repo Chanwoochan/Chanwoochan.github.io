@@ -1,7 +1,7 @@
-import {HeadTilt} from './head-tilt.js';
+import {HeadTilt} from './head-tilt.js?v=20261123-yaw-contact';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
-import {BridgeCycle as Cycle} from './rod-recovery.js?v=20261123-rod-release';
+import {BridgeCycle as Cycle} from './rod-recovery.js?v=20261123-yaw-contact';
 
 let mj, py, sim, cycle, paused = false, hidden = false, started = false;
 let timer, lastWall = 0, accumulator = 0, lastFrame = 0, winAt = null;
@@ -61,7 +61,7 @@ class Simulation {
     mj.mj_step(this.model, this.data);
   }
   clawExternalZ() {
-    this.touchingRod = false;
+    this.rodForceZ = 0;
     let forceZ = 0;
     if (!this.data.ncon) return 0;
     const contacts = this.data.contact;
@@ -75,8 +75,9 @@ class Simulation {
           if (a === b) continue;
           mj.mj_contactForce(this.model, this.data, i, this.force);
           const f = this.force.GetView(), frame = contact.frame;
-          if (f[0] > 0 && this.rodIds.has(contact.flex[a ? 1 : 0])) this.touchingRod = true;
-          forceZ += (frame[2] * f[0] + frame[5] * f[1] + frame[8] * f[2]) * (b ? 1 : -1);
+          const contactZ = (frame[2] * f[0] + frame[5] * f[1] + frame[8] * f[2]) * (b ? 1 : -1);
+          forceZ += contactZ;
+          if (this.rodIds.has(contact.flex[a ? 1 : 0])) this.rodForceZ += contactZ;
         } finally { contact.delete(); }
       }
     } finally { contacts.delete(); }
@@ -126,7 +127,7 @@ class Simulation {
           m.pair_friction[p * 5] = m.pair_friction[p * 5 + 1] = v;
         }
         this.config[key] = v;
-      } else if (['head_stiffness', 'head_damping', 'head_limit_deg'].includes(key)) {
+      } else if (['yaw_kp', 'yaw_kd', 'head_stiffness', 'head_damping', 'head_limit_deg'].includes(key)) {
         this.config[key] = this.tilt.tune(key, value);
       }
     }

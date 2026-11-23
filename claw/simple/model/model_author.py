@@ -39,13 +39,15 @@ class Config:
     rod_tension: float = 2000.0
     rod_axial_rigidity: float = 60000.0
     rod_axial_damping: float = 5.0
+    yaw_kp: float = 8.0
+    yaw_kd: float = 0.4
 
     @property
     def chute_half_y(self):
         return 0.247
 
     def validate(self):
-        bounds = {'gap_12': (0.02, 0.35), 'gap_34': (0.02, 0.35), 'rod_radius': (0.004, 0.02), 'box_mass': (0.05, 2), 'box_contact_timeconst': (0.004, 0.1), 'box_contact_width': (0.0001, 0.01), 'tip_friction': (0, 2), 'arm_friction': (0, 2), 'rail_friction': (0, 2), 'inner_rail_friction': (0, 5), 'grip_torque': (0.005, 0.8), 'grip_kp': (0, 100), 'timestep': (0.00025, 0.002), 'z_force_limit': (20, 150), 'head_stiffness': (0, 30), 'head_damping': (0, 3), 'head_limit_deg': (1, 25), 'claw_scale': (0.65, 1.1), 'rod_bending_rigidity': (0.0, 5.0), 'rod_bending_damping': (0.0, 0.02), 'rod_tension': (0.0, 2000.0), 'rod_axial_rigidity': (1.0, 60000.0), 'rod_axial_damping': (0.0, 5.0)}
+        bounds = {'gap_12': (0.02, 0.35), 'gap_34': (0.02, 0.35), 'rod_radius': (0.004, 0.02), 'box_mass': (0.05, 2), 'box_contact_timeconst': (0.004, 0.1), 'box_contact_width': (0.0001, 0.01), 'tip_friction': (0, 2), 'arm_friction': (0, 2), 'rail_friction': (0, 2), 'inner_rail_friction': (0, 5), 'grip_torque': (0.005, 0.8), 'grip_kp': (0, 100), 'timestep': (0.00025, 0.002), 'z_force_limit': (20, 150), 'head_stiffness': (0, 30), 'head_damping': (0, 3), 'head_limit_deg': (1, 25), 'claw_scale': (0.65, 1.1), 'rod_bending_rigidity': (0.0, 5.0), 'rod_bending_damping': (0.0, 0.02), 'rod_tension': (0.0, 2000.0), 'rod_axial_rigidity': (1.0, 60000.0), 'rod_axial_damping': (0.0, 5.0), 'yaw_kp': (0.0, 50.0), 'yaw_kd': (0.0, 5.0)}
         for name, (lo, hi) in bounds.items():
             value = getattr(self, name)
             if not math.isfinite(value) or not lo <= value <= hi:

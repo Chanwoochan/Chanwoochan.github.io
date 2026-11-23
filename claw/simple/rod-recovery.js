@@ -61,10 +61,11 @@ export class BridgeCycle extends DescentYawCycle {
     if (state !== 'LOWERING' && state !== 'LIFTING') return;
     const z = this.sim.pose()[2];
     const advance = state === 'LIFTING' ? z - this.progressZ : this.progressZ - z;
-    if (this.sim.touchingRod) this.lastRodContact = this.elapsed;
-    // A contact may drop out for a few steps as the elastic rod vibrates.
-    // After a confirmed jam, also monitor the open-claw extraction itself.
-    if (advance >= .003 || (this.releaseAttempts === 0 && this.elapsed - this.lastRodContact > .10)) {
+    const opposingLoad = state === 'LIFTING' ? -this.sim.rodForceZ : this.sim.rodForceZ;
+    if (opposingLoad >= 1) this.lastRodContact = this.elapsed;
+    // Require a rod load opposing the commanded travel, including on retries.
+    // Allow short dropouts as the elastic rod vibrates.
+    if (advance >= .003 || this.elapsed - this.lastRodContact > .10) {
       this.progressZ = z;
       this.lastProgress = this.elapsed;
     } else if (this.elapsed - this.lastProgress >= .45) {

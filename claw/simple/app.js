@@ -1,6 +1,6 @@
 import {DualRenderer} from './outline-renderer.js?v=20261123-rods';
 import {Sounds} from './audio.js';
-import {labels} from './rod-recovery.js?v=20261123-rod-release';
+import {labels} from './rod-recovery.js?v=20261123-yaw-contact';
 
 const $ = id => document.getElementById(id);
 const STORAGE = 'ufo-catcher-simple-defaults-v1';
@@ -40,6 +40,8 @@ const schema = [
   ['집게 힘과 마찰', 'rail_friction', '1·4번 봉 마찰계수', 1, .01, 0, 2, true],
   ['집게 힘과 마찰', 'inner_rail_friction', '2·3번 실리콘 마찰계수', 1, .05, 0, 5, true],
   ['헤드와 계산', 'claw_scale', '집게 전체 크기 (%)', 100, 1, 65, 110],
+  ["헤드와 계산", "yaw_kp", "Yaw P게인 (N·m/rad)", 1, 0.1, 0, 50, true],
+  ["헤드와 계산", "yaw_kd", "Yaw D게인 (N·m·s/rad)", 1, 0.01, 0, 5, true],
   ['헤드와 계산', 'head_stiffness', '헤드 복원 강성 (N·m/rad)', 1, .1, 0, 30, true],
   ['헤드와 계산', 'head_damping', '헤드 감쇠 (N·m·s/rad)', 1, .01, 0, 3, true],
   ['헤드와 계산', 'head_limit_deg', '헤드 최대 꺾임 (°)', 1, .5, 1, 25, true],
@@ -273,7 +275,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-rod-release', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-yaw-contact', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

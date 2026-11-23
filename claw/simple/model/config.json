@@ -29,5 +29,7 @@
   "rod_bending_damping": 0.02,
   "rod_tension": 2000.0,
   "rod_axial_rigidity": 60000.0,
-  "rod_axial_damping": 5.0
+  "rod_axial_damping": 5.0,
+  "yaw_kp": 8.0,
+  "yaw_kd": 0.4
 }
