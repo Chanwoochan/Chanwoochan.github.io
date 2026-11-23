@@ -19,13 +19,15 @@ DECK_FRONT_Y = BODY_HALF_DEPTH - DEPTH
 GLASS_THICKNESS = .006
 FIELD_REAR_Y = .415
 FIELD_FRONT_Y = -FIELD_REAR_Y
-DISPLAY_DEPTH = .380
+DISPLAY_DEPTH = .296
 DISPLAY_FRONT_Y = round(FIELD_REAR_Y - DISPLAY_DEPTH, 3)
 MOUTH_FRONT_Y = -.375
 MOUTH_BACK_Y = DISPLAY_FRONT_Y
 CHUTE_HALF_X = .335
 CHUTE_HALF_Y = (MOUTH_BACK_Y - MOUTH_FRONT_Y) / 2
-BRIDGE_CENTER_Y = round((MOUTH_FRONT_Y + MOUTH_BACK_Y) / 2, 3)
+MOUTH_CENTER_Y = (MOUTH_FRONT_Y + MOUTH_BACK_Y) / 2
+# The rods stay at their established button-side position as the shelf retreats.
+BRIDGE_CENTER_Y = -.170
 HOME_Y = -.330
 GANTRY_MIN_Y = -.345
 
@@ -35,6 +37,18 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     assets = root.find('asset')
     gantry = world.find("body[@name='gantry']")
     head = gantry.find("body[@name='claw_head']")
+    # A passive bearing sits between the driven carriage and the sprung head.
+    # Its axis passes through the existing, already scaled shaft-top pivot.
+    pivot_pos = head.find("joint[@name='head_pivot']").get('pos')
+    swivel = ET.SubElement(gantry, 'body', name='head_swivel')
+    ET.SubElement(swivel, 'joint', name='head_swivel_yaw', type='hinge', axis='0 0 1',
+                  pos=pivot_pos, limited='false', stiffness='0', damping='.012')
+    mount = gantry.find("geom[@name='head_mount']")
+    gantry.remove(mount)
+    mount.set('mass', str(.030 * config.claw_scale**3))
+    swivel.append(mount)
+    gantry.remove(head)
+    swivel.append(head)
     prize = world.find("body[@name='prize']")
     left = -BAY_PITCH / 2
     right = left + WIDTH
@@ -169,7 +183,7 @@ def decorate_cabinet(root, config, geom, box, face, quad):
         field_block(f'field_frame_front_{bay}', x, .375, FIELD_FRONT_Y, MOUTH_FRONT_Y, .015, .145)
         for sign in (-1, 1):
             field_block(f'field_side_frame_{bay}_{sign}', x+sign*.355, .020, MOUTH_FRONT_Y, MOUTH_BACK_Y, .015, .145)
-            box(world, f'field_top_side_{bay}_{sign}', f'{x+sign*.355} {BRIDGE_CENTER_Y} .146',
+            box(world, f'field_top_side_{bay}_{sign}', f'{x+sign*.355} {MOUTH_CENTER_Y} .146',
                 f'.018 {CHUTE_HALF_Y-.002} .001', 'ufo_pearl')
         box(world, f'lower_light_{bay}', f'{x} -.416 .109', '.330 .002 .004', 'field_lamp')
         box(world, f'lower_light_cover_{bay}', f'{x} -.419 .109', '.343 .001 .012', 'ufo_glass')
@@ -215,12 +229,11 @@ def decorate_cabinet(root, config, geom, box, face, quad):
         # The rear platform itself forms the back edge of the playable opening.
         showcase = ET.SubElement(world, 'body', name=f'dummy_showcase_{bay}', pos=f'{x} 0 0')
         field_block(f'display_field_base_{bay}', x, .375, DISPLAY_FRONT_Y, FIELD_REAR_Y, .015, .250)
-        riser_front_y = DISPLAY_FRONT_Y + DISPLAY_DEPTH / 2
+        riser_front_y = FIELD_REAR_Y - .090
         field_block(f'display_field_riser_{bay}', x, .350, riser_front_y, FIELD_REAR_Y, .250, .300)
         box(showcase, f'display_front_lip_{bay}', f'0 {DISPLAY_FRONT_Y+.002} .255', '.350 .002 .005', 'ufo_pearl')
-        for row, (y, z) in enumerate(((DISPLAY_FRONT_Y+.072, .250), (riser_front_y+.082, .300))):
-            for column, bx in enumerate((-.240, -.080, .080, .240)):
-                dummy(showcase, f'dummy_box_{bay}_{row}_{column}', bx, y, z)
+        for column, bx in enumerate((-.240, -.080, .080, .240)):
+            dummy(showcase, f'dummy_box_{bay}_{column}', bx, FIELD_REAR_Y-.045, .300)
         for sign in (-1, 1):
             box(showcase, f'display_mount_rail_{bay}_{sign}', f'{sign*.353} .413 .665', '.008 .004 .495', 'ufo_pearl')
             for index in range(19):

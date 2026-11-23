@@ -81,7 +81,7 @@ class Simulation {
     const p = this.prize * 3, r = this.prize * 9, c = this.config;
     const top = this.data.xpos[p + 2] + (Math.abs(this.data.xmat[r + 6]) * c.box_width +
       Math.abs(this.data.xmat[r + 7]) * c.box_length + Math.abs(this.data.xmat[r + 8]) * c.box_height) / 2;
-    return top < -.02 && Math.abs(this.data.xpos[p]) < 0.335 && this.data.xpos[p + 1] > -0.375 && this.data.xpos[p + 1] < 0.035;
+    return top < -.02 && Math.abs(this.data.xpos[p]) < 0.335 && this.data.xpos[p + 1] > -0.375 && this.data.xpos[p + 1] < 0.119;
   }
   tune(values) {
     const m = this.model;
@@ -210,10 +210,10 @@ function sendFrame() {
     transforms.set(x.subarray(b * 3, b * 3 + 3), b * 7);
     transforms.set(q.subarray(b * 4, b * 4 + 4), b * 7 + 3);
   }
-  const headW = d.qpos[sim.model.jnt_qposadr[sim.headJoint]];
+  const headVertical = d.xmat[9 * sim.model.jnt_bodyid[sim.headJoint] + 8];
   const payload = {type: 'frame', revision, transforms, state: cycle.state, elapsed: d.time,
     heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(sim.pose()),
-    headAngle: 2 * Math.acos(clip(Math.abs(headW), 0, 1)) * 180 / Math.PI,
+    headAngle: Math.acos(clip(headVertical, -1, 1)) * 180 / Math.PI,
     reason: cycle.reason, paused: paused || hidden, winning: winAt !== null};
   postMessage(payload, [transforms.buffer]);
 }

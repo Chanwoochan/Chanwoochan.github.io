@@ -7,9 +7,9 @@
   },
   "chute_opening_mm": {
     "width": 670,
-    "depth": 410
+    "depth": 494
   },
-  "rear_display_depth_mm": 380,
+  "rear_display_depth_mm": 296,
   "bridge_centre_y_mm": -170,
   "dimensions_include": "Two booths and the front control-deck projection; floor excluded.",
   "sources": [

@@ -261,7 +261,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-bridge', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-swivel', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;
