@@ -71,10 +71,12 @@ def configure_head_mount(root, gantry, head, config):
 def add_elastic_rod(bridge, deformable, tendons, rod, config):
     # Small-deflection string with bending stiffness. The intermediate nodes can
     # move sideways and vertically; the support nodes have no joint at all.
-    segments = 10
-    tension = 72.0          # N at the straight reference length
-    axial_rigidity = 1500.0 # EA, N
-    bending_rigidity = .12  # EI, N m^2
+    # Keep ten sections at the default step. Longer steps use longer sections
+    # to lower the highest bending frequency (proportional to 1/dx²).
+    segments = min(10, math.floor(10 * math.sqrt(.0005 / config.timestep)))
+    tension = 576.0          # N at the straight reference length
+    axial_rigidity = 12000.0 # EA, N; preserves the installed prestrain
+    bending_rigidity = .96   # EI, N m^2
     line_mass = .20         # kg/m
     name = rod.get('name')
     left_x, y, z, right_x, _, _ = map(float, rod.get('fromto').split())
@@ -107,7 +109,7 @@ def add_elastic_rod(bridge, deformable, tendons, rod, config):
                   solimp=f'.90 .98 {config.box_contact_width}')
     # The flex material damps bending. Its free vertex slide joints must be undamped.
     ET.SubElement(flex, 'elasticity', young=str(bending_rigidity / (math.pi*radius**4/4)),
-                  damping='.001')
+                  damping='.00035')
 
 
 def decorate_cabinet(root, config, geom, box, face, quad):
