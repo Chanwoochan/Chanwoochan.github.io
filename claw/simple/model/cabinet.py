@@ -30,23 +30,50 @@ HOME_Y = -.330
 GANTRY_MIN_Y = -.345
 
 
+def configure_head_mount(root, gantry, head, config):
+    # All three rotations share the scaled shaft-top pivot. Intrinsic Z-Y-X
+    # makes the first hinge the head's yaw in the cabinet frame.
+    old_pivot = head.find("joint[@name='head_pivot']")
+    pivot = old_pivot.get('pos')
+    head.remove(old_pivot)
+    gantry.remove(gantry.find("joint[@name='gantry_yaw']"))
+    yaw_limit = math.radians(5)
+    yaw_range = f'{-yaw_limit} {yaw_limit}'
+    ET.SubElement(head, 'joint', name='head_swivel_yaw', type='hinge', axis='0 0 1',
+                  pos=pivot, limited='true', range=yaw_range, solreflimit='.004 1',
+                  solimplimit='.99 .999 .001', armature='.0001')
+    for name, axis in (('head_pitch', '0 1 0'), ('head_roll', '1 0 0')):
+        ET.SubElement(head, 'joint', name=name, type='hinge', axis=axis, pos=pivot,
+                      limited='false', stiffness=str(config.head_stiffness),
+                      damping=str(config.head_damping), armature='.0001')
+    motor = root.find("./actuator/position[@name='yaw_motor']")
+    motor.attrib.update(joint='head_swivel_yaw', ctrlrange=yaw_range,
+                        kp='36', kv='2.4', forcerange='-4 4')
+    mount = gantry.find("geom[@name='head_mount']")
+    gantry.remove(mount)
+    mount.set('mass', str(.030 * config.claw_scale**3))
+    head.append(mount)
+
+    # Retain the circular tilt stop even when both pitch and roll are active.
+    # The separation of two axial sites depends on total tilt, independent of yaw.
+    pivot_z = float(pivot.split()[2])
+    a = pivot_z / 2
+    b = a + .001
+    separation = math.hypot(b-a, 2*math.sqrt(a*b)*math.sin(math.radians(config.head_limit_deg)/2))
+    tendon = ET.SubElement(root, 'tendon')
+    stop = ET.SubElement(tendon, 'spatial', name='head_tilt_stop', limited='true',
+                         range=f'0 {separation}', rgba='0 0 0 0', solreflimit='.004 1')
+    for body, name, radius in ((gantry, 'tilt_anchor', a), (head, 'tilt_tip', b)):
+        ET.SubElement(body, 'site', name=name, pos=f'0 0 {pivot_z-radius}', size='.001', rgba='0 0 0 0')
+        ET.SubElement(stop, 'site', site=name)
+
+
 def decorate_cabinet(root, config, geom, box, face, quad):
     world = root.find('worldbody')
     assets = root.find('asset')
     gantry = world.find("body[@name='gantry']")
     head = gantry.find("body[@name='claw_head']")
-    # A passive bearing sits between the driven carriage and the sprung head.
-    # Its axis passes through the existing, already scaled shaft-top pivot.
-    pivot_pos = head.find("joint[@name='head_pivot']").get('pos')
-    swivel = ET.SubElement(gantry, 'body', name='head_swivel')
-    ET.SubElement(swivel, 'joint', name='head_swivel_yaw', type='hinge', axis='0 0 1',
-                  pos=pivot_pos, limited='false', stiffness='0', damping='.012')
-    mount = gantry.find("geom[@name='head_mount']")
-    gantry.remove(mount)
-    mount.set('mass', str(.030 * config.claw_scale**3))
-    swivel.append(mount)
-    gantry.remove(head)
-    swivel.append(head)
+    configure_head_mount(root, gantry, head, config)
     prize = world.find("body[@name='prize']")
     left = -BAY_PITCH / 2
     right = left + WIDTH

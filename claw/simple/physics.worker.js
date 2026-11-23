@@ -1,3 +1,4 @@
+import {HeadTilt} from './head-tilt.js';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
 import {Cycle} from './cycle.js';
@@ -23,7 +24,7 @@ class Simulation {
     const option = model.opt; this.dt = option.timestep; option.delete();
     this.gantry = id(model, 'mjOBJ_BODY', 'gantry');
     this.prize = id(model, 'mjOBJ_BODY', 'prize');
-    this.headJoint = id(model, 'mjOBJ_JOINT', 'head_pivot');
+    this.tilt = new HeadTilt(model, id);
     this.target = new Float64Array(6); this.force = new mj.DoubleBuffer(6);
     this.clawBodies = new Set();
     for (let b = 1; b < model.nbody; b++) {
@@ -114,13 +115,8 @@ class Simulation {
           m.pair_friction[p * 5] = m.pair_friction[p * 5 + 1] = v;
         }
         this.config[key] = v;
-      } else if (key === 'head_stiffness') {
-        m.jnt_stiffness[this.headJoint] = clip(value, 0, 30); this.config[key] = clip(value, 0, 30);
-      } else if (key === 'head_damping') {
-        const a = m.jnt_dofadr[this.headJoint], v = clip(value, 0, 3);
-        for (let i = 0; i < 3; i++) m.dof_damping[a + i] = v; this.config[key] = v;
-      } else if (key === 'head_limit_deg') {
-        const v = clip(value, 1, 25); m.jnt_range[this.headJoint * 2 + 1] = v * Math.PI / 180; this.config[key] = v;
+      } else if (['head_stiffness', 'head_damping', 'head_limit_deg'].includes(key)) {
+        this.config[key] = this.tilt.tune(key, value);
       }
     }
   }
@@ -210,7 +206,7 @@ function sendFrame() {
     transforms.set(x.subarray(b * 3, b * 3 + 3), b * 7);
     transforms.set(q.subarray(b * 4, b * 4 + 4), b * 7 + 3);
   }
-  const headVertical = d.xmat[9 * sim.model.jnt_bodyid[sim.headJoint] + 8];
+  const headVertical = d.xmat[9 * sim.tilt.body + 8];
   const payload = {type: 'frame', revision, transforms, state: cycle.state, elapsed: d.time,
     heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(sim.pose()),
     headAngle: Math.acos(clip(headVertical, -1, 1)) * 180 / Math.PI,
