@@ -8,37 +8,37 @@ from appearance import decorate_scene
 
 @dataclass
 class Config:
-    gap: float = 0.19
-    gap_12: float = 0.178
-    gap_34: float = 0.178
+    gap: float = 0.12
+    gap_12: float = 0.08
+    gap_34: float = 0.08
     rod_radius: float = 0.009
     inner_height: float = 0.22
     outer_height: float = 0.26
-    box_width: float = 0.15
-    box_length: float = 0.3
-    box_height: float = 0.075
+    box_width: float = 0.18
+    box_length: float = 0.25
+    box_height: float = 0.1
     box_mass: float = 0.35
     box_contact_timeconst: float = 0.015
     box_contact_width: float = 0.002
     com_x: float = 0.0
-    com_y: float = 0.0
+    com_y: float = -0.01
     tip_friction: float = 0.3
     arm_friction: float = 0.2
     rail_friction: float = 0.35
     inner_rail_friction: float = 2.0
     grip_torque: float = 0.6
-    grip_kp: float = 15.0
+    grip_kp: float = 1.3
     z_force_limit: float = 40.0
-    head_stiffness: float = 4.0
-    head_damping: float = 0.25
+    head_stiffness: float = 15.0
+    head_damping: float = 1.0
     head_limit_deg: float = 8.0
-    claw_scale: float = 0.9
+    claw_scale: float = 1.0
     timestep: float = 0.00025
-    rod_bending_rigidity: float = 2.0
-    rod_bending_damping: float = 0.005
-    rod_tension: float = 1000.0
-    rod_axial_rigidity: float = 20000.0
-    rod_axial_damping: float = 2.0
+    rod_bending_rigidity: float = 5.0
+    rod_bending_damping: float = 0.02
+    rod_tension: float = 2000.0
+    rod_axial_rigidity: float = 60000.0
+    rod_axial_damping: float = 5.0
 
     @property
     def chute_half_y(self):

@@ -20,14 +20,14 @@
   "grip_torque": 0.6,
   "grip_kp": 1.3,
   "z_force_limit": 40.0,
-  "head_stiffness": 4.0,
-  "head_damping": 0.25,
+  "head_stiffness": 15.0,
+  "head_damping": 1.0,
   "head_limit_deg": 8.0,
   "claw_scale": 1.0,
   "timestep": 0.00025,
-  "rod_bending_rigidity": 2.0,
-  "rod_bending_damping": 0.005,
-  "rod_tension": 1000.0,
-  "rod_axial_rigidity": 20000.0,
-  "rod_axial_damping": 2.0
+  "rod_bending_rigidity": 5.0,
+  "rod_bending_damping": 0.02,
+  "rod_tension": 2000.0,
+  "rod_axial_rigidity": 60000.0,
+  "rod_axial_damping": 5.0
 }
