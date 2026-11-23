@@ -28,7 +28,7 @@ CHUTE_HALF_Y = (MOUTH_BACK_Y - MOUTH_FRONT_Y) / 2
 MOUTH_CENTER_Y = (MOUTH_FRONT_Y + MOUTH_BACK_Y) / 2
 HOME_Y = -.330
 GANTRY_MIN_Y = -.345
-HEAD_YAW_LIMIT_DEG = 5
+HEAD_YAW_LIMIT_DEG = 15
 
 
 def configure_head_mount(root, gantry, head, config):
