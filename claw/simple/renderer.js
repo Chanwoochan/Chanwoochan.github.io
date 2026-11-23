@@ -1,3 +1,4 @@
+import {createRoomScene, readRoomViews, frameRoomCamera, checkerColor} from './room-view.js';
 import * as THREE from '../vendor/three/three.module.js';
 
 const numbers = (value, fallback = []) => value ? value.trim().split(/\s+/).map(Number) : fallback;
@@ -57,12 +58,7 @@ export class DualRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.15;
-    this.renderer.setClearColor('#101b2d');
-    this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog('#101b2d', 7, 18);
-    this.scene.add(new THREE.HemisphereLight('#e6f5ff', '#34405e', 2.1));
-    const key = new THREE.DirectionalLight('#fff6e9', 3.2); key.position.set(-1, -3, 4); this.scene.add(key);
-    const fill = new THREE.DirectionalLight('#b3dfff', 1.7); fill.position.set(2, 1, 2); this.scene.add(fill);
+    this.scene = createRoomScene(this.renderer);
     this.cameras = panes.map(() => { const c = new THREE.PerspectiveCamera(38, 1, .01, 40); c.up.set(0, 0, 1); return c; });
     this.views = panes.map(() => ({zoom: 1, panX: 0, panZ: 0}));
     panes.forEach((pane, i) => this.bindCamera(pane, i));
@@ -104,8 +100,8 @@ export class DualRenderer {
     } else {
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
       const context = canvas.getContext('2d');
-      context.fillStyle = '#283249'; context.fillRect(0, 0, 128, 128);
-      context.fillStyle = '#222c40'; context.fillRect(0, 0, 64, 64); context.fillRect(64, 64, 64, 64);
+      context.fillStyle = checkerColor(node, 'rgb1'); context.fillRect(0, 0, 128, 128);
+      context.fillStyle = checkerColor(node, 'rgb2'); context.fillRect(0, 0, 64, 64); context.fillRect(64, 64, 64, 64);
       texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
     }
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -115,9 +111,10 @@ export class DualRenderer {
     this.revision = revision; this.description = description;
     this.clearGeometry();
     const doc = new DOMParser().parseFromString(description.xml, 'application/xml');
+    this.roomViews = readRoomViews(doc);
     const asset = doc.querySelector('asset'), materials = new Map(), textures = new Map(), xmlGeoms = new Map();
     asset.querySelectorAll('material').forEach(n => materials.set(n.getAttribute('name'), n));
-    asset.querySelectorAll('texture').forEach(n => textures.set(n.getAttribute('name'), n));
+    asset.querySelectorAll('texture:not([type="skybox"])').forEach(n => textures.set(n.getAttribute('name'), n));
     doc.querySelectorAll('worldbody geom[name]').forEach(n => xmlGeoms.set(n.getAttribute('name'), n));
     await Promise.all([...textures].map(([name, node]) => this.texture(name, node)));
     if (revision !== this.revision) return;
@@ -176,11 +173,15 @@ export class DualRenderer {
       }
     }
     for (const [material, geometries] of fixed) this.addMerged(this.scene, geometries, material);
+    this.renderer.shadowMap.needsUpdate = true;
     this.pendingBatches = []; this.needsFirstFrame = false;
   }
   addMerged(group, items, material) {
+    const room = items.some(g => g.name === 'arcade_floor' || g.name.startsWith('room_'));
     const geometry = mergeGeometries(items); items.forEach(g => g.dispose());
-    const mesh = new THREE.Mesh(geometry, material); group.add(mesh); this.meshes.push(mesh);
+    const mesh = new THREE.Mesh(geometry, material); mesh.receiveShadow = room;
+    mesh.castShadow = group === this.scene && !room && !material.transparent;
+    group.add(mesh); this.meshes.push(mesh);
   }
   update(frame) {
     if (frame.revision !== this.revision || !this.description || !this.pendingBatches) return;
@@ -198,13 +199,8 @@ export class DualRenderer {
       const r = pane.getBoundingClientRect(), width = r.width, height = r.height;
       if (!width || !height) return;
       const camera = this.cameras[index], view = this.views[index], full = this.mode === 'cabinet';
-      camera.aspect = width / height; camera.updateProjectionMatrix();
-      const center = new THREE.Vector3(full ? .42125 : 0, 0, full ? .25 : .43);
-      if (index === 0) center.x += view.panX; else center.y -= view.panX;
-      center.z += view.panZ;
-      const distance = (full ? 3.2 : 1.55) * view.zoom * Math.max(1, .82 / camera.aspect);
-      camera.position.copy(center).add(index === 0 ? new THREE.Vector3(0, -distance, distance * .10) : new THREE.Vector3(-distance, 0, distance * .10));
-      camera.lookAt(center);
+      if (!this.roomViews) return;
+      frameRoomCamera(camera, this.roomViews[(full ? 2 : 0) + index], view, index, width / height);
       this.renderer.setViewport(r.left - rect.left, rect.bottom - r.bottom, width, height);
       this.renderer.setScissor(r.left - rect.left, rect.bottom - r.bottom, width, height);
       this.renderer.render(this.scene, camera);

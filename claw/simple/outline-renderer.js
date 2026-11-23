@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three/three.module.js';
-import {DualRenderer as SceneRenderer} from './renderer.js?v=20261123-ink';
+import {DualRenderer as SceneRenderer} from './renderer.js?v=20261123-white-room';
 import {RodMesh, rodOutlineMaterial} from './rod-mesh.js';
 
 function outlined(name) {

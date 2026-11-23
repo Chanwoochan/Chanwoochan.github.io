@@ -31,6 +31,27 @@ GANTRY_MIN_Y = -.345
 HEAD_YAW_LIMIT_DEG = 15
 
 
+def add_room_views(world):
+    # Both play cameras frame the active booth. Distances are in metres
+    # from the same bridge centre, with independently chosen elevations.
+    views = (
+        ('play', (0., MOUTH_CENTER_Y, .450), (1.59, 1.40), (.095, .103)),
+        ('cabinet', (BAY_PITCH / 2, -.075, (GROUND_Z + ROOF_Z) / 2), (3.75, 4.0), (.105, .10)),
+    )
+    for mode, focus, distances, slopes in views:
+        focus_name = f'{mode}_camera_focus'
+        ET.SubElement(world, 'body', name=focus_name, pos=' '.join(map(str, focus)))
+        for side, distance, slope in zip(('front', 'left'), distances, slopes):
+            name = side if mode == 'play' else f'cabinet_{side}'
+            camera = world.find(f"camera[@name='{name}']")
+            if camera is None:
+                camera = ET.SubElement(world, 'camera', name=name)
+            camera.attrib.pop('xyaxes', None)
+            x, y, z = focus
+            eye = (x, y-distance, z+distance*slope) if side == 'front' else (x-distance, y, z+distance*slope)
+            camera.attrib.update(pos=' '.join(map(str, eye)), mode='targetbody', target=focus_name, fovy='38')
+
+
 def configure_head_mount(root, gantry, head, config):
     # All three rotations share the scaled shaft-top pivot. Intrinsic Z-Y-X
     # makes the first hinge the head's yaw in the cabinet frame.
@@ -67,6 +88,37 @@ def configure_head_mount(root, gantry, head, config):
     for body, name, radius in ((gantry, 'tilt_anchor', a), (head, 'tilt_tip', b)):
         ET.SubElement(body, 'site', name=name, pos=f'0 0 {pivot_z-radius}', size='.001', rgba='0 0 0 0')
         ET.SubElement(stop, 'site', site=name)
+
+
+def shape_finger_tip(finger, side, contacts):
+    lower = finger.find(f"geom[@name='{side}_lower']")
+    elbow = finger.find(f"geom[@name='{side}_elbow']")
+    neck = finger.find(f"geom[@name='{side}_tip_neck']")
+    bridge = finger.find(f"geom[@name='{side}_tip_bridge']")
+    disc = finger.find(f"geom[@name='{side}_tip']")
+
+    # These coordinates already include the selected claw scale. The lower
+    # arm's centre is halfway between its elbow and its distal endpoint.
+    middle_x, _, middle_z = map(float, lower.get('pos').split())
+    elbow_x, _, elbow_z = map(float, elbow.get('pos').split())
+    bend_x, bend_z = 2*middle_x - elbow_x, 2*middle_z - elbow_z
+    hinge_x = float(finger.get('pos').split()[0])
+    radius, half_thickness = map(float, disc.get('size').split())
+    angle = math.copysign(math.radians(10), -hinge_x)
+    rotation = f'{math.cos(angle/2)} 0 {math.sin(angle/2)} 0'
+
+    # The innermost point of the tilted cylinder, including thickness,
+    # touches the head centre plane when both finger hinges read zero.
+    extent_x = radius*math.cos(angle) + half_thickness*abs(math.sin(angle))
+    disc_x = -hinge_x + math.copysign(extent_x, hinge_x)
+    disc_z = bend_z - (disc_x - bend_x)*math.tan(angle)
+    disc.attrib.update(pos=f'{disc_x} 0 {disc_z}', quat=rotation)
+    length = math.hypot(disc_x - bend_x, disc_z - bend_z)
+    bridge.attrib.update(pos=f'{(bend_x+disc_x)/2} 0 {(bend_z+disc_z)/2}', quat=rotation,
+                         size=f'{length/2} {radius} {half_thickness}',
+                         mass=str(float(bridge.get('mass')) + float(neck.get('mass'))))
+    finger.remove(neck)
+    contacts.remove(contacts.find(f"pair[@geom2='{side}_tip_neck']"))
 
 
 def add_elastic_rod(bridge, deformable, tendons, rod, config):
@@ -129,8 +181,11 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     configure_head_mount(root, gantry, head, config)
     # A rod (priority 2) sets friction against the carton (priority 1).
     # The finger contact surfaces use their own sliding friction against rods.
+    contacts = root.find('contact')
     for side in ('left', 'right'):
-        for surface in head.findall(f"body[@name='{side}_finger']/geom"):
+        finger = head.find(f"body[@name='{side}_finger']")
+        shape_finger_tip(finger, side, contacts)
+        for surface in finger.findall('geom'):
             if surface.get('class') == 'decor':
                 continue
             tip = surface.get('name').startswith(f'{side}_tip')
@@ -190,7 +245,6 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     # starts over its inner pair, so resetData restores the same offset as well.
     bridge = ET.SubElement(world, 'body', name='bridge_rods', pos=f'0 {MOUTH_CENTER_Y} 0')
     deformable = ET.SubElement(root, 'deformable')
-    contacts = root.find('contact')
     rod_templates = []
     for i in range(1, 5):
         rod = world.find(f"geom[@name='rod_{i}']")
@@ -201,6 +255,31 @@ def decorate_cabinet(root, config, geom, box, face, quad):
     prize_z = prize.get('pos').split()[2]
     prize.set('pos', f'0 {MOUTH_CENTER_Y} {prize_z}')
     geom(world, 'arcade_floor', kind='plane', pos=f'0 0 {GROUND_Z}', size='5 5 .1', material='floor')
+    assets.find("texture[@name='floor_tex']").attrib.update(rgb1='.86 .87 .87', rgb2='.89 .90 .90')
+    assets.find("material[@name='floor']").attrib.update(texrepeat='10 10', reflectance='.03')
+    ET.SubElement(assets, 'texture', name='room_sky', type='skybox', builtin='gradient',
+                  rgb1='.98 .98 .97', rgb2='.92 .94 .95', width='128', height='128')
+    root.find('./visual/rgba').set('haze', '.95 .96 .96 1')
+    material('room_plaster', '.82 .80 .76 1', specular='.06')
+    material('room_trim', '.63 .66 .65 1', specular='.12')
+    material('room_joint', '.69 .69 .66 1', specular='.04')
+
+    # Two perpendicular walls. The baseboard leaves a 12 mm gap behind the cabinet.
+    wall_y, wall_x = back + .024, right + 1.05
+    room_left, room_front, wall_height = -5., -5., 3.05
+    wall_z = GROUND_Z + wall_height / 2
+    mid_x, half_x = (wall_x + room_left) / 2, (wall_x - room_left) / 2
+    mid_y, half_y = (wall_y + room_front) / 2, (wall_y - room_front) / 2
+    box(world, 'room_back_wall', f'{mid_x} {wall_y+.025} {wall_z}', f'{half_x} .025 {wall_height/2}', 'room_plaster')
+    box(world, 'room_side_wall', f'{wall_x+.025} {mid_y} {wall_z}', f'.025 {half_y} {wall_height/2}', 'room_plaster')
+    box(world, 'room_back_skirt', f'{mid_x} {wall_y-.006} {GROUND_Z+.05}', f'{half_x} .006 .05', 'room_trim')
+    box(world, 'room_side_skirt', f'{wall_x-.006} {mid_y} {GROUND_Z+.05}', f'.006 {half_y} .05', 'room_trim')
+    for i in range(6):
+        offset = wall_x - (i + 1) * 1.20
+        if offset > room_left:
+            box(world, f'room_panel_joint_{i}', f'{offset} {wall_y-.0007} {wall_z+.05}',
+                f'.001 .0005 {(wall_height-.10)/2}', 'room_joint')
+    add_room_views(world)
     material('showcase_light', '.94 .98 1 1', emission='.75')
     material('outlet_glass', '.86 .94 1 .085', specular='.75', shininess='.9')
     material('field_lamp', '.66 .90 1 1', emission='.7')
