@@ -1,7 +1,7 @@
 import {HeadTilt} from './head-tilt.js';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
-import {DescentYawCycle as Cycle} from './descent-yaw.js?v=20261123-descent-yaw';
+import {BridgeCycle as Cycle} from './rod-recovery.js?v=20261123-rod-release';
 
 let mj, py, sim, cycle, paused = false, hidden = false, started = false;
 let timer, lastWall = 0, accumulator = 0, lastFrame = 0, winAt = null;
@@ -34,6 +34,7 @@ class Simulation {
         a = model.body_parentid[a];
       }
     }
+    this.rodIds = new Set([1, 2, 3, 4].map(i => id(model, 'mjOBJ_FLEX', 'rod_' + i)));
     this.clawGeoms = new Set();
     for (let g = 0; g < model.ngeom; g++) if (this.clawBodies.has(model.geom_bodyid[g])) this.clawGeoms.add(g);
   }
@@ -60,6 +61,7 @@ class Simulation {
     mj.mj_step(this.model, this.data);
   }
   clawExternalZ() {
+    this.touchingRod = false;
     let forceZ = 0;
     if (!this.data.ncon) return 0;
     const contacts = this.data.contact;
@@ -68,10 +70,12 @@ class Simulation {
         const contact = contacts.get(i);
         if (!contact) continue;
         try {
-          const a = this.clawGeoms.has(contact.geom1), b = this.clawGeoms.has(contact.geom2);
+          const geoms = contact.geom;
+          const a = this.clawGeoms.has(geoms[0]), b = this.clawGeoms.has(geoms[1]);
           if (a === b) continue;
           mj.mj_contactForce(this.model, this.data, i, this.force);
           const f = this.force.GetView(), frame = contact.frame;
+          if (f[0] > 0 && this.rodIds.has(contact.flex[a ? 1 : 0])) this.touchingRod = true;
           forceZ += (frame[2] * f[0] + frame[5] * f[1] + frame[8] * f[2]) * (b ? 1 : -1);
         } finally { contact.delete(); }
       }
@@ -261,6 +265,9 @@ self.onmessage = event => {
     case 'release': cycle.release(message.axis); break;
     case 'pause': cycle.release(); paused = !!message.value; accumulator = 0; sendFrame(); break;
     case 'visibility': cycle.release(); hidden = !!message.hidden; accumulator = 0; lastWall = performance.now(); sendFrame(); break;
+    case 'retry-rod':
+      if (started && !paused && !hidden && winAt === null) cycle.retryRelease();
+      break;
     case 'reset': reset(); break;
     case 'tune': sim.tune(message.values); break;
   }

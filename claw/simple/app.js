@@ -1,6 +1,6 @@
 import {DualRenderer} from './outline-renderer.js?v=20261123-rods';
 import {Sounds} from './audio.js';
-import {labels} from './cycle.js';
+import {labels} from './rod-recovery.js?v=20261123-rod-release';
 
 const $ = id => document.getElementById(id);
 const STORAGE = 'ufo-catcher-simple-defaults-v1';
@@ -168,6 +168,8 @@ function maybeReady() {
 function updateControls() {
   const active = ready && started && !paused && !latestFrame?.winning;
   const state = latestFrame?.state || 'READY_X';
+  $('retry-rod').hidden = state !== 'ROD_BLOCKED' || !ready || !started || winning;
+  $('retry-rod').disabled = !active;
   $('left').disabled = !active || !['READY_X', 'MOVING_X'].includes(state);
   $('back').disabled = !active || !['READY_Y', 'MOVING_Y'].includes(state);
   $('pause').disabled = $('reset').disabled = !ready || !started;
@@ -221,6 +223,7 @@ $('pause').addEventListener('click', () => {
   sounds.setPaused(paused); $('pause').textContent = paused ? '계속하기' : '일시 정지';
   $('engine-status').textContent = paused ? '일시 정지' : '플레이 중'; updateControls();
 });
+$('retry-rod').addEventListener('click', () => worker.postMessage({type: 'retry-rod'}));
 $('reset').addEventListener('click', () => { releaseHeld(); worker.postMessage({type: 'reset'}); });
 for (const mode of ['play', 'cabinet']) $('view-' + mode).addEventListener('click', () => {
   renderer?.setMode(mode);
@@ -270,7 +273,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-yaw15', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261123-rod-release', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

@@ -34,6 +34,7 @@
         <div class="hold-times"><span>좌 <b id="held-x">0.00 s</b></span><span>상 <b id="held-y">0.00 s</b></span></div>
         <p class="cycle-note">좌 버튼을 놓고 상 버튼을 눌러주세요.<br>상 버튼을 놓으면 집게가 자동으로 내려갑니다.</p>
         <p id="reason" class="reason"></p>
+        <button id="retry-rod" class="primary" hidden>걸림 해제 재시도</button>
         <div class="secondary-actions"><button id="pause" class="secondary" disabled>일시 정지</button><button id="reset" class="secondary" disabled>새 판 시작</button></div>
         <div class="sound-row"><label class="toggle"><input type="checkbox" id="sound"><span></span>효과음</label><input id="volume" type="range" min="0" max="100" value="55" aria-label="효과음 음량"><output id="volume-value">55%</output></div>
         <div class="prize-card"><img src="./assets/dummy_front.png" alt="DUMMY라고 적힌 단순한 흰 박스"><div><h3>DUMMY</h3><p>단순한 경품 박스</p></div></div>
@@ -49,6 +50,6 @@
   </main>
   <div id="toast" class="toast" hidden role="status"></div>
   <noscript>이 게임을 실행하려면 브라우저의 JavaScript를 켜주세요.</noscript>
-  <script type="module" src="./app.js?v=20261123-yaw15"></script>
+  <script type="module" src="./app.js?v=20261123-rod-release"></script>
 </body>
 </html>
