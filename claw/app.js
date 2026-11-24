@@ -1,4 +1,4 @@
-import {DualRenderer} from './renderer.js';
+import {DualRenderer} from './renderer.js?v=pc-perf';
 import {Sounds} from './audio.js';
 import {labels} from './cycle.js';
 import {recordWin} from './collection/store.js';
@@ -9,6 +9,7 @@ const prizeMode = 'cygnus';
 const clone = value => JSON.parse(JSON.stringify(value));
 let worker, renderer, latestFrame, base, config, settings, currentAudio;
 let started = false, paused = false, ready = false, sceneReady = false, configured = false, winning = false;
+let nextTelemetry = 0;
 let held = null, holdTimer, toastTimer, pending = null, requestId = 0, fatalError = false;
 const sounds = new Sounds(message => toast(message, true));
 const fields = new Map();
@@ -258,8 +259,7 @@ async function boot() {
   config = values.config; settings = values.cycle; currentAudio = values.audio;
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
-  const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=pc-perf', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;
@@ -270,7 +270,7 @@ async function boot() {
         try {
           await renderer.load(m.scene, m.revision);
           if (renderer.revision !== m.revision) return;
-          sceneReady = true; if (latestFrame) renderer.update(latestFrame); maybeReady();
+          sceneReady = true; if (latestFrame) renderer.requestDraw(latestFrame); maybeReady();
         } catch (e) { error('3D 화면을 준비하지 못했습니다. ' + e.message); }
         break;
       case 'configured':
@@ -287,13 +287,22 @@ async function boot() {
         }
         populate({config, cycle: settings}); maybeReady(); break;
       case 'frame': {
-        latestFrame = m; if (sceneReady) renderer.update(m);
+        const previous = latestFrame;
+        latestFrame = m; if (sceneReady) renderer.requestDraw(m);
+        const stateChanged = !previous || previous.state !== m.state || previous.reason !== m.reason ||
+          previous.winning !== m.winning || previous.paused !== m.paused || previous.revision !== m.revision ||
+          m.elapsed < previous.elapsed;
+        const now = performance.now();
+        if (stateChanged || now >= nextTelemetry) {
+          nextTelemetry = now + 100;
+          $('z-load').firstChild.data = m.zLoad.toFixed(2) + ' ';
+          $('height').firstChild.data = (m.position[2] * 1000).toFixed(0) + ' ';
+          $('head-angle').firstChild.data = m.headAngle.toFixed(1) + ' ';
+          $('sim-time').firstChild.data = m.elapsed.toFixed(1) + ' ';
+          $('held-x').textContent = m.heldX.toFixed(2) + ' s'; $('held-y').textContent = m.heldY.toFixed(2) + ' s';
+        }
+        if (!stateChanged) break;
         $('phase').textContent = m.winning ? '경품 획득! 새 판을 준비합니다' : labels[m.state] || m.state;
-        $('z-load').innerHTML = `${m.zLoad.toFixed(2)} <small>N</small>`;
-        $('height').innerHTML = `${(m.position[2] * 1000).toFixed(0)} <small>mm</small>`;
-        $('head-angle').innerHTML = `${m.headAngle.toFixed(1)} <small>°</small>`;
-        $('sim-time').innerHTML = `${m.elapsed.toFixed(1)} <small>s</small>`;
-        $('held-x').textContent = m.heldX.toFixed(2) + ' s'; $('held-y').textContent = m.heldY.toFixed(2) + ' s';
         $('reason').textContent = m.reason ? '하강 종료: ' + m.reason : '';
         const x = ['READY_X', 'MOVING_X'].includes(m.state), y = ['READY_Y', 'MOVING_Y'].includes(m.state);
         $('step-x').classList.toggle('active', x); $('step-y').classList.toggle('active', y); $('step-auto').classList.toggle('active', !x && !y);

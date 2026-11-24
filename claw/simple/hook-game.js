@@ -1,4 +1,4 @@
-import {Cycle, labels as baseLabels} from './cycle.js';
+import {Cycle, labels as baseLabels} from './cycle.js?v=pc-perf';
 
 export const hookLabels = {
   ...baseLabels,
@@ -113,7 +113,6 @@ export class HookCycle extends Cycle {
   update(dt) {
     if (this.state === 'HOOK_DWELL') {
       this.elapsed += dt;
-      this.zLoad = this.sim.clawExternalZ();
       if (this.elapsed >= this.settings.bottom_wait) this.startLift();
       return;
     }
@@ -122,7 +121,6 @@ export class HookCycle extends Cycle {
       return;
     }
     this.elapsed += dt;
-    this.zLoad = this.sim.clawExternalZ();
     const z = this.sim.pose()[2], s = this.settings;
     if (Math.abs(z - s.home_height) < .002) {
       this.sim.setTarget({x: s.start_x, y: s.start_y});

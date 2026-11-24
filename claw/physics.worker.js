@@ -1,6 +1,6 @@
 import loadMujoco from './vendor/mujoco/mujoco.js';
 import {loadPyodide} from './vendor/pyodide/pyodide.mjs';
-import {Cycle} from './cycle.js';
+import {Cycle} from './cycle.js?v=pc-perf';
 
 let mj, py, sim, cycle, paused = false, hidden = false, started = false;
 let timer, lastWall = 0, accumulator = 0, lastFrame = 0, winAt = null;
@@ -9,10 +9,10 @@ const speedLimits = [.14, .14, .10, .75, .45, .45];
 const send = (type, payload = {}) => postMessage({type, ...payload});
 const phase = state => send('phase', {state});
 const clip = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
-async function fetchFile(path, binary = false) {
+async function fetchFile(path) {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-  return binary ? new Uint8Array(await response.arrayBuffer()) : response.text();
+  return response.text();
 }
 function id(model, kind, name) { return mj.mj_name2id(model, mj.mjtObj[kind].value, name); }
 function name(model, kind, index) { return mj.mj_id2name(model, mj.mjtObj[kind].value, index) || ''; }
@@ -25,6 +25,7 @@ class Simulation {
     this.prize = id(model, 'mjOBJ_BODY', 'prize');
     this.headJoint = id(model, 'mjOBJ_JOINT', 'head_pivot');
     this.target = new Float64Array(6); this.force = new mj.DoubleBuffer(6);
+    this.ctrlRange = Array.from(model.actuator_ctrlrange);
     this.clawBodies = new Set();
     for (let b = 1; b < model.nbody; b++) {
       let a = b;
@@ -51,7 +52,7 @@ class Simulation {
   setTarget({x, y, z, yaw, opening}) {
     const values = [x, y, z === undefined ? undefined : z - .8, yaw, opening, opening];
     for (let i = 0; i < 6; i++) if (values[i] !== undefined)
-      this.target[i] = clip(values[i], this.model.actuator_ctrlrange[i * 2], this.model.actuator_ctrlrange[i * 2 + 1]);
+      this.target[i] = clip(values[i], this.ctrlRange[i * 2], this.ctrlRange[i * 2 + 1]);
   }
   step() {
     const dt = this.dt, ctrl = this.data.ctrl;
@@ -60,14 +61,16 @@ class Simulation {
   }
   clawExternalZ() {
     let forceZ = 0;
-    if (!this.data.ncon) return 0;
+    const count = this.data.ncon;
+    if (!count) return 0;
     const contacts = this.data.contact;
     try {
-      for (let i = 0; i < this.data.ncon; i++) {
+      for (let i = 0; i < count; i++) {
         const contact = contacts.get(i);
         if (!contact) continue;
         try {
-          const a = this.clawGeoms.has(contact.geom1), b = this.clawGeoms.has(contact.geom2);
+          const geoms = contact.geom;
+          const a = this.clawGeoms.has(geoms[0]), b = this.clawGeoms.has(geoms[1]);
           if (a === b) continue;
           mj.mj_contactForce(this.model, this.data, i, this.force);
           const f = this.force.GetView(), frame = contact.frame;
@@ -79,9 +82,12 @@ class Simulation {
   }
   won() {
     const p = this.prize * 3, r = this.prize * 9, c = this.config;
-    const top = this.data.xpos[p + 2] + (Math.abs(this.data.xmat[r + 6]) * c.box_width +
-      Math.abs(this.data.xmat[r + 7]) * c.box_length + Math.abs(this.data.xmat[r + 8]) * c.box_height) / 2;
-    return top < -.02 && Math.abs(this.data.xpos[p]) < .44 && Math.abs(this.data.xpos[p + 1]) < Math.max(.44, c.gap / 2);
+    const pos = this.data.xpos;
+    if (pos[p + 2] >= -.02) return false;
+    const mat = this.data.xmat;
+    const top = pos[p + 2] + (Math.abs(mat[r + 6]) * c.box_width +
+      Math.abs(mat[r + 7]) * c.box_length + Math.abs(mat[r + 8]) * c.box_height) / 2;
+    return top < -.02 && Math.abs(pos[p]) < .44 && Math.abs(pos[p + 1]) < Math.max(.44, c.gap / 2);
   }
   tune(values) {
     const m = this.model;
@@ -124,8 +130,8 @@ class Simulation {
       }
     }
   }
-  scene(xml) {
-    const m = this.model, meshes = {};
+  scene(xml, m) {
+    const meshes = {};
     for (let i = 0; i < m.nmesh; i++) {
       const va = m.mesh_vertadr[i], vn = m.mesh_vertnum[i], fa = m.mesh_faceadr[i], fn = m.mesh_facenum[i];
       const ta = m.mesh_texcoordadr[i], tn = m.mesh_texcoordnum[i];
@@ -145,25 +151,26 @@ class Simulation {
       material: m.geom_matid[i] < 0 ? '' : name(m, 'mjOBJ_MATERIAL', m.geom_matid[i]),
       rgba: Array.from(m.geom_rgba.subarray(i * 4, i * 4 + 4)),
     });
-    return {xml, geoms, meshes, nbody: m.nbody, dynamicBodies: [...this.clawBodies, this.prize]};
+    const dynamicBodies = [];
+    for (let b = 1; b < m.nbody; b++) if (m.body_weldid[b] !== 0) dynamicBodies.push(b);
+    return {xml, geoms, meshes, nbody: m.nbody, dynamicBodies};
   }
 }
 
 async function initRuntimes() {
   send('loading', {message: '물리 엔진과 모델을 준비하고 있어요'});
   const files = ['model_author.py', 'appearance.py', 'cycle_settings.py'];
-  const [engine, python, sources, assets] = await Promise.all([
+  const [engine, python, sources] = await Promise.all([
     loadMujoco({locateFile: file => new URL(`./vendor/mujoco/${file}`, import.meta.url).href}),
     loadPyodide({indexURL: new URL('./vendor/pyodide/', import.meta.url).href}),
     Promise.all(files.map(file => fetchFile(`./model/${file}`))),
-    fetchFile('./assets/manifest.json').then(JSON.parse),
   ]);
   mj = engine; py = python;
-  py.FS.mkdirTree('/model'); mj.FS.mkdirTree('/model/assets');
+  py.FS.mkdirTree('/model');
   files.forEach((file, i) => py.FS.writeFile(`/model/${file}`, sources[i]));
-  await Promise.all(assets.map(async file => mj.FS.writeFile(`/model/assets/${file}`, await fetchFile(`./assets/${file}`, true))));
   py.runPython(`
 import sys, json
+import xml.etree.ElementTree as ET
 sys.path.insert(0, '/model')
 from model_author import Config, model_xml
 from cycle_settings import CycleSettings
@@ -172,7 +179,21 @@ def author(payload):
     config = Config(**values['config'])
     settings = CycleSettings(**values['cycle'])
     settings.validate()
-    return model_xml(config)
+    xml = model_xml(config)
+    root = ET.fromstring(xml)
+    # Three.js reads the original XML and loads the images. MuJoCo only
+    # supplies mesh geometry, material IDs and body-local transforms.
+    assets = root.find('asset')
+    for texture in assets.findall('texture'):
+        assets.remove(texture)
+    for material in assets.findall('material'):
+        material.attrib.pop('texture', None)
+    # Both models must keep identical body IDs for animation.
+    compiler = root.find('compiler')
+    compiler.set('fusestatic', 'false')
+    visual = ET.tostring(root, encoding='unicode')
+    compiler.set('discardvisual', 'true')
+    return json.dumps([xml, visual, ET.tostring(root, encoding='unicode')])
 `);
 }
 async function rebuild(config, settings, requestId) {
@@ -181,12 +202,15 @@ async function rebuild(config, settings, requestId) {
   let fresh;
   try {
     const author = py.globals.get('author');
-    let xml;
-    try { xml = author(JSON.stringify({config, cycle: settings})); } finally { author.destroy(); }
-    const model = mj.MjModel.from_xml_string(xml);
+    let sources;
+    try { sources = JSON.parse(author(JSON.stringify({config, cycle: settings}))); } finally { author.destroy(); }
+    const [xml, visualXml, physicsXml] = sources;
+    const model = mj.MjModel.from_xml_string(physicsXml);
     try { fresh = new Simulation(model, config); } catch (e) { model.delete(); throw e; }
     fresh.reset(settings);
-    const scene = fresh.scene(xml);
+    const visual = mj.MjModel.from_xml_string(visualXml);
+    let scene;
+    try { scene = fresh.scene(xml, visual); } finally { visual.delete(); }
     sim?.dispose(); sim = fresh; fresh = null; revision++;
     cycle = new Cycle(sim, settings, phase); winAt = null;
     send('scene', {scene, revision});
@@ -195,7 +219,7 @@ async function rebuild(config, settings, requestId) {
     phase(cycle.state); sendFrame();
   } catch (error) {
     fresh?.dispose(); send('error', {message: String(error?.message || error), requestId, recoverable: !!sim});
-  } finally { busy = false; lastWall = performance.now(); accumulator = 0; timer = setTimeout(tick, 4); }
+  } finally { busy = false; setActivity(); }
 }
 function reset() {
   if (!sim) return;
@@ -212,10 +236,16 @@ function sendFrame() {
   }
   const headW = d.qpos[sim.model.jnt_qposadr[sim.headJoint]];
   const payload = {type: 'frame', revision, transforms, state: cycle.state, elapsed: d.time,
-    heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(sim.pose()),
+    heldX: cycle.heldX, heldY: cycle.heldY, zLoad: sim.clawExternalZ(), position: Array.from(sim.pose()),
     headAngle: 2 * Math.acos(clip(Math.abs(headW), 0, 1)) * 180 / Math.PI,
     reason: cycle.reason, paused: paused || hidden, winning: winAt !== null};
   postMessage(payload, [transforms.buffer]);
+}
+function setActivity() {
+  clearTimeout(timer);
+  accumulator = 0;
+  lastWall = performance.now();
+  if (sim && !busy && started && !paused && !hidden) timer = setTimeout(tick, 4);
 }
 function tick() {
   if (!sim || busy) return;
@@ -244,14 +274,20 @@ self.onmessage = event => {
     }).catch(error => send('error', {message: String(error?.message || error), recoverable: !!sim}));
     return;
   }
+  if (message.type === 'visibility') {
+    hidden = !!message.hidden;
+    cycle?.release();
+    setActivity();
+    if (sim && !busy) sendFrame();
+    return;
+  }
   if (!sim || busy) return;
   switch (message.type) {
-    case 'start': started = true; paused = false; lastWall = performance.now(); sendFrame(); break;
+    case 'start': started = true; paused = false; setActivity(); sendFrame(); break;
     case 'press': if (started && !paused && !hidden && winAt === null) { inputDeadline = performance.now() + 1000; cycle.press(message.axis); } break;
     case 'hold': inputDeadline = performance.now() + 1000; break;
     case 'release': cycle.release(message.axis); break;
-    case 'pause': cycle.release(); paused = !!message.value; accumulator = 0; sendFrame(); break;
-    case 'visibility': cycle.release(); hidden = !!message.hidden; accumulator = 0; lastWall = performance.now(); sendFrame(); break;
+    case 'pause': cycle.release(); paused = !!message.value; setActivity(); sendFrame(); break;
     case 'reset': reset(); break;
     case 'tune': sim.tune(message.values); break;
   }

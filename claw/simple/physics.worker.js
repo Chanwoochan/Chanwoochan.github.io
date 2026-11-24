@@ -1,8 +1,8 @@
 import {HeadTilt} from './head-tilt.js?v=20261123-passive-pitch';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
-import {BridgeCycle} from './rod-recovery.js?v=20261123-yaw-contact';
-import {HookCycle} from './hook-game.js?v=20261124-d-ring';
+import {BridgeCycle} from './rod-recovery.js?v=pc-perf';
+import {HookCycle} from './hook-game.js?v=pc-perf';
 const hookMode = new URL(import.meta.url).searchParams.get('mode') === 'hook-ring';
 const Cycle = hookMode ? HookCycle : BridgeCycle;
 
@@ -13,10 +13,10 @@ const speedLimits = [.14, .14, .10, .75, .45, .45];
 const send = (type, payload = {}) => postMessage({type, ...payload});
 const phase = state => send('phase', {state});
 const clip = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
-async function fetchFile(path, binary = false) {
+async function fetchFile(path) {
   const response = await fetch(path, {cache: 'no-cache'});
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-  return binary ? new Uint8Array(await response.arrayBuffer()) : response.text();
+  return response.text();
 }
 function id(model, kind, name) { return mj.mj_name2id(model, mj.mjtObj[kind].value, name); }
 function name(model, kind, index) { return mj.mj_id2name(model, mj.mjtObj[kind].value, index) || ''; }
@@ -31,6 +31,7 @@ class Simulation {
     this.strokeAddress = this.qadr('gantry_z');
     this.drivePosition = new Float64Array(3);
     this.target = new Float64Array(model.nu); this.force = new mj.DoubleBuffer(6);
+    this.ctrlRange = Array.from(model.actuator_ctrlrange);
     this.clawBodies = new Set();
     for (let b = 1; b < model.nbody; b++) {
       let a = b;
@@ -64,7 +65,7 @@ class Simulation {
   setTarget({x, y, z, yaw, opening}) {
     const values = [x, y, z === undefined ? undefined : z - .8, yaw, opening, opening];
     for (let i = 0; i < this.target.length; i++) if (values[i] !== undefined)
-      this.target[i] = clip(values[i], this.model.actuator_ctrlrange[i * 2], this.model.actuator_ctrlrange[i * 2 + 1]);
+      this.target[i] = clip(values[i], this.ctrlRange[i * 2], this.ctrlRange[i * 2 + 1]);
   }
   step() {
     const dt = this.dt, ctrl = this.data.ctrl;
@@ -74,10 +75,11 @@ class Simulation {
   clawExternalZ() {
     this.rodForceZ = 0;
     let forceZ = 0;
-    if (!this.data.ncon) return 0;
+    const count = this.data.ncon;
+    if (!count) return 0;
     const contacts = this.data.contact;
     try {
-      for (let i = 0; i < this.data.ncon; i++) {
+      for (let i = 0; i < count; i++) {
         const contact = contacts.get(i);
         if (!contact) continue;
         try {
@@ -96,9 +98,12 @@ class Simulation {
   }
   won() {
     const p = this.prize * 3, r = this.prize * 9, c = this.config;
-    const top = this.data.xpos[p + 2] + (Math.abs(this.data.xmat[r + 6]) * c.box_width +
-      Math.abs(this.data.xmat[r + 7]) * c.box_length + Math.abs(this.data.xmat[r + 8]) * c.box_height) / 2;
-    return top < -.02 && Math.abs(this.data.xpos[p]) < 0.335 && this.data.xpos[p + 1] > -0.375 && this.data.xpos[p + 1] < 0.119;
+    const pos = this.data.xpos;
+    if (pos[p + 2] >= -.02) return false;
+    const mat = this.data.xmat;
+    const top = pos[p + 2] + (Math.abs(mat[r + 6]) * c.box_width +
+      Math.abs(mat[r + 7]) * c.box_length + Math.abs(mat[r + 8]) * c.box_height) / 2;
+    return top < -.02 && Math.abs(pos[p]) < 0.335 && pos[p + 1] > -0.375 && pos[p + 1] < 0.119;
   }
   tune(values) {
     const m = this.model;
@@ -143,8 +148,8 @@ class Simulation {
       }
     }
   }
-  scene(xml) {
-    const m = this.model, meshes = {};
+  scene(xml, m) {
+    const meshes = {};
     for (let i = 0; i < m.nmesh; i++) {
       const va = m.mesh_vertadr[i], vn = m.mesh_vertnum[i], fa = m.mesh_faceadr[i], fn = m.mesh_facenum[i];
       const ta = m.mesh_texcoordadr[i], tn = m.mesh_texcoordnum[i];
@@ -164,12 +169,14 @@ class Simulation {
       material: m.geom_matid[i] < 0 ? '' : name(m, 'mjOBJ_MATERIAL', m.geom_matid[i]),
       rgba: Array.from(m.geom_rgba.subarray(i * 4, i * 4 + 4)),
     });
+    const dynamicBodies = [];
+    for (let b = 1; b < m.nbody; b++) if (m.body_weldid[b] !== 0) dynamicBodies.push(b);
     const rods = [...this.rodIds].map(f => {
       const mat = m.flex_matid[f];
       return {first: m.flex_vertadr[f], count: m.flex_vertnum[f], radius: m.flex_radius[f],
         color: Array.from(m.mat_rgba.subarray(mat * 4, mat * 4 + 3)), metal: name(m, 'mjOBJ_MATERIAL', mat) === 'steel'};
     });
-    return {xml, geoms, meshes, rods, nbody: m.nbody, dynamicBodies: [...this.clawBodies, this.prize, ...(hookMode ? [id(m, 'mjOBJ_BODY', 'hook_shelf')] : [])]};
+    return {xml, geoms, meshes, rods, nbody: m.nbody, dynamicBodies};
   }
 }
 
@@ -177,18 +184,17 @@ async function initRuntimes() {
   send('loading', {message: '물리 엔진과 모델을 준비하고 있어요'});
   const files = ['model_author.py', 'appearance.py', 'cycle_settings.py', 'cabinet.py'];
   if (hookMode) files.push('hook_ring.py');
-  const [engine, python, sources, assets] = await Promise.all([
+  const [engine, python, sources] = await Promise.all([
     loadMujoco({locateFile: file => new URL(`../vendor/mujoco/${file}`, import.meta.url).href}),
     loadPyodide({indexURL: new URL('../vendor/pyodide/', import.meta.url).href}),
     Promise.all(files.map(file => fetchFile(`./model/${file}${new URL(import.meta.url).search}`))),
-    fetchFile('./assets/manifest.json').then(JSON.parse),
   ]);
   mj = engine; py = python;
-  py.FS.mkdirTree('/model'); mj.FS.mkdirTree('/model/assets');
+  py.FS.mkdirTree('/model');
   files.forEach((file, i) => py.FS.writeFile(`/model/${file}`, sources[i]));
-  await Promise.all(assets.map(async file => mj.FS.writeFile(`/model/assets/${file}`, await fetchFile(`./assets/${file}`, true))));
   py.runPython(`
 import sys, json
+import xml.etree.ElementTree as ET
 sys.path.insert(0, '/model')
 from ${hookMode ? 'hook_ring' : 'model_author'} import Config, model_xml
 from ${hookMode ? 'hook_ring' : 'cycle_settings'} import CycleSettings
@@ -197,7 +203,21 @@ def author(payload):
     config = Config(**values['config'])
     settings = CycleSettings(**values['cycle'])
     settings.validate()
-    return model_xml(config)
+    xml = model_xml(config)
+    root = ET.fromstring(xml)
+    # Three.js reads the original XML and loads the images. MuJoCo only
+    # supplies mesh geometry, material IDs and body-local transforms.
+    assets = root.find('asset')
+    for texture in assets.findall('texture'):
+        assets.remove(texture)
+    for material in assets.findall('material'):
+        material.attrib.pop('texture', None)
+    # Both models must keep identical body IDs for animation.
+    compiler = root.find('compiler')
+    compiler.set('fusestatic', 'false')
+    visual = ET.tostring(root, encoding='unicode')
+    compiler.set('discardvisual', 'true')
+    return json.dumps([xml, visual, ET.tostring(root, encoding='unicode')])
 `);
 }
 async function rebuild(config, settings, requestId) {
@@ -206,12 +226,15 @@ async function rebuild(config, settings, requestId) {
   let fresh;
   try {
     const author = py.globals.get('author');
-    let xml;
-    try { xml = author(JSON.stringify({config, cycle: settings})); } finally { author.destroy(); }
-    const model = mj.MjModel.from_xml_string(xml);
+    let sources;
+    try { sources = JSON.parse(author(JSON.stringify({config, cycle: settings}))); } finally { author.destroy(); }
+    const [xml, visualXml, physicsXml] = sources;
+    const model = mj.MjModel.from_xml_string(physicsXml);
     try { fresh = new Simulation(model, config); } catch (e) { model.delete(); throw e; }
     fresh.reset(settings);
-    const scene = fresh.scene(xml);
+    const visual = mj.MjModel.from_xml_string(visualXml);
+    let scene;
+    try { scene = fresh.scene(xml, visual); } finally { visual.delete(); }
     sim?.dispose(); sim = fresh; fresh = null; revision++;
     cycle = new Cycle(sim, settings, phase); winAt = null;
     send('scene', {scene, revision});
@@ -220,7 +243,7 @@ async function rebuild(config, settings, requestId) {
     phase(cycle.state); sendFrame();
   } catch (error) {
     fresh?.dispose(); send('error', {message: String(error?.message || error), requestId, recoverable: !!sim});
-  } finally { busy = false; lastWall = performance.now(); accumulator = 0; timer = setTimeout(tick, 4); }
+  } finally { busy = false; setActivity(); }
 }
 function reset() {
   if (!sim) return;
@@ -238,10 +261,16 @@ function sendFrame() {
   const headVertical = d.xmat[9 * sim.tilt.body + 8];
   const rodPoints = sim.rodIds.size ? new Float32Array(d.flexvert_xpos) : new Float32Array(0);
   const payload = {type: 'frame', revision, transforms, rodPoints, state: cycle.state, elapsed: d.time,
-    heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(d.xpos.subarray(3 * sim.tilt.body, 3 * sim.tilt.body + 3)),
+    heldX: cycle.heldX, heldY: cycle.heldY, zLoad: sim.clawExternalZ(), position: Array.from(d.xpos.subarray(3 * sim.tilt.body, 3 * sim.tilt.body + 3)),
     headAngle: Math.acos(clip(headVertical, -1, 1)) * 180 / Math.PI,
     reason: cycle.reason, paused: paused || hidden, winning: winAt !== null};
   postMessage(payload, [transforms.buffer, rodPoints.buffer]);
+}
+function setActivity() {
+  clearTimeout(timer);
+  accumulator = 0;
+  lastWall = performance.now();
+  if (sim && !busy && started && !paused && !hidden) timer = setTimeout(tick, 4);
 }
 function tick() {
   if (!sim || busy) return;
@@ -270,14 +299,20 @@ self.onmessage = event => {
     }).catch(error => send('error', {message: String(error?.message || error), recoverable: !!sim}));
     return;
   }
+  if (message.type === 'visibility') {
+    hidden = !!message.hidden;
+    cycle?.release();
+    setActivity();
+    if (sim && !busy) sendFrame();
+    return;
+  }
   if (!sim || busy) return;
   switch (message.type) {
-    case 'start': started = true; paused = false; lastWall = performance.now(); sendFrame(); break;
+    case 'start': started = true; paused = false; setActivity(); sendFrame(); break;
     case 'press': if (started && !paused && !hidden && winAt === null) { inputDeadline = performance.now() + 1000; cycle.press(message.axis); } break;
     case 'hold': inputDeadline = performance.now() + 1000; break;
     case 'release': cycle.release(message.axis); break;
-    case 'pause': cycle.release(); paused = !!message.value; accumulator = 0; sendFrame(); break;
-    case 'visibility': cycle.release(); hidden = !!message.hidden; accumulator = 0; lastWall = performance.now(); sendFrame(); break;
+    case 'pause': cycle.release(); paused = !!message.value; setActivity(); sendFrame(); break;
     case 'retry-rod':
       if (started && !paused && !hidden && winAt === null) cycle.retryRelease();
       break;

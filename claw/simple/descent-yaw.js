@@ -1,4 +1,4 @@
-import {Cycle} from './cycle.js';
+import {Cycle} from './cycle.js?v=pc-perf';
 
 const yawTravelMetres = 0.30;
 

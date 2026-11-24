@@ -55,7 +55,7 @@ export class DualRenderer {
     this.canvas = canvas; this.panes = panes; this.groups = new Map(); this.meshes = [];
     this.textures = new Map(); this.materials = new Map(); this.mode = 'play'; this.revision = -1;
     this.renderer = new THREE.WebGLRenderer({canvas, antialias: true, alpha: false, powerPreference: 'high-performance'});
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.5 : 2));
+    this.renderer.autoClear = false;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.15;
     this.scene = createRoomScene(this.renderer);
@@ -63,16 +63,32 @@ export class DualRenderer {
     this.views = panes.map(() => ({zoom: 1, panX: 0, panZ: 0}));
     panes.forEach((pane, i) => this.bindCamera(pane, i));
     this.observer = new ResizeObserver(() => this.resize()); this.observer.observe(canvas.parentElement);
+    canvas.addEventListener('webglcontextrestored', () => { this.renderer.shadowMap.needsUpdate = true; this.requestDraw(); });
     this.resize();
   }
   resize() {
     const r = this.canvas.parentElement.getBoundingClientRect();
-    if (r.width && r.height) this.renderer.setSize(r.width, r.height, false);
+    if (!r.width || !r.height) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.5, Math.sqrt(1440000 / (r.width * r.height)));
+    this.renderer.setDrawingBufferSize(r.width, r.height, ratio);
+    this.requestDraw();
+  }
+  requestDraw(frame) {
+    if (frame) this.nextFrame = frame;
+    if (this.drawPending) return;
+    this.drawPending = true;
+    requestAnimationFrame(() => {
+      this.drawPending = false;
+      if (this.nextFrame) this.update(this.nextFrame);
+      this.nextFrame = null;
+      this.draw();
+    });
   }
   bindCamera(pane, index) {
     let drag = null;
     pane.addEventListener('wheel', event => {
       event.preventDefault(); const v = this.views[index]; v.zoom = Math.max(.4, Math.min(3, v.zoom * Math.exp(event.deltaY * .001)));
+      this.requestDraw();
     }, {passive: false});
     pane.addEventListener('pointerdown', event => {
       if (event.button !== 0) return;
@@ -83,12 +99,13 @@ export class DualRenderer {
       const v = this.views[index], scale = .002 * v.zoom;
       v.panX -= (event.clientX - drag.x) * scale; v.panZ += (event.clientY - drag.y) * scale;
       drag.x = event.clientX; drag.y = event.clientY;
+      this.requestDraw();
     });
     const stop = () => { drag = null; };
     pane.addEventListener('pointerup', stop); pane.addEventListener('pointercancel', stop); pane.addEventListener('lostpointercapture', stop);
-    pane.addEventListener('dblclick', () => { this.views[index] = {zoom: 1, panX: 0, panZ: 0}; });
+    pane.addEventListener('dblclick', () => { this.views[index] = {zoom: 1, panX: 0, panZ: 0}; this.requestDraw(); });
   }
-  setMode(mode) { this.mode = mode; this.views.forEach(v => Object.assign(v, {zoom: 1, panX: 0, panZ: 0})); }
+  setMode(mode) { this.mode = mode; this.views.forEach(v => Object.assign(v, {zoom: 1, panX: 0, panZ: 0})); this.requestDraw(); }
   async texture(name, node) {
     if (this.textures.has(name)) return this.textures.get(name);
     let texture;

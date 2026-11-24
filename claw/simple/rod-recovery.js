@@ -1,5 +1,5 @@
-import {labels as cycleLabels} from './cycle.js';
-import {DescentYawCycle} from './descent-yaw.js';
+import {labels as cycleLabels} from './cycle.js?v=pc-perf';
+import {DescentYawCycle} from './descent-yaw.js?v=pc-perf';
 
 export const labels = {
   ...cycleLabels,

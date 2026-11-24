@@ -31,8 +31,9 @@ export class Cycle {
     this.sim.data.ctrl[2] = this.sim.target[2]; this.enter('CLOSING');
   }
   update(dt) {
-    const s = this.settings, sim = this.sim, p = sim.pose();
-    this.elapsed += dt; this.zLoad = sim.clawExternalZ();
+    const s = this.settings, sim = this.sim;
+    this.elapsed += dt;
+    if (this.state === 'LOWERING' || this.state === 'LIFTING') this.zLoad = sim.clawExternalZ();
     switch (this.state) {
       case 'MOVING_X': this.heldX += dt; sim.setTarget({x: sim.target[0] - s.move_speed * dt}); break;
       case 'MOVING_Y': this.heldY += dt; sim.setTarget({y: sim.target[1] + s.move_speed * dt}); break;
@@ -42,19 +43,21 @@ export class Cycle {
         this.loadTime = this.zLoad >= s.z_load_threshold ? this.loadTime + dt : 0;
         if (this.zLoad >= s.z_load_threshold && this.loadTime >= s.contact_hold_time)
           this.stopDescent(`Z 접촉 하중 ${this.zLoad.toFixed(2)} N ≥ ${s.z_load_threshold} N`);
-        else if (p[2] <= s.lower_height + .002 && Math.abs(sim.data.ctrl[2] - sim.target[2]) < .001)
+        else if (sim.pose()[2] <= s.lower_height + .002 && Math.abs(sim.data.ctrl[2] - sim.target[2]) < .001)
           this.stopDescent('하강 한계 도달');
         break;
       case 'CLOSING':
         if (this.elapsed >= s.close_duration) { sim.setTarget({z: s.home_height}); this.enter('LIFTING'); } break;
       case 'LIFTING':
-        if (Math.abs(p[2] - s.home_height) < .002) {
+        if (Math.abs(sim.pose()[2] - s.home_height) < .002) {
           sim.setTarget({x: s.release_x, y: s.release_y, z: s.home_height}); this.enter('MOVING_CENTER');
         } break;
-      case 'MOVING_CENTER':
+      case 'MOVING_CENTER': {
+        const p = sim.pose();
         if (Math.abs(p[0] - s.release_x) < .003 && Math.abs(p[1] - s.release_y) < .003 && Math.abs(p[2] - s.home_height) < .003) {
           sim.setTarget({opening: s.open_angle}); this.enter('RELEASING');
         } break;
+      }
       case 'RELEASING':
         if (this.elapsed >= s.open_duration + s.release_duration) {
           sim.setTarget({opening: s.closed_angle}); this.enter('RECLOSING');
@@ -63,10 +66,12 @@ export class Cycle {
         if (this.elapsed >= s.close_duration) {
           sim.setTarget({x: s.start_x, y: s.start_y, z: s.home_height, yaw: 0}); this.enter('RETURNING');
         } break;
-      case 'RETURNING':
+      case 'RETURNING': {
+        const p = sim.pose();
         if (Math.abs(p[0] - s.start_x) < .003 && Math.abs(p[1] - s.start_y) < .003 && Math.abs(p[2] - s.home_height) < .003) {
           this.heldX = this.heldY = 0; this.reason = ''; this.enter('READY_X');
         } break;
+      }
     }
   }
 }
