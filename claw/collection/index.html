@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fbfaf7">
+  <title>경품 도감 · UFO캐쳐</title>
+  <link rel="icon" href="../simple/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../lobby.css?v=collection">
+  <link rel="stylesheet" href="./collection.css">
+</head>
+<body>
+  <header class="topbar"><nav class="wrap" aria-label="주 메뉴">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true"></span>UFO캐쳐</a>
+    <a class="classic" href="../">← 게임 로비</a>
+  </nav></header>
+  <main class="wrap">
+    <header class="collection-head">
+      <div><h1>경품 도감</h1><p>뽑기에 성공하면 이 브라우저의 도감에 기록됩니다.</p></div>
+      <div class="summary" aria-live="polite">
+        <span>수집한 경품</span><strong id="total">불러오는 중…</strong>
+        <progress id="progress" aria-label="경품 수집률"></progress>
+      </div>
+    </header>
+    <p id="storage-error" role="status" hidden>이 브라우저에서 획득 기록을 불러올 수 없습니다.</p>
+    <section class="shelf" aria-label="경품 목록" id="shelf"></section>
+    <noscript>획득 기록을 보려면 브라우저의 JavaScript를 켜주세요.</noscript>
+  </main>
+  <template id="prize">
+    <article class="prize">
+      <div class="display"><img class="package" alt=""><span class="ownership"></span></div>
+      <div class="details">
+        <h2></h2><p class="description"></p>
+        <dl class="first" hidden><dt>첫 획득</dt><dd></dd></dl>
+        <ul class="games" aria-label="플레이할 게임과 획득 수"></ul>
+      </div>
+    </article>
+  </template>
+  <script type="module" src="./collection.js"></script>
+</body>
+</html>

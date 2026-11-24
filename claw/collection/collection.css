@@ -1,0 +1,35 @@
+.collection-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 26px; }
+.collection-head h1 { margin-bottom: 10px; }
+.collection-head p, .description { color: #605f69; font-size: 15px; line-height: 1.65; }
+.summary { min-width: 155px; display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 8px 12px; }
+.summary span { color: #565b68; font-size: 13px; }
+.summary strong { justify-self: end; font-size: 19px; }
+progress { width: 100%; height: 7px; grid-column: 1 / -1; appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: #dfe5e8; }
+progress::-webkit-progress-bar { background: #dfe5e8; }
+progress::-webkit-progress-value { background: #37688c; }
+progress::-moz-progress-bar { background: #37688c; }
+#storage-error { margin-bottom: 16px; color: #8a4126; }
+.shelf { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.prize { border: 1px solid #d8d7d2; border-radius: 16px; overflow: hidden; background: #fff; }
+.display { position: relative; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; padding: 28px; height: clamp(225px, 25vw, 290px); background: #e5eff6; isolation: isolate; }
+.cygnus .display { background: #e8e3f3; }
+.display::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(#36384c23 1px, transparent 1.2px); background-size: 12px 12px; mask-image: linear-gradient(130deg, transparent, black); }
+.package { position: relative; height: 100%; max-height: 220px; width: auto; max-width: 78%; object-fit: contain; transform: perspective(680px) rotateY(-12deg) rotateZ(-3deg); box-shadow: 4px 2px 0 #4a56655e, 8px 12px 18px #29334125; }
+.ownership { position: absolute; top: 16px; right: 16px; border-radius: 20px; padding: 5px 11px; background: #fffffff0; color: #545664; font-size: 13px; font-weight: 700; }
+.owned .ownership { background: #234d40; color: #fff; }
+.details { padding: 22px clamp(17px, 3vw, 28px) 10px; }
+.details h2 { font-size: clamp(23px, 3vw, 30px); letter-spacing: -.06em; margin-bottom: 6px; }
+.first { margin: 10px 0 0; font-size: 13px; }
+.first dt, .first dd { display: inline; margin: 0; }
+.first dt { color: #696673; margin-right: 8px; }
+.games { list-style: none; padding: 0; margin-top: 18px; }
+.games li { border-top: 1px solid #e3e2de; }
+.games a { display: flex; align-items: center; gap: 10px; min-height: 46px; font-size: 15px; font-weight: 700; }
+.games a:hover { color: #3b6083; }
+.games small { margin-left: auto; color: #625f69; font-size: 12px; font-weight: 500; }
+@media (max-width: 600px) {
+  .collection-head { flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+  .summary { min-width: 160px; }
+  .shelf { grid-template-columns: 1fr; gap: 16px; }
+  .display { height: 210px; }
+}

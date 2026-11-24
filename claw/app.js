@@ -1,9 +1,11 @@
 import {DualRenderer} from './renderer.js';
 import {Sounds} from './audio.js';
 import {labels} from './cycle.js';
+import {recordWin} from './collection/store.js';
 
 const $ = id => document.getElementById(id);
 const STORAGE = 'cygnus-ufo-defaults-v1';
+const prizeMode = 'cygnus';
 const clone = value => JSON.parse(JSON.stringify(value));
 let worker, renderer, latestFrame, base, config, settings, currentAudio;
 let started = false, paused = false, ready = false, sceneReady = false, configured = false, winning = false;
@@ -298,7 +300,14 @@ async function boot() {
         updateControls(); break;
       }
       case 'phase': if (started && !winning) sounds.play(m.state); break;
-      case 'win': winning = true; releaseHeld(); $('win').hidden = false; sounds.play('WIN'); break;
+      case 'win':
+        if (winning) break;
+        winning = true;
+        releaseHeld();
+        $('win').hidden = false;
+        recordWin(prizeMode).catch(() => toast('경품을 획득했지만 이 브라우저에 도감을 저장할 수 없습니다.', true));
+        sounds.play('WIN');
+        break;
       case 'reset': winning = false; $('win').hidden = true; if (started) sounds.play('READY_X'); break;
       case 'error': error(m.message, m.recoverable); break;
     }
