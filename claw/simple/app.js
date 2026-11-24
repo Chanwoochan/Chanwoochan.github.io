@@ -1,7 +1,7 @@
 import {DualRenderer} from './outline-renderer.js?v=20261123-ceiling-pivot';
 import {Sounds} from './audio.js';
 import {labels as bridgeLabels} from './rod-recovery.js?v=20261123-yaw-contact';
-import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=20261124-hook-settings';
+import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=20261124-hook-shapes';
 const hookMode = new URL(location.href).searchParams.get('mode') === 'hook-ring';
 const labels = hookMode ? hookLabels : bridgeLabels;
 if (hookMode) setHookPage();
@@ -172,7 +172,7 @@ function maybeReady() {
   if (!configured || !sceneReady || fatalError) return;
   ready = true; $('engine-dot').classList.add('ready'); $('engine-status').textContent = '준비 완료';
   $('loading-line').hidden = true; $('start').textContent = '플레이 시작'; $('start').disabled = false;
-  $('loading-message').textContent = hookMode ? '링의 위치를 정하고 받침대의 후크를 노리세요.' : '좌, 상 버튼으로 집게의 위치를 정해보세요.';
+  $('loading-message').textContent = hookMode ? '줄 끝을 받침대의 후크나 D링에 맞추세요.' : '좌, 상 버튼으로 집게의 위치를 정해보세요.';
   if (started) { $('entry').hidden = true; $('engine-status').textContent = paused ? '일시 정지' : '플레이 중'; }
   $('apply-settings').disabled = $('save-settings').disabled = false; updateControls();
 }
@@ -285,7 +285,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261124-hook-settings' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261124-hook-shapes' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

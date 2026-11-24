@@ -45,15 +45,23 @@ def segment(body, name, start, end, radius, color, mass):
                          friction='.36 .002 .0001', condim='3', solref='.008 1')
 
 
-def ring_outline(kind):
-    # The chain is attached at the top centre. All outlines span [-1, 1] in X.
+# Continuous wire from the mounted stem to the free lip of a question mark.
+# Its centreline has unit width and height. The two mounts use opposite ends up.
+QUESTION_PROFILE = (
+    (0, 0), (0, .25), (.02, .33), (.09, .40), (.23, .47), (.36, .53),
+    (.45, .60), (.50, .69), (.50, .77), (.46, .85), (.39, .92),
+    (.27, .97), (.14, 1), (0, 1), (-.16, .98), (-.30, .94),
+    (-.41, .87), (-.48, .79), (-.50, .70),
+)
+
+
+def hanging_outline(kind):
+    if kind == 2:
+        return [(-2*x, -2.7*z) for x, z in QUESTION_PROFILE]
     circle = [(math.sin(i*math.tau/24), math.cos(i*math.tau/24)-1) for i in range(24)]
-    if kind == 1:  # upright oval
-        return [(x, 1.4*z) for x, z in circle]
-    if kind == 2:  # D ring with a flat lower bar and rounded bottom corners
-        return circle[:7] + [(1, -1.62), (.94, -1.75), (.80, -1.8),
-                             (-.80, -1.8), (-.94, -1.75), (-1, -1.62)] + circle[18:]
-    return circle
+    if kind == 1:
+        circle = [(x, 1.4*z) for x, z in circle]
+    return circle + circle[:1]
 
 
 def hang_ring(head, config):
@@ -72,32 +80,37 @@ def hang_ring(head, config):
     scale = config.ring_width / .0816
     wire_radius = .0038 * scale
     radius = config.ring_width/2 - wire_radius
-    points = [(radius*x, 0, radius*z) for x, z in ring_outline(config.ring_type)]
-    # Keep the wire density consistent, including across the D ring's long bar.
+    points = [(radius*x, 0, radius*z) for x, z in hanging_outline(config.ring_type)]
     reference_perimeter = 48 * .037 * math.sin(math.pi/24)
     mass_per_metre = .072 / reference_perimeter * scale**2
-    for i, (start, end) in enumerate(zip(points, points[1:] + points[:1])):
+    for i, (start, end) in enumerate(zip(points, points[1:])):
         segment(ring, f'ring_arc_{i}', start, end, wire_radius,
                 '.95 .46 .09 1', mass_per_metre * math.dist(start, end))
 
 
+def shelf_outline(kind):
+    if kind == 1:
+        return [(0, .072*x, .107*z) for x, z in QUESTION_PROFILE]
+    if kind == 2:
+        # One post meets the middle of the flat back of the horizontal D.
+        mount = (0, 0, .107)
+        rim = [(.043*math.cos(i*math.pi/16), -.065*math.sin(i*math.pi/16), .107)
+               for i in range(17)]
+        return [(0, 0, 0), mount, *rim, mount]
+    return [(0, 0, 0), (0, 0, .076), (0, -.003, .090), (0, -.011, .101),
+            (0, -.023, .107), (0, -.036, .107), (0, -.047, .100),
+            (0, -.055, .085), (0, -.060, .077)]
+
+
 def add_hooks(shelf, config):
-    # Coordinates start at the top of the tray. Including wire thickness,
-    # both profiles reach 112 mm at the reference scale.
-    profile = [(0, 0), (0, .076), (-.003, .090), (-.011, .101),
-               (-.023, .107), (-.036, .107), (-.047, .100), (-.055, .085), (-.060, .077)]
-    reference_length = sum(math.dist(a, b) for a, b in zip(profile, profile[1:]))
-    if config.hook_type == 1:
-        profile = [(0, 0), (0, .107), (-.057, .107), (-.057, .072)]
     scale = config.hook_height / .112
-    offsets = (-.019, .019) if config.hook_type == 2 else (0.,)
-    for prong, offset in enumerate(offsets):
-        points = [(.092 + offset*scale, .183 + y*scale, .005 + z*scale) for y, z in profile]
-        for i, (start, end) in enumerate(zip(points, points[1:])):
-            mass = .004 * scale**3
-            if config.hook_type == 1:
-                mass = .032 * scale**2 * math.dist(start, end) / reference_length
-            segment(shelf, f'prize_hook_{prong}_{i}', start, end, .005*scale, '.31 .25 .54 1', mass)
+    points = [(.092 + x*scale, .183 + y*scale, .005 + z*scale)
+              for x, y, z in shelf_outline(config.hook_type)]
+    basic = shelf_outline(0)
+    mass_per_metre = .032 * scale**2 / sum(math.dist(a, b) for a, b in zip(basic, basic[1:]))
+    for i, (start, end) in enumerate(zip(points, points[1:])):
+        mass = .004 * scale**3 if config.hook_type == 0 else mass_per_metre * math.dist(start, end)
+        segment(shelf, f'prize_hook_0_{i}', start, end, .005*scale, '.31 .25 .54 1', mass)
 
 
 def add_shelf(world, prize, config):

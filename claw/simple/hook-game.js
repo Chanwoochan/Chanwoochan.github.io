@@ -2,18 +2,18 @@ import {Cycle, labels as baseLabels} from './cycle.js';
 
 export const hookLabels = {
   ...baseLabels,
-  READY_X: '좌 버튼으로 링의 가로 위치를 정하세요',
-  MOVING_Y: '뒤로 이동 중 · 놓으면 링 하강',
-  LOWERING: '링을 후크로 내리는 중',
-  HOOK_DWELL: '하강 완료 · 링을 멈춘 높이에서 대기 중',
-  LIFTING: '링을 들어 올리는 중',
-  HOOK_BLOCKED: '링이 걸렸어요. 새 판을 시작할 수 있어요.',
+  READY_X: '좌 버튼으로 줄 끝의 가로 위치를 정하세요',
+  MOVING_Y: '뒤로 이동 중 · 놓으면 하강',
+  LOWERING: '줄을 내리는 중',
+  HOOK_DWELL: '하강 완료 · 상승 대기 중',
+  LIFTING: '줄을 들어 올리는 중',
+  HOOK_BLOCKED: '줄 끝이 걸렸어요. 새 판을 시작할 수 있어요.',
 };
 
 const equipment = [
-  {key: 'hook_type', label: '후크 종류', initial: 0, options: ['곡선형', '각진형', '더블형']},
+  {key: 'hook_type', label: '받침대 후크 모양', initial: 0, options: ['기본형', '물음표형 (?)', '수평 D링']},
   {key: 'hook_height', label: '후크 높이 (mm)', initial: .112, multiplier: 1000, min: 20, max: 220},
-  {key: 'ring_type', label: '링 종류', initial: 0, options: ['원형', '세로 타원형', 'D형']},
+  {key: 'ring_type', label: '줄 끝 링 모양', initial: 0, options: ['원형', '타원형', '갈고리형 (¿)']},
   {key: 'ring_width', label: '링 바깥 너비 (mm)', initial: .0816, multiplier: 1000, min: 20, max: 200},
   {key: 'chain_length', label: '줄 길이 (mm)', initial: .090, multiplier: 1000, min: 10, max: 400},
   {key: 'bottom_wait', label: '하강 후 대기 시간 (초)', initial: 0, source: 'cycle', min: 0},
@@ -71,9 +71,9 @@ export function setHookPage() {
   document.title = '후크&링 · UFO캐쳐 프리게임';
   document.querySelector('.brand').textContent = '후크&링';
   document.querySelector('#entry h1').textContent = '후크&링';
-  document.querySelector('.entry-note').textContent = '좌 이동 · 상 이동 · 링 내리기';
-  document.querySelector('#step-auto').textContent = '링 내리기';
-  document.querySelector('.cycle-note').textContent = '좌·상 버튼으로 링을 후크 끝에 맞추세요. 상 버튼을 놓으면 링이 내려갔다 올라옵니다. 받침대가 기울어 경품이 떨어지면 성공입니다.';
+  document.querySelector('.entry-note').textContent = '좌 이동 · 상 이동 · 자동 하강';
+  document.querySelector('#step-auto').textContent = '자동 하강';
+  document.querySelector('.cycle-note').textContent = '좌·상 버튼으로 줄 끝을 조준하세요. 상 버튼을 놓으면 줄이 내려갔다 올라옵니다. 받침대를 걸어 기울이고 경품을 떨어뜨리세요.';
   document.querySelector('.settings-heading p').textContent = '후크·링의 형상, 줄 길이와 하강 후 대기 시간은 새 판에 적용됩니다. 헤드 강성과 감쇠는 즉시 반영됩니다.';
 }
 
