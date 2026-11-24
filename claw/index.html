@@ -3,53 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b1220">
-  <meta name="description" content="시그너스 피규어 UFO 캐처. 정면과 좌측면을 보며 좌·상 버튼으로 조작하는 MuJoCo 물리 시뮬레이터.">
-  <title>CYGNUS · UFO CATCHER</title>
-  <link rel="icon" type="image/svg+xml" href="./icon.svg">
-  <link rel="stylesheet" href="./style.css">
+  <meta name="theme-color" content="#fbfaf7">
+  <meta name="description" content="UFO캐쳐 게임 로비. 프리게임에서 두 버튼으로 집게를 움직여 DUMMY 박스를 뽑아보세요.">
+  <title>게임 로비 · UFO캐쳐</title>
+  <link rel="icon" href="./simple/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./lobby.css">
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="./" aria-label="시그너스 UFO 캐처 홈"><span class="brand-symbol">C<span>·</span></span><span>CYGNUS<small>SWAN ROBOTICS</small></span></a>
-    <div class="top-right"><a class="quiet" href="./simple/" style="font-size:14px">단순 버전</a><span class="eyebrow">UFO CATCHER / 01</span><button id="settings-toggle" class="quiet" aria-controls="settings-panel" aria-expanded="false">설정 <span aria-hidden="true">⚙</span></button></div>
+    <nav class="wrap" aria-label="주 메뉴">
+      <a class="brand" href="./" aria-label="UFO캐쳐 게임 로비"><span class="brand-mark" aria-hidden="true"></span>UFO캐쳐</a>
+      <a class="classic" href="./cygnus.html">시그너스 버전 <span aria-hidden="true">↗</span></a>
+    </nav>
   </header>
-  <main>
-    <div class="intro"><div><span class="eyebrow">THE CYGNUS COLLECTION</span><h1>시그너스를 잡아보세요<span>.</span></h1></div><p>위치를 정하고, 나머지는 집게에게.</p></div>
-    <div class="game-layout">
-      <section class="machine" aria-label="UFO 캐처 게임 화면">
-        <div class="stage-toolbar"><div class="connection"><i id="engine-dot"></i><span id="engine-status" role="status">준비 중</span></div><div class="view-controls"><div class="segmented" aria-label="카메라 구도"><button class="selected" id="view-play" aria-pressed="true">플레이</button><button id="view-cabinet" aria-pressed="false">기기 전체</button></div><button id="fullscreen" class="icon-button" title="전체 화면" aria-label="게임 화면 전체 화면">⛶</button></div></div>
-        <div id="stage" class="stage">
-          <canvas id="scene" aria-label="정면과 좌측면의 동일한 물리 시뮬레이션"></canvas>
-          <div class="panes"><div class="view-pane" id="front-pane"><span class="view-label"><b>01</b> FRONT <span>정면</span></span></div><div class="view-pane" id="left-pane"><span class="view-label"><b>02</b> LEFT <span>좌측면</span></span></div></div>
-          <div class="stage-hint">드래그로 화면 이동 · 휠로 확대 · 두 번 눌러 시점 복귀</div>
-          <div id="entry" class="entry"><div class="entry-content"><span class="eyebrow">SWAN ROBOTICS</span><h2>CYGNUS</h2><p id="loading-message" role="status">물리 엔진과 시그너스 경품을 준비합니다.</p><div class="loading-line" id="loading-line"></div><button id="start" class="primary" disabled>준비 중…</button><p class="entry-note">좌 → 상 → 자동 집기<br>PC 키보드와 모바일 터치를 지원합니다.</p></div></div>
-          <div id="win" class="win" hidden role="status"><div class="win-orbit">✦</div><span class="eyebrow">PRIZE GET!</span><h2>시그너스 획득!</h2><p>축하합니다. 잠시 후 새 판이 시작됩니다.</p></div>
-        </div>
-        <div class="telemetry" aria-label="현재 집게 상태"><div><span>Z 외력</span><strong id="z-load">0.00 <small>N</small></strong></div><div><span>집게 높이</span><strong id="height">— <small>mm</small></strong></div><div><span>헤드 기울기</span><strong id="head-angle">0.0 <small>°</small></strong></div><div><span>플레이 시간</span><strong id="sim-time">0.0 <small>s</small></strong></div></div>
-      </section>
-      <aside class="control-panel" aria-label="게임 조작">
-        <div class="panel-heading"><span class="eyebrow">CONTROL DECK</span><span class="live-dot">● LIVE</span></div>
-        <div class="steps" aria-label="플레이 순서"><span id="step-x" class="active">01 <b>좌 이동</b></span><i>→</i><span id="step-y">02 <b>상 이동</b></span><i>→</i><span id="step-auto">03 <b>자동 집기</b></span></div>
-        <h2 id="phase" aria-live="polite">곧 플레이를 시작할 수 있어요</h2>
-        <div class="hold-buttons"><button id="left" class="hold" disabled><span class="arrow">←</span><span><b>좌</b><small>누르는 동안 왼쪽으로</small></span><kbd>←</kbd></button><button id="back" class="hold" disabled><span class="arrow">↑</span><span><b>상</b><small>누르는 동안 뒤쪽으로</small></span><kbd>↑</kbd></button></div>
-        <div class="hold-times"><span>좌 <b id="held-x">0.00 s</b></span><span>상 <b id="held-y">0.00 s</b></span></div>
-        <p class="cycle-note">좌 버튼을 놓고, 상 버튼을 눌러주세요.<br>상 버튼을 놓으면 집게가 자동으로 움직입니다.</p>
-        <p id="reason" class="reason"></p>
-        <div class="secondary-actions"><button id="pause" class="secondary" disabled>일시 정지</button><button id="reset" class="secondary" disabled>새 판 시작</button></div>
-        <div class="sound-row"><label class="toggle"><input type="checkbox" id="sound"><span></span>효과음</label><input id="volume" type="range" min="0" max="100" value="55" aria-label="효과음 음량"><output id="volume-value">55%</output></div>
-        <div class="prize-card"><img src="./assets/cygnus_box_front_v1.png" alt="스완로보틱스 시그너스 피규어 패키지"><div><span class="eyebrow">TODAY'S PRIZE</span><h3>CYGNUS <span>시그너스</span></h3><p>HUMANOID ROBOT<br>COLLECTIBLE FIGURE / 01</p></div></div>
-      </aside>
-    </div>
-    <section class="settings-panel" id="settings-panel" hidden aria-label="물리와 동작 설정">
-      <div class="settings-heading"><div><span class="eyebrow">MACHINE SETTINGS</span><h2>내 취향대로 세팅하기</h2><p>치수·동작을 적용하면 새 판을 시작합니다. P게인과 마찰 등은 즉시 반영됩니다.</p></div><button id="settings-close" class="quiet">닫기 ×</button></div>
-      <form id="settings-form"><div class="settings-grid" id="settings-fields"></div><div class="settings-actions"><button type="submit" class="primary" id="apply-settings">설정 적용 · 새 판</button><button type="button" id="save-settings" class="secondary">기본값으로 저장</button><button type="button" id="restore-settings" class="quiet">배포 기본값</button><button type="button" id="export-settings" class="quiet">JSON 내보내기</button><label class="quiet file-label">JSON 가져오기<input id="import-settings" type="file" accept="application/json,.json" hidden></label></div></form>
-      <p class="settings-note">저장한 기본값은 이 기기의 브라우저에 보관됩니다. 다른 기기로 옮길 때는 JSON 내보내기를 사용하세요.</p>
+  <main class="wrap">
+    <h1>게임 로비</h1>
+    <section class="feature" aria-labelledby="free-title">
+      <div class="feature-copy">
+        <h2 id="free-title">프리게임</h2>
+        <p>집게를 움직여 봉 위의 DUMMY 박스를<br class="wide"> 아래로 떨어뜨려 보세요.</p>
+        <a class="play" href="./freegame/">플레이하기 <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="feature-art" aria-hidden="true"><img src="./assets/lobby-cabinet.png" width="330" height="244" alt=""></div>
     </section>
-    <footer><span>CYGNUS × SWAN ROBOTICS</span><span>MuJoCo 접촉 물리 · 정면 + 좌측면</span><a href="./credits.html" target="_blank" rel="noopener">디자인·사운드 출처 ↗</a></footer>
+    <section class="upcoming" aria-labelledby="menu-title">
+      <h2 id="menu-title">게임 메뉴</h2>
+      <ul class="cards">
+        <li><div class="card-top"><span class="tile flag" aria-hidden="true"></span><span class="status">준비 중</span></div><h3>챌린지</h3><p>주어진 조건에 맞춰 경품 뽑기</p></li>
+        <li><div class="card-top"><span class="tile trophy" aria-hidden="true"></span><span class="status">준비 중</span></div><h3>랭킹</h3><p>플레이 기록과 순위 보기</p></li>
+        <li><div class="card-top"><span class="tile parcel" aria-hidden="true"></span><span class="status">준비 중</span></div><h3>경품 도감</h3><p>뽑은 경품을 한곳에서 모아보기</p></li>
+      </ul>
+    </section>
   </main>
-  <div id="toast" class="toast" hidden role="status"></div>
-  <noscript>이 게임을 실행하려면 브라우저의 JavaScript를 켜주세요.</noscript>
-  <script type="module" src="./app.js"></script>
 </body>
 </html>
