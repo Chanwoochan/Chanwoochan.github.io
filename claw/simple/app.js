@@ -1,9 +1,13 @@
 import {DualRenderer} from './outline-renderer.js?v=20261123-ceiling-pivot';
 import {Sounds} from './audio.js';
-import {labels} from './rod-recovery.js?v=20261123-yaw-contact';
+import {labels as bridgeLabels} from './rod-recovery.js?v=20261123-yaw-contact';
+import {hookLabels, setHookPage, showHookSetting} from './hook-game.js?v=20261124-modes';
+const hookMode = new URL(location.href).searchParams.get('mode') === 'hook-ring';
+const labels = hookMode ? hookLabels : bridgeLabels;
+if (hookMode) setHookPage();
 
 const $ = id => document.getElementById(id);
-const STORAGE = 'ufo-catcher-simple-defaults-v1';
+const STORAGE = hookMode ? 'ufo-catcher-hook-ring-defaults-v1' : 'ufo-catcher-simple-defaults-v1';
 const clone = value => JSON.parse(JSON.stringify(value));
 let worker, renderer, latestFrame, base, config, settings, currentAudio;
 let started = false, paused = false, ready = false, sceneReady = false, configured = false, winning = false;
@@ -86,6 +90,7 @@ function renderSettings() {
   const groups = new Map();
   for (const row of schema) {
     const [groupName, key, label, multiplier, step, min, max, live] = row;
+    if (hookMode && !showHookSetting(key)) continue;
     let group = groups.get(groupName);
     if (!group) {
       group = document.createElement('fieldset'); group.className = 'settings-group';
@@ -165,7 +170,7 @@ function maybeReady() {
   if (!configured || !sceneReady || fatalError) return;
   ready = true; $('engine-dot').classList.add('ready'); $('engine-status').textContent = '준비 완료';
   $('loading-line').hidden = true; $('start').textContent = '플레이 시작'; $('start').disabled = false;
-  $('loading-message').textContent = '좌, 상 버튼으로 집게의 위치를 정해보세요.';
+  $('loading-message').textContent = hookMode ? '링의 위치를 정하고 받침대의 후크를 노리세요.' : '좌, 상 버튼으로 집게의 위치를 정해보세요.';
   if (started) { $('entry').hidden = true; $('engine-status').textContent = paused ? '일시 정지' : '플레이 중'; }
   $('apply-settings').disabled = $('save-settings').disabled = false; updateControls();
 }
@@ -270,6 +275,10 @@ async function boot() {
   if (!window.WebAssembly || !window.Worker) throw new Error('WebAssembly와 Web Worker를 지원하는 브라우저가 필요합니다.');
   const fetchJSON = async path => { const r = await fetch(path, {cache: 'no-cache'}); if (!r.ok) throw new Error(`설정 불러오기 실패: ${r.status}`); return r.json(); };
   const [c, s, audio] = await Promise.all(['config.json', 'cycle_config.json', 'audio_config.json'].map(f => fetchJSON('./model/' + f)));
+  if (hookMode) {
+    Object.assign(c, {box_width: .15, box_length: .14, box_height: .09, box_mass: .22});
+    s.lower_height = .440;
+  }
   base = {config: c, cycle: s, audio}; let values = clone(base);
   try { const saved = localStorage.getItem(STORAGE); if (saved) values = normalise(JSON.parse(saved)); }
   catch { toast('저장된 설정을 읽지 못해 배포 기본값으로 시작합니다.'); }
@@ -277,7 +286,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261123-ceiling-pivot', import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261124-modes' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

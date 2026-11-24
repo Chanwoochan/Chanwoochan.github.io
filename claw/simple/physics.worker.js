@@ -1,7 +1,10 @@
 import {HeadTilt} from './head-tilt.js?v=20261123-passive-pitch';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
-import {BridgeCycle as Cycle} from './rod-recovery.js?v=20261123-yaw-contact';
+import {BridgeCycle} from './rod-recovery.js?v=20261123-yaw-contact';
+import {HookCycle} from './hook-game.js?v=20261124-modes';
+const hookMode = new URL(import.meta.url).searchParams.get('mode') === 'hook-ring';
+const Cycle = hookMode ? HookCycle : BridgeCycle;
 
 let mj, py, sim, cycle, paused = false, hidden = false, started = false;
 let timer, lastWall = 0, accumulator = 0, lastFrame = 0, winAt = null;
@@ -27,7 +30,7 @@ class Simulation {
     this.tilt = new HeadTilt(model, id);
     this.strokeAddress = this.qadr('gantry_z');
     this.drivePosition = new Float64Array(3);
-    this.target = new Float64Array(6); this.force = new mj.DoubleBuffer(6);
+    this.target = new Float64Array(model.nu); this.force = new mj.DoubleBuffer(6);
     this.clawBodies = new Set();
     for (let b = 1; b < model.nbody; b++) {
       let a = b;
@@ -36,7 +39,7 @@ class Simulation {
         a = model.body_parentid[a];
       }
     }
-    this.rodIds = new Set([1, 2, 3, 4].map(i => id(model, 'mjOBJ_FLEX', 'rod_' + i)));
+    this.rodIds = new Set(Array.from({length: model.nflex}, (_, i) => i));
     this.clawGeoms = new Set();
     for (let g = 0; g < model.ngeom; g++) if (this.clawBodies.has(model.geom_bodyid[g])) this.clawGeoms.add(g);
   }
@@ -54,18 +57,18 @@ class Simulation {
     const q = this.data.qpos;
     q[this.qadr('gantry_x')] = s.start_x; q[this.qadr('gantry_y')] = s.start_y;
     q[this.qadr('gantry_z')] = s.home_height - .8;
-    q[this.qadr('left_hinge')] = q[this.qadr('right_hinge')] = s.closed_angle;
-    this.target.set([s.start_x, s.start_y, s.home_height - .8, 0, s.closed_angle, s.closed_angle]);
+    if (!hookMode) q[this.qadr('left_hinge')] = q[this.qadr('right_hinge')] = s.closed_angle;
+    this.target.set([s.start_x, s.start_y, s.home_height - .8, 0, s.closed_angle, s.closed_angle].slice(0, this.target.length));
     this.data.ctrl.set(this.target); mj.mj_forward(this.model, this.data);
   }
   setTarget({x, y, z, yaw, opening}) {
     const values = [x, y, z === undefined ? undefined : z - .8, yaw, opening, opening];
-    for (let i = 0; i < 6; i++) if (values[i] !== undefined)
+    for (let i = 0; i < this.target.length; i++) if (values[i] !== undefined)
       this.target[i] = clip(values[i], this.model.actuator_ctrlrange[i * 2], this.model.actuator_ctrlrange[i * 2 + 1]);
   }
   step() {
     const dt = this.dt, ctrl = this.data.ctrl;
-    for (let i = 0; i < 6; i++) ctrl[i] += clip(this.target[i] - ctrl[i], -speedLimits[i] * dt, speedLimits[i] * dt);
+    for (let i = 0; i < this.target.length; i++) ctrl[i] += clip(this.target[i] - ctrl[i], -speedLimits[i] * dt, speedLimits[i] * dt);
     mj.mj_step(this.model, this.data);
   }
   clawExternalZ() {
@@ -161,18 +164,19 @@ class Simulation {
       material: m.geom_matid[i] < 0 ? '' : name(m, 'mjOBJ_MATERIAL', m.geom_matid[i]),
       rgba: Array.from(m.geom_rgba.subarray(i * 4, i * 4 + 4)),
     });
-    const rods = [1, 2, 3, 4].map(rod => {
-      const f = id(m, 'mjOBJ_FLEX', 'rod_' + rod), mat = m.flex_matid[f];
+    const rods = [...this.rodIds].map(f => {
+      const mat = m.flex_matid[f];
       return {first: m.flex_vertadr[f], count: m.flex_vertnum[f], radius: m.flex_radius[f],
-        color: Array.from(m.mat_rgba.subarray(mat * 4, mat * 4 + 3)), metal: rod === 1 || rod === 4};
+        color: Array.from(m.mat_rgba.subarray(mat * 4, mat * 4 + 3)), metal: name(m, 'mjOBJ_MATERIAL', mat) === 'steel'};
     });
-    return {xml, geoms, meshes, rods, nbody: m.nbody, dynamicBodies: [...this.clawBodies, this.prize]};
+    return {xml, geoms, meshes, rods, nbody: m.nbody, dynamicBodies: [...this.clawBodies, this.prize, ...(hookMode ? [id(m, 'mjOBJ_BODY', 'hook_shelf')] : [])]};
   }
 }
 
 async function initRuntimes() {
   send('loading', {message: '물리 엔진과 모델을 준비하고 있어요'});
   const files = ['model_author.py', 'appearance.py', 'cycle_settings.py', 'cabinet.py'];
+  if (hookMode) files.push('hook_ring.py');
   const [engine, python, sources, assets] = await Promise.all([
     loadMujoco({locateFile: file => new URL(`../vendor/mujoco/${file}`, import.meta.url).href}),
     loadPyodide({indexURL: new URL('../vendor/pyodide/', import.meta.url).href}),
@@ -186,7 +190,8 @@ async function initRuntimes() {
   py.runPython(`
 import sys, json
 sys.path.insert(0, '/model')
-from model_author import Config, model_xml
+from model_author import Config
+from ${hookMode ? 'hook_ring' : 'model_author'} import model_xml
 from cycle_settings import CycleSettings
 def author(payload):
     values = json.loads(payload)
@@ -232,7 +237,7 @@ function sendFrame() {
     transforms.set(q.subarray(b * 4, b * 4 + 4), b * 7 + 3);
   }
   const headVertical = d.xmat[9 * sim.tilt.body + 8];
-  const rodPoints = new Float32Array(d.flexvert_xpos);
+  const rodPoints = sim.rodIds.size ? new Float32Array(d.flexvert_xpos) : new Float32Array(0);
   const payload = {type: 'frame', revision, transforms, rodPoints, state: cycle.state, elapsed: d.time,
     heldX: cycle.heldX, heldY: cycle.heldY, zLoad: cycle.zLoad, position: Array.from(d.xpos.subarray(3 * sim.tilt.body, 3 * sim.tilt.body + 3)),
     headAngle: Math.acos(clip(headVertical, -1, 1)) * 180 / Math.PI,

@@ -1,0 +1,19 @@
+.modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.mode { display: flex; flex-direction: column; border: 1px solid #d6d3ce; border-radius: 18px; overflow: hidden; background: #fff; }
+.mode:hover, .mode:focus-visible { border-color: #73658b; box-shadow: 0 5px 16px #30214612; }
+.art { display: grid; place-items: center; background-image: radial-gradient(#281a3f21 1px, transparent 1.25px); background-size: 12px 12px; }
+.bridge-art { background-color: #caf1df; }
+.hook-art { background-color: #e9e0f8; }
+.art img { width: min(93%, 396px); height: auto; image-rendering: pixelated; }
+.mode-copy { display: flex; flex: 1; flex-direction: column; padding: 24px 28px; }
+.mode h2 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.06em; }
+.mode small { font-size: 14px; color: #666274; font-weight: 500; letter-spacing: 0; }
+.mode p { font-size: 16px; line-height: 1.6; color: #565360; margin: 9px 0 23px; }
+.enter { margin-top: auto; border-top: 1px solid #ebe8e4; padding-top: 16px; display: flex; justify-content: space-between; font-weight: 750; }
+.enter b { color: #64548b; }
+@media (max-width: 620px) {
+  .modes { grid-template-columns: 1fr; gap: 17px; }
+  .art img { max-width: 250px; }
+  .mode-copy { padding: 17px 20px; }
+  .mode p { margin-bottom: 15px; }
+}
