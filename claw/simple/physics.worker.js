@@ -2,7 +2,7 @@ import {HeadTilt} from './head-tilt.js?v=20261123-passive-pitch';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
 import {BridgeCycle} from './rod-recovery.js?v=20261123-yaw-contact';
-import {HookCycle} from './hook-game.js?v=20261124-modes';
+import {HookCycle} from './hook-game.js?v=20261124-hook-settings';
 const hookMode = new URL(import.meta.url).searchParams.get('mode') === 'hook-ring';
 const Cycle = hookMode ? HookCycle : BridgeCycle;
 
@@ -190,9 +190,8 @@ async function initRuntimes() {
   py.runPython(`
 import sys, json
 sys.path.insert(0, '/model')
-from model_author import Config
-from ${hookMode ? 'hook_ring' : 'model_author'} import model_xml
-from cycle_settings import CycleSettings
+from ${hookMode ? 'hook_ring' : 'model_author'} import Config, model_xml
+from ${hookMode ? 'hook_ring' : 'cycle_settings'} import CycleSettings
 def author(payload):
     values = json.loads(payload)
     config = Config(**values['config'])

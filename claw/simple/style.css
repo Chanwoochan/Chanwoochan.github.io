@@ -7,7 +7,7 @@
 body {
   margin:0;background:var(--bg);color:var(--text);min-height:100dvh
 }
-button,input {
+button,input,select {
   font:inherit
 }
 button,a,input,label {
@@ -22,7 +22,7 @@ button {
 button:disabled {
   opacity:.62;cursor:default
 }
-button:focus-visible,a:focus-visible,input:focus-visible {
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible {
   outline:2px solid var(--accent);outline-offset:3px
 }
 a {
@@ -306,7 +306,7 @@ input[type=range] {
 .field {
   display:grid;grid-template-columns:1fr 100px;gap:15px;align-items:center;margin:12px 0;color:#354a53;font-size:.875rem
 }
-.field input[type=number] {
+.field input[type=number], .field select {
   width:100%;min-height:36px;background:#ffffff;border:1px solid #a8b9be;border-radius:5px;color:var(--text);padding:7px 8px;text-align:right;font-variant-numeric:tabular-nums
 }
 .live-field .field-name:after {
