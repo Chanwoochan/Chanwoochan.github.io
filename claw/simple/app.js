@@ -1,7 +1,7 @@
 import {DualRenderer} from './outline-renderer.js?v=20261123-ceiling-pivot';
 import {Sounds} from './audio.js';
 import {labels as bridgeLabels} from './rod-recovery.js?v=20261123-yaw-contact';
-import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=20261124-hook-shapes';
+import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=20261124-d-ring';
 const hookMode = new URL(location.href).searchParams.get('mode') === 'hook-ring';
 const labels = hookMode ? hookLabels : bridgeLabels;
 if (hookMode) setHookPage();
@@ -285,7 +285,7 @@ async function boot() {
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   const draw = () => { renderer.draw(); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
-  worker = new Worker(new URL('./physics.worker.js?v=20261124-hook-shapes' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261124-d-ring' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

@@ -91,18 +91,53 @@ def hang_ring(head, config):
 def shelf_outline(kind):
     if kind == 1:
         return [(0, .072*x, .107*z) for x, z in QUESTION_PROFILE]
-    if kind == 2:
-        # One post meets the middle of the flat back of the horizontal D.
-        mount = (0, 0, .107)
-        rim = [(.043*math.cos(i*math.pi/16), -.065*math.sin(i*math.pi/16), .107)
-               for i in range(17)]
-        return [(0, 0, 0), mount, *rim, mount]
     return [(0, 0, 0), (0, 0, .076), (0, -.003, .090), (0, -.011, .101),
             (0, -.023, .107), (0, -.036, .107), (0, -.047, .100),
             (0, -.055, .085), (0, -.060, .077)]
 
 
+def add_d_ring(shelf, height):
+    foot_thickness = .032 * height
+    band_half_width = .065 * height
+    band_half_thickness = .016 * height
+    outer_radius = height - foot_thickness
+    foot_half_length = outer_radius + band_half_thickness
+    # Keep both ends on the tray, including at the largest allowed size.
+    center_x = min(.092, .265 - foot_half_length)
+    mount = ET.SubElement(shelf, 'body', name='shelf_d_ring',
+                          pos=f'{center_x} .217 .005')
+    plastic = dict(type='box', rgba='.83 .075 .055 1', density='1150',
+                   friction='.36 .002 .0001', condim='3', solref='.008 1')
+    ET.SubElement(mount, 'geom', name='d_ring_foot', pos=f'0 0 {foot_thickness/2}',
+                  size=f'{foot_half_length} {band_half_width} {foot_thickness/2}', **plastic)
+
+    # Short tangent boxes form the curved strip. Outer corners meet and inner
+    # corners overlap slightly, leaving a continuous rim and an open aperture.
+    count = 32
+    half_step = math.pi / (2 * count)
+    outer_apothem = outer_radius * math.cos(half_step)
+    center_radius = outer_apothem - band_half_thickness
+    half_length = outer_radius * math.sin(half_step)
+    for i in range(count):
+        angle = (2*i + 1)*half_step
+        x = center_radius * math.cos(angle)
+        z = foot_thickness + center_radius * math.sin(angle)
+        ET.SubElement(mount, 'geom', name=f'd_ring_band_{i}', pos=f'{x} 0 {z}',
+                      euler=f'0 {math.pi/2 - angle} 0',
+                      size=f'{half_length} {band_half_width} {band_half_thickness}', **plastic)
+
+    for i, sign in enumerate((-1, 1)):
+        cap_half_height = .005*height
+        ET.SubElement(mount, 'geom', name=f'd_ring_fastener_{i}', type='cylinder',
+                      pos=f'{sign*.78*outer_radius} 0 {foot_thickness + cap_half_height}',
+                      size=f'{.025*height} {cap_half_height}', material='steel',
+                      density='7850', friction='.36 .002 .0001', solref='.008 1')
+
+
 def add_hooks(shelf, config):
+    if config.hook_type == 2:
+        add_d_ring(shelf, config.hook_height)
+        return
     scale = config.hook_height / .112
     points = [(.092 + x*scale, .183 + y*scale, .005 + z*scale)
               for x, y, z in shelf_outline(config.hook_type)]

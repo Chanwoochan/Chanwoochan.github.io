@@ -11,7 +11,7 @@ export const hookLabels = {
 };
 
 const equipment = [
-  {key: 'hook_type', label: '받침대 후크 모양', initial: 0, options: ['기본형', '물음표형 (?)', '수평 D링']},
+  {key: 'hook_type', label: '받침대 후크 모양', initial: 0, options: ['기본형', '물음표형 (?)', '받침판 D링 (∩)']},
   {key: 'hook_height', label: '후크 높이 (mm)', initial: .112, multiplier: 1000, min: 20, max: 220},
   {key: 'ring_type', label: '줄 끝 링 모양', initial: 0, options: ['원형', '타원형', '갈고리형 (¿)']},
   {key: 'ring_width', label: '링 바깥 너비 (mm)', initial: .0816, multiplier: 1000, min: 20, max: 200},
