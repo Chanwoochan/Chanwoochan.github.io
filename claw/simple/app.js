@@ -1,7 +1,7 @@
 import {DualRenderer} from './outline-renderer.js?v=pc-perf';
 import {Sounds} from './audio.js';
 import {labels as bridgeLabels} from './rod-recovery.js?v=pc-perf';
-import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=pc-perf';
+import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=20261127-hook-defaults';
 const hookMode = new URL(location.href).searchParams.get('mode') === 'hook-ring';
 const labels = hookMode ? hookLabels : bridgeLabels;
 if (hookMode) setHookPage();
@@ -287,7 +287,7 @@ async function boot() {
   config = values.config; settings = values.cycle; currentAudio = values.audio;
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
-  worker = new Worker(new URL('./physics.worker.js?v=pc-perf' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=20261127-hook-defaults' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;

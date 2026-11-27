@@ -12,16 +12,21 @@ export const hookLabels = {
 
 const equipment = [
   {key: 'hook_type', label: '받침대 후크 모양', initial: 0, options: ['기본형', '물음표형 (?)', '받침판 D링 (∩)']},
-  {key: 'hook_height', label: '후크 높이 (mm)', initial: .112, multiplier: 1000, min: 20, max: 220},
+  {key: 'hook_height', label: '후크 높이 (mm)', initial: .050, multiplier: 1000, min: 20, max: 220},
   {key: 'ring_type', label: '줄 끝 링 모양', initial: 0, options: ['원형', '타원형', '갈고리형 (¿)']},
-  {key: 'ring_width', label: '링 바깥 너비 (mm)', initial: .0816, multiplier: 1000, min: 20, max: 200},
-  {key: 'chain_length', label: '줄 길이 (mm)', initial: .090, multiplier: 1000, min: 10, max: 400},
-  {key: 'bottom_wait', label: '하강 후 대기 시간 (초)', initial: 0, source: 'cycle', min: 0},
+  {key: 'ring_width', label: '링 바깥 너비 (mm)', initial: .080, multiplier: 1000, min: 20, max: 200},
+  {key: 'chain_length', label: '줄 길이 (mm)', initial: .150, multiplier: 1000, min: 10, max: 400},
+  {key: 'bottom_wait', label: '하강 후 대기 시간 (초)', initial: 3, source: 'cycle', min: 0},
 ];
 
 export function applyHookDefaults(config, cycle) {
-  Object.assign(config, {box_width: .15, box_length: .14, box_height: .09, box_mass: .22});
-  cycle.lower_height = .440;
+  Object.assign(config, {
+    box_width: .15, box_length: .14, box_height: .09, box_mass: .22,
+    claw_scale: .65, yaw_kp: 30, yaw_kd: 3,
+    pitch_stiffness: 30, pitch_damping: 3,
+    head_stiffness: 30, head_damping: 3, head_limit_deg: 1,
+  });
+  Object.assign(cycle, {lower_height: .430, z_load_threshold: 30});
   for (const {source, key, initial} of equipment) (source === 'cycle' ? cycle : config)[key] = initial;
 }
 

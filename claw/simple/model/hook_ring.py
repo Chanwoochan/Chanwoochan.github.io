@@ -9,11 +9,23 @@ from model_author import Config as BridgeConfig, model_xml as cabinet_xml
 
 @dataclass
 class Config(BridgeConfig):
-    hook_height: float = .112
-    ring_width: float = .0816
-    chain_length: float = .090
+    hook_height: float = .050
+    ring_width: float = .080
+    chain_length: float = .150
     hook_type: int = 0
     ring_type: int = 0
+    box_width: float = .15
+    box_length: float = .14
+    box_height: float = .09
+    box_mass: float = .22
+    claw_scale: float = .65
+    yaw_kp: float = 30.
+    yaw_kd: float = 3.
+    pitch_stiffness: float = 30.
+    pitch_damping: float = 3.
+    head_stiffness: float = 30.
+    head_damping: float = 3.
+    head_limit_deg: float = 1.
 
     def validate(self):
         super().validate()
@@ -30,7 +42,9 @@ class Config(BridgeConfig):
 
 @dataclass
 class CycleSettings(BridgeCycleSettings):
-    bottom_wait: float = 0.
+    bottom_wait: float = 3.
+    lower_height: float = .430
+    z_load_threshold: float = 30.
 
     def validate(self):
         super().validate()

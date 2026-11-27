@@ -2,7 +2,7 @@ import {HeadTilt} from './head-tilt.js?v=20261123-passive-pitch';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
 import {BridgeCycle} from './rod-recovery.js?v=pc-perf';
-import {HookCycle} from './hook-game.js?v=pc-perf';
+import {HookCycle} from './hook-game.js?v=20261127-hook-defaults';
 const hookMode = new URL(import.meta.url).searchParams.get('mode') === 'hook-ring';
 const Cycle = hookMode ? HookCycle : BridgeCycle;
 
