@@ -111,7 +111,7 @@ export class DualRenderer {
     let texture;
     const file = node?.getAttribute('file');
     if (file) {
-      texture = await new THREE.TextureLoader().loadAsync('./assets/' + file.split('/').pop());
+      texture = await new THREE.TextureLoader().loadAsync(this.packageTextures?.[name] ?? ('./assets/' + file.split('/').pop()));
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
     } else {

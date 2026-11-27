@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#fbfaf7">
-  <meta name="description" content="UFO캐쳐 게임 로비. 프리게임에서 두 버튼으로 집게를 움직여 DUMMY 박스를 뽑아보세요.">
+  <meta name="description" content="데일리 모드에서 오늘의 피규어를 뽑거나 프리게임에서 하시와타시와 후크&amp;링을 플레이하세요.">
   <title>게임 로비 · UFO캐쳐</title>
   <link rel="icon" href="./simple/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./lobby.css?v=collection">
+  <link rel="stylesheet" href="./lobby.css?v=daily1">
 </head>
 <body>
   <header class="topbar">
@@ -18,6 +18,15 @@
   </header>
   <main class="wrap">
     <h1>게임 로비</h1>
+    <div class="mode-pair">
+    <section class="feature daily-feature" aria-labelledby="daily-title">
+      <div class="feature-copy">
+        <h2 id="daily-title">데일리 모드</h2>
+        <p><strong id="daily-name">오늘의 피규어</strong><br>매일 밤 12시 교체 · 한국 시간</p>
+        <a class="play" href="./daily/">오늘의 뽑기 <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="daily-art" aria-hidden="true"><img id="daily-cover" alt="" hidden></div>
+    </section>
     <section class="feature" aria-labelledby="free-title">
       <div class="feature-copy">
         <h2 id="free-title">프리게임</h2>
@@ -26,6 +35,7 @@
       </div>
       <div class="feature-art" aria-hidden="true"><img src="./assets/lobby-cabinet.png" width="330" height="244" alt=""></div>
     </section>
+    </div>
     <section class="upcoming" aria-labelledby="menu-title">
       <h2 id="menu-title">게임 메뉴</h2>
       <ul class="cards">
@@ -35,5 +45,6 @@
       </ul>
     </section>
   </main>
+  <script type="module" src="./daily/lobby.js"></script>
 </body>
 </html>

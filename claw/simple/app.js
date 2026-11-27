@@ -1,15 +1,19 @@
-import {DualRenderer} from './outline-renderer.js?v=20261127-tray';
+import {DualRenderer} from './outline-renderer.js?v=daily1';
 import {Sounds} from './audio.js';
 import {labels as bridgeLabels} from './rod-recovery.js?v=pc-perf';
 import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=20261127-tray';
-const hookMode = new URL(location.href).searchParams.get('mode') === 'hook-ring';
+import {dailyAt} from '../daily/catalog.js';
+import {setDailyPage, watchDailyRound} from '../daily/game.js';
+const daily = document.body.dataset.mode === 'daily' ? dailyAt() : null;
+let refreshDaily;
+const hookMode = !daily && new URL(location.href).searchParams.get('mode') === 'hook-ring';
 const labels = hookMode ? hookLabels : bridgeLabels;
 if (hookMode) setHookPage();
-import {recordWin} from '../collection/store.js';
+import {recordWin} from '../collection/store.js?v=daily1';
 
 const $ = id => document.getElementById(id);
 const STORAGE = hookMode ? 'ufo-catcher-hook-ring-defaults-v1' : 'ufo-catcher-simple-defaults-v1';
-const prizeMode = hookMode ? 'hook-ring' : 'bridge';
+const prizeMode = daily?.prize.key ?? (hookMode ? 'hook-ring' : 'bridge');
 const clone = value => JSON.parse(JSON.stringify(value));
 let worker, renderer, latestFrame, base, config, settings, currentAudio;
 let started = false, paused = false, ready = false, sceneReady = false, configured = false, winning = false;
@@ -281,12 +285,18 @@ async function boot() {
   const fetchJSON = async path => { const r = await fetch(path, {cache: 'no-cache'}); if (!r.ok) throw new Error(`설정 불러오기 실패: ${r.status}`); return r.json(); };
   const [c, s, audio] = await Promise.all(['config.json', 'cycle_config.json', 'audio_config.json'].map(f => fetchJSON('./model/' + f)));
   if (hookMode) applyHookDefaults(c, s);
+  if (daily) setDailyPage(daily, c);
   base = {config: c, cycle: s, audio}; let values = clone(base);
-  try { const saved = localStorage.getItem(STORAGE); if (saved) values = normalise(JSON.parse(saved)); }
+  try { const saved = !daily && localStorage.getItem(STORAGE); if (saved) values = normalise(JSON.parse(saved)); }
   catch { toast('저장된 설정을 읽지 못해 배포 기본값으로 시작합니다.'); }
   config = values.config; settings = values.cycle; currentAudio = values.audio;
-  setAudio(currentAudio); renderSettings();
+  setAudio(currentAudio); if (!daily) renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
+  if (daily) {
+    const {art} = daily.prize;
+    renderer.packageTextures = {package_front_tex: art.front, package_long_tex: art.long, package_short_tex: art.short};
+    refreshDaily = watchDailyRound(daily, () => !held && !winning && (!started || latestFrame?.state === 'READY_X'));
+  }
   worker = new Worker(new URL('./physics.worker.js?v=20261127-tray' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
@@ -330,6 +340,7 @@ async function boot() {
           $('held-x').textContent = m.heldX.toFixed(2) + ' s'; $('held-y').textContent = m.heldY.toFixed(2) + ' s';
         }
         if (!stateChanged) break;
+        if (m.state === 'READY_X' && !m.winning) refreshDaily?.();
         $('phase').textContent = m.winning ? '경품 획득! 새 판을 준비합니다' : labels[m.state] || m.state;
         $('reason').textContent = m.reason ? '하강 종료: ' + m.reason : '';
         const x = ['READY_X', 'MOVING_X'].includes(m.state), y = ['READY_Y', 'MOVING_Y'].includes(m.state);

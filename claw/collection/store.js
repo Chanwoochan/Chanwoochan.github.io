@@ -1,7 +1,10 @@
+import {prizes as dailyPrizes} from '../daily/catalog.js';
+
 export const games = {
   bridge: {name: '하시와타시', url: '../freegame/play/?mode=bridge'},
   'hook-ring': {name: '후크&링', url: '../freegame/play/?mode=hook-ring'},
   cygnus: {name: '시그너스 버전', url: '../cygnus.html'},
+  ...Object.fromEntries(dailyPrizes.map(prize => [prize.key, {name: '데일리 모드', url: '../daily/'}])),
 };
 
 function openCollection() {

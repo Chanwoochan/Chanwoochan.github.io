@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three/three.module.js';
-import {DualRenderer as SceneRenderer} from './renderer.js?v=pc-perf';
+import {DualRenderer as SceneRenderer} from './renderer.js?v=daily1';
 import {RodMesh, rodOutlineMaterial} from './rod-mesh.js';
 import {TelescopicLift} from './telescopic-lift.js?v=20261123-ceiling-pivot';
 import {TrayCord} from './tray-cord.js';

@@ -1,0 +1,8 @@
+[data-mode="daily"] .prize-card { display: flex; margin-top: 12px; }
+.prize-card img { width: 72px; height: 94px; object-fit: contain; background: #f5f3ef; }
+#daily-date { color: var(--muted); font-size: .75rem; }
+.prize-card h3 { margin: 4px 0; }
+.daily-specs { display: grid; gap: 3px; margin: 12px 0 0; font-size: .8rem; line-height: 1.6; }
+.daily-specs dt { color: var(--muted); margin-top: 7px; }
+.daily-specs dd { margin: 0; }
+.daily-specs a { text-underline-offset: 3px; color: #176478; }

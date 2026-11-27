@@ -1,10 +1,12 @@
-import {games, readWins} from './store.js';
+import {games, readWins} from './store.js?v=daily1';
+import {boxSpecs, dailyAt, prizes as dailyPrizes} from '../daily/catalog.js';
 
 const prizes = [
   {id: 'dummy', name: 'DUMMY 박스', description: '두 프리게임에서 만날 수 있는 흰색 경품 상자.',
     image: '../simple/assets/dummy_front.png', modes: ['bridge', 'hook-ring']},
   {id: 'cygnus', name: '시그너스 피규어', description: '스완로보틱스의 휴머노이드 로봇 시그너스.',
     image: '../assets/cygnus_box_front_v1.png', modes: ['cygnus']},
+  ...dailyPrizes.map(p => ({id: p.key, name: p.name, description: boxSpecs(p), image: p.art.front, modes: [p.key]})),
 ];
 
 const shelf = document.getElementById('shelf');
@@ -37,7 +39,7 @@ function render(wins) {
       const li = document.createElement('li');
       const link = document.createElement('a');
       link.href = games[mode].url;
-      link.append(games[mode].name);
+      link.append(mode === dailyAt().prize.key ? '오늘의 데일리 경품' : games[mode].name);
       const tally = document.createElement('small');
       if (wins) tally.textContent = number.format(wins.get(mode)?.count ?? 0) + '개 획득';
       const arrow = document.createElement('span');
