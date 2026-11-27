@@ -1,4 +1,4 @@
-"""Hanging ring and tip-up prize shelf for the hook game."""
+"""Hook game with a free pickup plate and a cord-operated prize tray."""
 import math
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -116,11 +116,8 @@ def add_d_ring(shelf, height):
     band_half_thickness = .016 * height
     outer_radius = height - foot_thickness
     foot_half_length = outer_radius + band_half_thickness
-    # Keep both ends on the tray, including at the largest allowed size.
-    center_x = min(.092, .265 - foot_half_length)
-    mount = ET.SubElement(shelf, 'body', name='shelf_d_ring',
-                          pos=f'{center_x} .217 .005')
-    plastic = dict(type='box', rgba='.83 .075 .055 1', density='1150',
+    mount = ET.SubElement(shelf, 'body', name='shelf_d_ring', pos='0 0 .005')
+    plastic = dict(type='box', rgba='.045 .49 .12 1', density='1150',
                    friction='.36 .002 .0001', condim='3', solref='.008 1')
     ET.SubElement(mount, 'geom', name='d_ring_foot', pos=f'0 0 {foot_thickness/2}',
                   size=f'{foot_half_length} {band_half_width} {foot_thickness/2}', **plastic)
@@ -153,35 +150,72 @@ def add_hooks(shelf, config):
         add_d_ring(shelf, config.hook_height)
         return
     scale = config.hook_height / .112
-    points = [(.092 + x*scale, .183 + y*scale, .005 + z*scale)
+    points = [(x*scale, y*scale, .005 + z*scale)
               for x, y, z in shelf_outline(config.hook_type)]
     basic = shelf_outline(0)
     mass_per_metre = .032 * scale**2 / sum(math.dist(a, b) for a, b in zip(basic, basic[1:]))
     for i, (start, end) in enumerate(zip(points, points[1:])):
         mass = .004 * scale**3 if config.hook_type == 0 else mass_per_metre * math.dist(start, end)
-        segment(shelf, f'prize_hook_0_{i}', start, end, .005*scale, '.31 .25 .54 1', mass)
+        segment(shelf, f'prize_hook_0_{i}', start, end, .005*scale, '.045 .49 .12 1', mass)
 
 
-def add_shelf(world, prize, config):
-    hinge_y, hinge_z = -.165, .210
+def add_shelf(world, tendon, prize, config):
+    plate_y, rail_z, rail_radius = .002, .315, .006
+    plate_z = rail_z + rail_radius + .005
+    for i, y in enumerate((plate_y - .055, plate_y + .055)):
+        rail = segment(world, f'pickup_rail_{i}', (-.352, y, rail_z), (.352, y, rail_z),
+                       rail_radius, '.035 .19 .68 1', 0)
+        rail.set('friction', '.55 .002 .0001')
+        for side in (-1, 1):
+            x = side * .350
+            segment(world, f'pickup_rail_post_{i}_{side}', (x, y, .145), (x, y, rail_z),
+                    .006, '.17 .21 .27 1', 0)
+
+    plate = ET.SubElement(world, 'body', name='pickup_plate', pos=f'0 {plate_y} {plate_z}')
+    ET.SubElement(plate, 'freejoint', name='pickup_free')
+    half_width = max(.165, config.hook_height) if config.hook_type == 2 else .165
+    ET.SubElement(plate, 'geom', name='red_pickup_plate', type='box', size=f'{half_width} .080 .005',
+                  rgba='.67 .055 .045 1', mass='.12', friction='.55 .002 .0001', solref='.01 1')
+    add_hooks(plate, config)
+
+    # The discharge edge faces the player. Lifting the rear of the black tray
+    # rotates it about the X axle and leaves a clear path to the chute.
+    hinge_y, hinge_z = -.208, min(.155, plate_z - .035 - config.box_height)
     shelf = ET.SubElement(world, 'body', name='hook_shelf', pos=f'0 {hinge_y} {hinge_z}')
     ET.SubElement(shelf, 'joint', name='shelf_hinge', type='hinge', axis='1 0 0',
                   limited='true', range=f'0 {math.radians(72)}', damping='.022',
                   armature='.0005', solreflimit='.005 1')
-    ET.SubElement(shelf, 'geom', name='tilting_plate', type='box', pos='0 .123 0',
-                  size='.265 .133 .005', rgba='.62 .78 .78 1', mass='.22',
+    ET.SubElement(shelf, 'geom', name='tilting_plate', type='box', pos='0 .100 0',
+                  size='.250 .110 .005', rgba='.033 .038 .048 1', mass='.20',
                   priority='2', friction='.22 .002 .0001', solref='.008 1')
     for sign in (-1, 1):
         ET.SubElement(world, 'geom', name=f'tray_bracket_{sign}', type='box',
-                      pos=f'{sign*.332} {hinge_y} .173', size='.014 .018 .041',
+                      pos=f'{sign*.335} {hinge_y} {hinge_z}', size='.012 .012 .012',
                       material='ufo_pearl', mass='0')
     # The stationary axle passes through the hinge. It cannot collide with the
     # rotating plate or hold up a falling prize in the chute.
     axle = segment(world, 'tray_axle', (-.342, hinge_y, hinge_z), (.342, hinge_y, hinge_z),
                    .006, '.33 .39 .44 1', 0)
     axle.attrib.update(contype='0', conaffinity='0')
-    add_hooks(shelf, config)
-    prize.set('pos', f'-.095 -.043 {hinge_z + .005 + config.box_height/2 + .001}')
+    prize.set('pos', f'0 {hinge_y + .100} {hinge_z + .005 + config.box_height/2 + .001}')
+
+    # A spatial tendon with only a maximum length pulls after its slack is
+    # taken up. Both endpoints belong to moving bodies.
+    upper = (0, .022, -.005)
+    lower = (0, .199, .005)
+    purple = '.45 .075 .62 1'
+    for body, name, point in ((plate, 'cord_upper', upper), (shelf, 'cord_lower', lower)):
+        pos = ' '.join(map(str, point))
+        ET.SubElement(body, 'site', name=name, pos=pos, size='.002')
+        ET.SubElement(body, 'geom', name=name + '_eye', type='sphere', pos=pos,
+                      size='.004', rgba=purple, mass='0', contype='0', conaffinity='0')
+    distance = math.hypot(plate_y + upper[1] - hinge_y - lower[1],
+                          plate_z + upper[2] - hinge_z - lower[2])
+    cord = ET.SubElement(tendon, 'spatial', name='tray_cord', limited='true',
+                         range=f'0 {distance + .005}', width='.0026', rgba=purple,
+                         solreflimit='.008 1')
+    ET.SubElement(cord, 'site', site='cord_upper')
+    ET.SubElement(cord, 'site', site='cord_lower')
 
 
 def model_xml(config):
@@ -204,5 +238,5 @@ def model_xml(config):
         if any(s.get('site', '').startswith('rod_') for s in spring.findall('site')):
             tendon.remove(spring)
     hang_ring(head, config)
-    add_shelf(world, world.find("body[@name='prize']"), config)
+    add_shelf(world, tendon, world.find("body[@name='prize']"), config)
     return ET.tostring(root, encoding='unicode')

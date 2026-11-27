@@ -2,6 +2,7 @@ import * as THREE from '../vendor/three/three.module.js';
 import {DualRenderer as SceneRenderer} from './renderer.js?v=pc-perf';
 import {RodMesh, rodOutlineMaterial} from './rod-mesh.js';
 import {TelescopicLift} from './telescopic-lift.js?v=20261123-ceiling-pivot';
+import {TrayCord} from './tray-cord.js';
 
 function outlined(name) {
   const part = name.replace(/^display_/, '');
@@ -118,15 +119,22 @@ export class DualRenderer extends SceneRenderer {
     for (const rod of this.rods) this.scene.add(rod.group);
     this.lifts = [0, 1].map(bay => new TelescopicLift(description.geoms, bay));
     for (const lift of this.lifts) this.scene.add(lift.root);
+    if (description.trayCord) {
+      this.cord = new TrayCord(description.trayCord);
+      this.scene.add(this.cord.group);
+    }
   }
   update(frame) {
     super.update(frame);
     if (frame.revision === this.revision) {
       for (const rod of this.rods) rod.update(frame.rodPoints);
       for (const lift of this.lifts) lift.update(frame.transforms);
+      this.cord?.update(frame.transforms);
     }
   }
   clearGeometry() {
+    this.cord?.dispose();
+    this.cord = null;
     for (const rod of this.rods) rod.dispose();
     this.rods = [];
     for (const lift of this.lifts) lift.dispose();

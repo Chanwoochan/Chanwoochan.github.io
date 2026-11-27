@@ -2,7 +2,7 @@ import {HeadTilt} from './head-tilt.js?v=20261123-passive-pitch';
 import loadMujoco from '../vendor/mujoco/mujoco.js';
 import {loadPyodide} from '../vendor/pyodide/pyodide.mjs';
 import {BridgeCycle} from './rod-recovery.js?v=pc-perf';
-import {HookCycle} from './hook-game.js?v=20261127-hook-defaults';
+import {HookCycle} from './hook-game.js?v=20261127-tray';
 const hookMode = new URL(import.meta.url).searchParams.get('mode') === 'hook-ring';
 const Cycle = hookMode ? HookCycle : BridgeCycle;
 
@@ -176,7 +176,17 @@ class Simulation {
       return {first: m.flex_vertadr[f], count: m.flex_vertnum[f], radius: m.flex_radius[f],
         color: Array.from(m.mat_rgba.subarray(mat * 4, mat * 4 + 3)), metal: name(m, 'mjOBJ_MATERIAL', mat) === 'steel'};
     });
-    return {xml, geoms, meshes, rods, nbody: m.nbody, dynamicBodies};
+    let trayCord = null;
+    if (hookMode) {
+      const t = id(m, 'mjOBJ_TENDON', 'tray_cord');
+      const anchors = [0, 1].map(offset => {
+        const site = m.wrap_objid[m.tendon_adr[t] + offset];
+        return {body: m.site_bodyid[site], pos: Array.from(m.site_pos.subarray(3*site, 3*site+3))};
+      });
+      trayCord = {anchors, length: m.tendon_range[2*t+1], radius: m.tendon_width[t],
+        color: Array.from(m.tendon_rgba.subarray(4*t, 4*t+3))};
+    }
+    return {xml, geoms, meshes, rods, trayCord, nbody: m.nbody, dynamicBodies};
   }
 }
 
