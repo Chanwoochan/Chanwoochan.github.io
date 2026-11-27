@@ -5,8 +5,21 @@ const phases = {
   ROD_RELEASE: 'open', ROD_BLOCKED: 'stop', HOOK_DWELL: 'aim', HOOK_BLOCKED: 'stop', WIN: 'win',
 };
 const loops = new Set(['moveX','moveY','lower','lift']);
-const catalogUrl = new URL('./assets/sounds/manifest.json?v=coffee-jazz-1', import.meta.url);
+const catalogUrl = new URL('./assets/sounds/manifest.json?v=jazz-shuffle-1', import.meta.url);
 const percent = n => Math.max(0, Math.min(100, Number(n) || 0));
+
+function shuffledTracks(tracks, previous) {
+  const queue = [...tracks];
+  for (let i = queue.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [queue[i], queue[j]] = [queue[j], queue[i]];
+  }
+  if (queue.length > 1 && queue[0] === previous) {
+    const j = 1 + Math.floor(Math.random() * (queue.length - 1));
+    [queue[0], queue[j]] = [queue[j], queue[0]];
+  }
+  return queue;
+}
 
 function retire(voice, now, fade) {
   if (!voice) return;
@@ -23,6 +36,7 @@ export class Sounds {
     this.musicEnabled = true; this.musicVolume = 30;
     this.buffers = new Map();
     this.effectVersion = 0; this.musicVersion = 0; this.musicOffset = 0;
+    this.musicQueue = [];
     this.paused = false;
   }
 
@@ -46,15 +60,17 @@ export class Sounds {
     if (this.context.state !== 'running') this.context.resume().catch(() => {});
   }
 
-  async fetchBuffer(key) {
+  getCatalog() {
     if (!this.catalog) {
       this.catalog = fetch(catalogUrl).then(response => {
         if (!response.ok) throw new Error('사운드 목록을 불러오지 못했습니다.');
         return response.json();
       }).catch(error => { this.catalog = null; throw error; });
     }
-    const catalog = await this.catalog;
-    const item = key === 'music' ? catalog.music : catalog.clips[key];
+    return this.catalog;
+  }
+
+  async fetchBuffer(item) {
     const response = await fetch(new URL(item.file, catalogUrl));
     if (!response.ok) throw new Error('음원을 불러오지 못했습니다.');
     const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
@@ -63,7 +79,7 @@ export class Sounds {
 
   load(key) {
     if (!this.buffers.has(key)) {
-      this.buffers.set(key, this.fetchBuffer(key).catch(error => {
+      this.buffers.set(key, this.getCatalog().then(catalog => this.fetchBuffer(catalog.clips[key])).catch(error => {
         this.buffers.delete(key); throw error;
       }));
     }
@@ -139,16 +155,53 @@ export class Sounds {
     if (!this.musicEnabled || this.paused) {
       if (this.music) {
         const now = this.context.currentTime;
-        this.musicOffset = (this.musicOffset + now - this.music.startedAt) % this.music.duration;
+        this.musicOffset = Math.min(this.musicOffset + now - this.music.startedAt, this.music.duration);
         retire(this.music, now, .09); this.music = null;
       }
       return;
     }
     if (this.music) return;
     try {
-      const {buffer, duration, level} = await this.load('music');
+      const catalog = await this.getCatalog();
       if (version !== this.musicVersion) return;
-      this.music = this.voice(buffer, this.musicBus, true, this.musicOffset, duration, level);
+      // Keep just the current song decoded, including while it is paused.
+      let candidates = [catalog.music, ...catalog.additional_music];
+      while (candidates.length) {
+        if (!this.track) {
+          if (!this.musicQueue.length) this.musicQueue = shuffledTracks(candidates, this.lastTrack);
+          this.track = this.musicQueue.shift();
+        }
+        const track = this.track;
+        this.trackBuffer ??= this.fetchBuffer(track);
+        let decoded;
+        try {
+          decoded = await this.trackBuffer;
+        } catch (error) {
+          if (version !== this.musicVersion) return;
+          this.clearTrack();
+          candidates = candidates.filter(item => item !== track);
+          if (!candidates.length) throw error;
+          continue;
+        }
+        if (version !== this.musicVersion) return;
+        const {buffer, duration, level} = decoded;
+        const voice = this.voice(buffer, this.musicBus, false, this.musicOffset, duration, level);
+        this.music = voice;
+        this.lastTrack = track;
+        voice.source.addEventListener('ended', () => {
+          if (this.music !== voice) return;
+          this.music = null;
+          this.clearTrack();
+          this.updateMusic();
+        }, {once: true});
+        return;
+      }
     } catch (error) { if (version === this.musicVersion) this.notify(error.message); }
+  }
+
+  clearTrack() {
+    this.track = null;
+    this.trackBuffer = null;
+    this.musicOffset = 0;
   }
 }

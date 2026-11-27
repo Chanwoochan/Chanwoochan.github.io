@@ -11,6 +11,48 @@
     "gain_db": -6,
     "changes": "Original MP3 as supplied by the artist. In-game playback gain reduced by 6 dB."
   },
+  "additional_music": [
+    {
+      "title": "Cat caffe",
+      "artist": "TAD",
+      "source": "https://opengameart.org/content/lofi-compilation",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "file": "cat-caffe.mp3",
+      "gain_db": -0.7,
+      "changes": "Original MP3. Playback volume adjusted in game."
+    },
+    {
+      "title": "Florist",
+      "artist": "TAD",
+      "source": "https://opengameart.org/content/lofi-compilation",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "file": "florist.mp3",
+      "gain_db": -4.2,
+      "changes": "Original MP3. Playback volume adjusted in game."
+    },
+    {
+      "title": "Oceanside",
+      "artist": "TAD",
+      "source": "https://opengameart.org/content/lofi-compilation",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "file": "oceanside.mp3",
+      "gain_db": -5.2,
+      "changes": "Original MP3. Playback volume adjusted in game."
+    },
+    {
+      "title": "Night in Venice",
+      "artist": "Kevin MacLeod",
+      "source": "https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1900056",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "file": "night-in-venice.mp3",
+      "gain_db": -8.9,
+      "changes": "Original MP3. Playback volume adjusted in game."
+    }
+  ],
   "clips": {
     "ready": {
       "file": "arcade-ready.wav"
