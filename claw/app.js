@@ -1,11 +1,12 @@
 import {DualRenderer} from './renderer.js?v=pc-perf';
-import {Sounds} from './audio.js';
+import {Sounds} from './audio.js?v=window-seat-1';
 import {labels} from './cycle.js';
 import {recordWin} from './collection/store.js';
 
 const $ = id => document.getElementById(id);
 const STORAGE = 'cygnus-ufo-defaults-v1';
 const prizeMode = 'cygnus';
+const mixerStorage = STORAGE + '-mix';
 const clone = value => JSON.parse(JSON.stringify(value));
 let worker, renderer, latestFrame, base, config, settings, currentAudio;
 let started = false, paused = false, ready = false, sceneReady = false, configured = false, winning = false;
@@ -112,7 +113,7 @@ function populate(values) {
 }
 function collect() {
   if (!$('settings-form').reportValidity()) return null;
-  const result = {config: clone(config), cycle: clone(settings), audio: {enabled: sounds.enabled, volume: sounds.volume}};
+  const result = {config: clone(config), cycle: clone(settings), audio: currentMix()};
   for (const [key, f] of fields) {
     if (!f.input.value.trim() || !Number.isFinite(Number(f.input.value))) { f.input.reportValidity(); return null; }
     result[f.source][key] = Number(f.input.value) / f.multiplier;
@@ -129,8 +130,7 @@ function normalise(values) {
     }
   }
   if (values.audio) {
-    result.audio.enabled = typeof values.audio.enabled === 'boolean' ? values.audio.enabled : result.audio.enabled;
-    if (Number.isFinite(values.audio.volume)) result.audio.volume = Math.max(0, Math.min(100, values.audio.volume));
+    result.audio = readMix(values.audio, result.audio);
   }
   return result;
 }
@@ -142,10 +142,28 @@ function configure(values, save = false) {
   $('start').textContent = '적용 중…'; $('loading-message').textContent = '설정을 적용하고 새 판을 준비합니다.';
   worker.postMessage({type: 'configure', config: values.config, settings: values.cycle, requestId}); updateControls();
 }
+function currentMix() {
+  return {enabled: sounds.enabled, volume: sounds.volume, musicEnabled: sounds.musicEnabled, musicVolume: sounds.musicVolume};
+}
+function readMix(values, defaults) {
+  const mix = {...defaults};
+  if (!values || typeof values !== 'object') return mix;
+  for (const key of ['enabled', 'musicEnabled']) if (typeof values[key] === 'boolean') mix[key] = values[key];
+  for (const key of ['volume', 'musicVolume']) if (Number.isFinite(values[key])) mix[key] = Math.max(0, Math.min(100, values[key]));
+  if (!('musicEnabled' in values) && (values.enabled === false || values.volume === 0)) mix.musicEnabled = false;
+  return mix;
+}
 function setAudio(values) {
-  sounds.enabled = values.enabled; sounds.setVolume(values.volume); $('sound').checked = values.enabled;
-  $('volume').value = values.volume; $('volume-value').value = `${values.volume}%`;
-  if (started) sounds.setEnabled(values.enabled);
+  sounds.setEnabled(values.enabled); sounds.setVolume(values.volume);
+  sounds.setMusicEnabled(values.musicEnabled); sounds.setMusicVolume(values.musicVolume);
+  $('sound').checked = values.enabled; $('music').checked = values.musicEnabled;
+  for (const [id, level] of [['volume', values.volume], ['music-volume', values.musicVolume]]) {
+    $(id).value = level; $(id + '-value').value = level + '%';
+  }
+  if (started) sounds.unlock();
+}
+function rememberMix() {
+  try { localStorage.setItem(mixerStorage, JSON.stringify(currentMix())); } catch { /* The current session still uses this mix. */ }
 }
 function maybeReady() {
   if (!configured || !sceneReady || fatalError) return;
@@ -164,6 +182,7 @@ function updateControls() {
 }
 function press(axis) {
   if (held || !ready || !started || paused || $(axis === 'x' ? 'left' : 'back').disabled) return false;
+  if (sounds.context?.state !== 'running') sounds.unlock();
   held = axis; $(axis === 'x' ? 'left' : 'back').classList.add('holding');
   worker.postMessage({type: 'press', axis});
   holdTimer = setInterval(() => worker.postMessage({type: 'hold'}), 200);
@@ -197,8 +216,10 @@ window.addEventListener('blur', () => releaseHeld());
 document.addEventListener('visibilitychange', () => {
   releaseHeld(); worker?.postMessage({type: 'visibility', hidden: document.hidden}); sounds.setPaused(document.hidden || paused);
 });
-window.addEventListener('pagehide', () => { releaseHeld(); worker?.postMessage({type: 'visibility', hidden: true}); sounds.stop(); });
-window.addEventListener('pageshow', () => worker?.postMessage({type: 'visibility', hidden: document.hidden}));
+window.addEventListener('pagehide', () => { releaseHeld(); worker?.postMessage({type: 'visibility', hidden: true}); sounds.setPaused(true); });
+window.addEventListener('pageshow', () => {
+  worker?.postMessage({type: 'visibility', hidden: document.hidden}); sounds.setPaused(document.hidden || paused);
+});
 
 $('start').addEventListener('click', () => {
   if (fatalError) { location.reload(); return; }
@@ -231,8 +252,16 @@ function showSettings(open) {
 }
 $('settings-toggle').addEventListener('click', () => showSettings($('settings-panel').hidden));
 $('settings-close').addEventListener('click', () => showSettings(false));
-$('sound').addEventListener('change', () => sounds.setEnabled($('sound').checked));
-$('volume').addEventListener('input', () => { sounds.setVolume($('volume').value); $('volume-value').value = `${sounds.volume}%`; });
+for (const [toggle, slider, setEnabled, setVolume] of [
+  ['sound', 'volume', value => sounds.setEnabled(value), value => sounds.setVolume(value)],
+  ['music', 'music-volume', value => sounds.setMusicEnabled(value), value => sounds.setMusicVolume(value)],
+]) {
+  $(toggle).addEventListener('change', () => {
+    setEnabled($(toggle).checked); if (started) sounds.unlock(); rememberMix();
+  });
+  $(slider).addEventListener('input', () => { setVolume($(slider).value); $(slider + '-value').value = $(slider).value + '%'; });
+  $(slider).addEventListener('change', rememberMix);
+}
 $('settings-form').addEventListener('submit', event => { event.preventDefault(); const v = collect(); if (v) configure(v); });
 $('save-settings').addEventListener('click', () => { const v = collect(); if (v) configure(v, true); });
 $('restore-settings').addEventListener('click', () => { if (base) { populate(base); configure(clone(base)); } });
@@ -253,9 +282,11 @@ async function boot() {
   if (!window.WebAssembly || !window.Worker) throw new Error('WebAssembly와 Web Worker를 지원하는 브라우저가 필요합니다.');
   const fetchJSON = async path => { const r = await fetch(path); if (!r.ok) throw new Error(`설정 불러오기 실패: ${r.status}`); return r.json(); };
   const [c, s, audio] = await Promise.all(['config.json', 'cycle_config.json', 'audio_config.json'].map(f => fetchJSON('./model/' + f)));
+  Object.assign(audio, readMix(audio, currentMix()));
   base = {config: c, cycle: s, audio}; let values = clone(base);
   try { const saved = localStorage.getItem(STORAGE); if (saved) values = normalise(JSON.parse(saved)); }
   catch { toast('저장된 설정을 읽지 못해 배포 기본값으로 시작합니다.'); }
+  try { values.audio = readMix(JSON.parse(localStorage.getItem(mixerStorage)), values.audio); } catch { /* Use the saved game or factory mix. */ }
   config = values.config; settings = values.cycle; currentAudio = values.audio;
   setAudio(currentAudio); renderSettings();
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
@@ -276,7 +307,7 @@ async function boot() {
       case 'configured':
         config = m.config; settings = m.settings; configured = true;
         if (pending && pending.id === m.requestId) {
-          setAudio(pending.audio); currentAudio = pending.audio;
+          setAudio(pending.audio); rememberMix(); currentAudio = pending.audio;
           if (pending.save) {
             try {
               localStorage.setItem(STORAGE, JSON.stringify({version: 1, config, cycle: settings, audio: currentAudio}));

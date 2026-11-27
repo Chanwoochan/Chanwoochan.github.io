@@ -1,43 +1,153 @@
-const phaseSounds = {
-  READY_X: ['ready', false], MOVING_X: ['move', true], MOVING_Y: ['move', true],
-  OPEN_BEFORE_LOWER: ['open', false], LOWERING: ['lower', true], CLOSING: ['close', false],
-  LIFTING: ['lift', true], MOVING_CENTER: ['move', true], RELEASING: ['release', false],
-  RECLOSING: ['close', false], RETURNING: ['move', true], WIN: ['win', false],
+const phases = {
+  READY_X: 'ready', READY_Y: 'aim', MOVING_X: 'moveX', MOVING_Y: 'moveY',
+  OPEN_BEFORE_LOWER: 'open', LOWERING: 'lower', CLOSING: 'close', LIFTING: 'lift',
+  MOVING_CENTER: 'moveX', RELEASING: 'release', RECLOSING: 'close', RETURNING: 'moveY',
+  ROD_RELEASE: 'open', ROD_BLOCKED: 'stop', HOOK_DWELL: 'aim', HOOK_BLOCKED: 'stop', WIN: 'win',
 };
+const loops = new Set(['moveX','moveY','lower','lift']);
+const catalogUrl = new URL('./assets/sounds/manifest.json?v=window-seat-1', import.meta.url);
+const percent = n => Math.max(0, Math.min(100, Number(n) || 0));
+
+function retire(voice, now, fade) {
+  if (!voice) return;
+  const gain = voice.envelope.gain;
+  gain.cancelScheduledValues(now);
+  gain.setTargetAtTime(0, now, fade / 5);
+  voice.source.stop(now + fade);
+}
+
 export class Sounds {
-  constructor(notify) { this.notify = notify; this.enabled = true; this.volume = 55; this.buffers = new Map(); this.state = null; }
-  async unlock() {
+  constructor(notify) {
+    this.notify = notify;
+    this.enabled = true; this.volume = 55;
+    this.musicEnabled = true; this.musicVolume = 30;
+    this.buffers = new Map();
+    this.effectVersion = 0; this.musicVersion = 0; this.musicOffset = 0;
+    this.paused = false;
+  }
+
+  unlock() {
+    if (!this.enabled && !this.musicEnabled) return;
     if (!this.context) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      this.context = new AudioContext(); this.gain = this.context.createGain(); this.gain.connect(this.context.destination);
-      this.setVolume(this.volume);
-      this.loading = (async () => {
-        const response = await fetch('./assets/sounds/manifest.json');
-        if (!response.ok) throw new Error('사운드 목록을 불러오지 못했습니다.');
-        const manifest = await response.json(); this.clips = manifest.clips;
-        await Promise.all([...new Set(Object.values(this.clips).map(c => c.file))].map(async file => {
-          const response = await fetch('./assets/sounds/' + file);
-          if (!response.ok) throw new Error('효과음을 불러오지 못했습니다.');
-          this.buffers.set(file, await this.context.decodeAudioData(await response.arrayBuffer()));
-        }));
-        this.play(this.state);
-      })().catch(error => this.notify(error.message));
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) return;
+      try { this.context = new Audio(); }
+      catch { this.notify('이 브라우저에서 오디오 출력을 열 수 없습니다.'); return; }
+      this.fxBus = this.context.createGain();
+      this.musicBus = this.context.createGain();
+      this.duck = this.context.createGain();
+      this.fxBus.connect(this.context.destination);
+      this.musicBus.connect(this.duck).connect(this.context.destination);
+      this.fxBus.gain.value = this.volume / 100;
+      this.musicBus.gain.value = this.musicVolume / 100;
+      this.updateEffect();
+      this.updateMusic();
     }
-    try { await this.context.resume(); } catch { /* Another gesture can resume audio. */ }
+    if (this.context.state !== 'running') this.context.resume().catch(() => {});
   }
-  setVolume(value) { this.volume = Number(value); if (this.gain) this.gain.gain.value = this.volume / 100; }
-  setEnabled(value) { this.enabled = value; if (!value) this.stop(); else { this.unlock(); this.play(this.state); } }
-  stop() { if (this.source) { try { this.source.stop(); } catch {} this.source.disconnect(); this.source = null; } }
+
+  async fetchBuffer(key) {
+    if (!this.catalog) {
+      this.catalog = fetch(catalogUrl).then(response => {
+        if (!response.ok) throw new Error('사운드 목록을 불러오지 못했습니다.');
+        return response.json();
+      }).catch(error => { this.catalog = null; throw error; });
+    }
+    const catalog = await this.catalog;
+    const item = key === 'music' ? catalog.music : catalog.clips[key];
+    const response = await fetch(new URL(item.file, catalogUrl));
+    if (!response.ok) throw new Error('음원을 불러오지 못했습니다.');
+    return {buffer: await this.context.decodeAudioData(await response.arrayBuffer()), duration: item.loop_seconds};
+  }
+
+  load(key) {
+    if (!this.buffers.has(key)) {
+      this.buffers.set(key, this.fetchBuffer(key).catch(error => {
+        this.buffers.delete(key); throw error;
+      }));
+    }
+    return this.buffers.get(key);
+  }
+
+  voice(buffer, bus, loop, offset = 0, duration = buffer.duration) {
+    const now = this.context.currentTime;
+    const source = this.context.createBufferSource(), envelope = this.context.createGain();
+    source.buffer = buffer; source.loop = loop;
+    if (loop) source.loopEnd = duration;
+    source.connect(envelope).connect(bus);
+    envelope.gain.setValueAtTime(0, now);
+    envelope.gain.linearRampToValueAtTime(1, now + (bus === this.musicBus ? .22 : .012));
+    source.onended = () => {
+      source.disconnect(); envelope.disconnect();
+      if (this.effect?.source === source) this.effect = null;
+    };
+    source.start(now, offset);
+    return {source, envelope, startedAt: now, duration};
+  }
+
+  setVolume(value) {
+    this.volume = percent(value);
+    if (this.fxBus) this.fxBus.gain.setTargetAtTime(this.volume / 100, this.context.currentTime, .025);
+  }
+  setMusicVolume(value) {
+    this.musicVolume = percent(value);
+    if (this.musicBus) this.musicBus.gain.setTargetAtTime(this.musicVolume / 100, this.context.currentTime, .035);
+  }
+  setEnabled(value) {
+    if (this.enabled === value) return;
+    this.enabled = value; this.updateEffect(true);
+  }
+  setMusicEnabled(value) {
+    if (this.musicEnabled === value) return;
+    this.musicEnabled = value; this.updateMusic();
+  }
+  setPaused(value) {
+    if (this.paused === value) return;
+    this.paused = value;
+    this.updateEffect(true); this.updateMusic();
+    if (!value && this.context?.state === 'suspended') this.context.resume().catch(() => {});
+  }
   play(state) {
-    this.state = state; const cue = phaseSounds[state];
-    if (!this.enabled || this.paused || !cue || !this.context || !this.clips) { this.stop(); return; }
-    const [key, loop] = cue, file = this.clips[key]?.file, buffer = this.buffers.get(file);
-    if (!buffer) return;
-    // Several motion phases intentionally share the same real-machine loop.
-    if (this.source && this.currentFile === file && this.source.loop && loop) return;
-    this.stop(); const source = this.context.createBufferSource(); source.buffer = buffer; source.loop = loop;
-    source.connect(this.gain); source.start(); this.source = source; this.currentFile = file;
+    if (this.state === state) return;
+    this.state = state; this.updateEffect();
   }
-  setPaused(value) { this.paused = value; if (value) this.stop(); else this.play(this.state); }
+
+  async updateEffect(loopsOnly = false) {
+    if (!this.context) return;
+    const key = phases[this.state], loop = loops.has(key);
+    const version = ++this.effectVersion;
+    if (loop && this.effect?.key === key && this.enabled && !this.paused) return;
+    retire(this.effect, this.context.currentTime, .035); this.effect = null;
+    if (!this.enabled || this.paused || !key || (loopsOnly && !loop)) return;
+    try {
+      const {buffer} = await this.load(key);
+      if (version !== this.effectVersion) return;
+      if (key === 'win') {
+        const now = this.context.currentTime, level = this.duck.gain;
+        level.cancelScheduledValues(now);
+        level.setTargetAtTime(.43, now, .045);
+        level.setTargetAtTime(1, now + buffer.duration, .27);
+      }
+      this.effect = this.voice(buffer, this.fxBus, loop); this.effect.key = key;
+    } catch (error) { if (version === this.effectVersion) this.notify(error.message); }
+  }
+
+  async updateMusic() {
+    if (!this.context) return;
+    const version = ++this.musicVersion;
+    if (!this.musicEnabled || this.paused) {
+      if (this.music) {
+        const now = this.context.currentTime;
+        this.musicOffset = (this.musicOffset + now - this.music.startedAt) % this.music.duration;
+        retire(this.music, now, .09); this.music = null;
+      }
+      return;
+    }
+    if (this.music) return;
+    try {
+      const {buffer, duration} = await this.load('music');
+      if (version !== this.musicVersion) return;
+      this.music = this.voice(buffer, this.musicBus, true, this.musicOffset, Math.min(duration, buffer.duration));
+    } catch (error) { if (version === this.musicVersion) this.notify(error.message); }
+  }
 }

@@ -1,4 +1,6 @@
 {
   "enabled": true,
-  "volume": 55
+  "volume": 55,
+  "musicEnabled": true,
+  "musicVolume": 30
 }
