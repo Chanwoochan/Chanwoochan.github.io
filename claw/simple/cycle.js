@@ -35,8 +35,8 @@ export class Cycle {
     this.elapsed += dt;
     if (this.state === 'LOWERING' || this.state === 'LIFTING') this.zLoad = sim.clawExternalZ();
     switch (this.state) {
-      case 'MOVING_X': this.heldX += dt; sim.setTarget({x: sim.target[0] - s.move_speed * dt}); break;
-      case 'MOVING_Y': this.heldY += dt; sim.setTarget({y: sim.target[1] + s.move_speed * dt}); break;
+      case 'MOVING_X': this.heldX += dt; sim.setTarget({x: Math.max(s.left_limit_x ?? -.24, sim.target[0] - s.move_speed * dt)}); break;
+      case 'MOVING_Y': this.heldY += dt; sim.setTarget({y: Math.min(s.back_limit_y ?? .27, sim.target[1] + s.move_speed * dt)}); break;
       case 'OPEN_BEFORE_LOWER':
         if (this.elapsed >= s.open_duration) { sim.setTarget({z: s.lower_height}); this.enter('LOWERING'); } break;
       case 'LOWERING':

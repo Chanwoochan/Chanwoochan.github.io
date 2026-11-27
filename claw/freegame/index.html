@@ -7,7 +7,7 @@
   <title>프리게임 선택 · UFO캐쳐</title>
   <link rel="icon" type="image/svg+xml" href="../simple/icon.svg">
   <link rel="stylesheet" href="../lobby.css">
-  <link rel="stylesheet" href="./modes.css">
+  <link rel="stylesheet" href="./modes.css?v=studio1">
 </head>
 <body>
   <header class="topbar"><nav class="wrap" aria-label="주 메뉴">
@@ -17,18 +17,18 @@
   <main class="wrap">
     <h1>프리게임</h1>
     <div class="modes">
-      <a class="mode" href="./play/?mode=bridge">
+      <article class="mode">
         <div class="art bridge-art"><img src="./bridge.png" width="256" height="136" alt=""></div>
         <div class="mode-copy"><h2>하시와타시 <small lang="ja">橋渡し</small></h2>
           <p>집게로 DUMMY 박스를 돌려 두 봉 사이로 떨어뜨리세요.</p>
-          <span class="enter">플레이하기 <b aria-hidden="true">→</b></span></div>
-      </a>
-      <a class="mode" href="./play/?mode=hook-ring">
+          <div class="enter"><a href="./play/?mode=bridge">플레이하기 →</a><a class="customize" href="./play/?mode=bridge&amp;settings=1">기기 커스터마이즈</a></div></div>
+      </article>
+      <article class="mode">
         <div class="art hook-art"><img src="./hook-ring.png" width="256" height="136" alt=""></div>
         <div class="mode-copy"><h2>후크&amp;링 <small lang="ja">フック＆リング</small></h2>
           <p>초록 고리를 걸어 빨간 판을 들고, 줄로 연결된 검은 판을 기울여 경품을 떨어뜨리세요.</p>
-          <span class="enter">플레이하기 <b aria-hidden="true">→</b></span></div>
-      </a>
+          <div class="enter"><a href="./play/?mode=hook-ring">플레이하기 →</a><a class="customize" href="./play/?mode=hook-ring&amp;settings=1">기기 커스터마이즈</a></div></div>
+      </article>
     </div>
   </main>
 </body>

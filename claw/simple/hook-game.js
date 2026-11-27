@@ -1,4 +1,4 @@
-import {Cycle, labels as baseLabels} from './cycle.js?v=pc-perf';
+import {Cycle, labels as baseLabels} from './cycle.js?v=studio1';
 
 export const hookLabels = {
   ...baseLabels,
@@ -79,7 +79,6 @@ export function setHookPage() {
   document.querySelector('.entry-note').textContent = '좌 이동 · 상 이동 · 자동 하강';
   document.querySelector('#step-auto').textContent = '자동 하강';
   document.querySelector('.cycle-note').textContent = '좌·상 버튼으로 초록 고리를 조준하세요. 빨간 판을 걸어 들면 보라색 줄이 검은 판을 기울여 경품이 미끄러집니다.';
-  document.querySelector('.settings-heading p').textContent = '후크·링의 형상, 줄 길이와 하강 후 대기 시간은 새 판에 적용됩니다. 헤드 강성과 감쇠는 즉시 반영됩니다.';
 }
 
 export function showHookSetting(key) {

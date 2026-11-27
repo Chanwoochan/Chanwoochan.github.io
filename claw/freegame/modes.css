@@ -10,7 +10,11 @@
 .mode small { font-size: 14px; color: #666274; font-weight: 500; letter-spacing: 0; }
 .mode p { font-size: 16px; line-height: 1.6; color: #565360; margin: 9px 0 23px; }
 .enter { margin-top: auto; border-top: 1px solid #ebe8e4; padding-top: 16px; display: flex; justify-content: space-between; font-weight: 750; }
-.enter b { color: #64548b; }
+.mode { position:relative; }
+.enter { align-items:center; flex-wrap:wrap; gap:12px; }
+.enter a:first-child::after { content:""; position:absolute; inset:0; border-radius:18px; }
+.enter .customize { position:relative; padding:8px 11px; border:1px solid #b8c8bd; border-radius:7px; background:#f3f7f1; color:#265c46; font-size:.83rem; }
+.enter .customize:hover { background:#e4eee1; }
 @media (max-width: 620px) {
   .modes { grid-template-columns: 1fr; gap: 17px; }
   .art img { max-width: 250px; }

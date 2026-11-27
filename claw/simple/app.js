@@ -1,7 +1,8 @@
 import {DualRenderer} from './outline-renderer.js?v=daily1';
 import {Sounds} from './audio.js';
-import {labels as bridgeLabels} from './rod-recovery.js?v=pc-perf';
-import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=20261127-tray';
+import {labels as bridgeLabels} from './rod-recovery.js?v=studio1';
+import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=studio1';
+let studio, editing = false, leaveAfterApply = false;
 import {dailyAt} from '../daily/catalog.js';
 import {setDailyPage, watchDailyRound} from '../daily/game.js';
 const daily = document.body.dataset.mode === 'daily' ? dailyAt() : null;
@@ -67,6 +68,8 @@ const schema = [
   ['자동 집기 동작', 'open_duration', '벌림 고정 대기 (s)', 1, .1, 0, 10],
   ['자동 집기 동작', 'close_duration', '닫힘 대기 (s)', 1, .1, .2, 5],
   ['자동 집기 동작', 'release_duration', '놓기 추가 대기 (s)', 1, .1, 0, 3],
+  ['이동 범위', 'left_limit_x', '왼쪽 끝 X (mm)', 1000, 1, -240, 240],
+  ['이동 범위', 'back_limit_y', '뒤쪽 끝 Y (mm)', 1000, 1, -345, 270],
   ['원점과 집게 각도', 'start_x', '우측 앞 원점 X (mm)', 1000, 1, -240, 240],
   ['원점과 집게 각도', 'start_y', '우측 앞 원점 Y (mm)', 1000, 1, -345, 270],
   ['원점과 집게 각도', 'home_height', '시작·상승 높이 (mm)', 1000, 1, 650, 950],
@@ -81,6 +84,7 @@ function toast(message, error = false) {
   $('toast').hidden = false; toastTimer = setTimeout(() => { $('toast').hidden = true; }, error ? 9000 : 4200);
 }
 function error(message, recoverable = false) {
+  studio?.setBusy(false); leaveAfterApply = false;
   releaseHeld(); ready = recoverable; pending = null;
   if (recoverable) {
     $('entry').hidden = started; $('engine-status').textContent = '이전 설정 유지';
@@ -131,6 +135,7 @@ function populate(values) {
   }
 }
 function collect() {
+  if (studio && !studio.checkFields()) return null;
   if (!$('settings-form').reportValidity()) return null;
   const result = {config: clone(config), cycle: clone(settings), audio: {enabled: sounds.enabled, volume: sounds.volume}};
   for (const [key, f] of fields) {
@@ -162,7 +167,10 @@ function normalise(values) {
   }
   return result;
 }
-function configure(values, save = false) {
+function configure(values, save = false, leave = false) {
+  if (pending) return;
+  if (studio) studio.setBusy(true);
+  leaveAfterApply = leave;
   releaseHeld(); ready = false; sceneReady = configured = false;
   pending = {id: ++requestId, save, audio: values.audio};
   $('apply-settings').disabled = $('save-settings').disabled = true;
@@ -177,6 +185,8 @@ function setAudio(values) {
 }
 function maybeReady() {
   if (!configured || !sceneReady || fatalError) return;
+  studio?.setBusy(false);
+  if (leaveAfterApply) { leaveAfterApply = false; showSettings(false); }
   ready = true; $('engine-dot').classList.add('ready'); $('engine-status').textContent = '준비 완료';
   $('loading-line').hidden = true; $('start').textContent = '플레이 시작'; $('start').disabled = false;
   $('loading-message').textContent = hookMode ? '줄 끝을 받침대의 후크나 D링에 맞추세요.' : '좌, 상 버튼으로 집게의 위치를 정해보세요.';
@@ -213,6 +223,7 @@ for (const [id, axis] of [['left', 'x'], ['back', 'y']]) {
   $(id).addEventListener('contextmenu', event => event.preventDefault());
 }
 window.addEventListener('keydown', event => {
+  if (editing) { if (event.key === 'Escape') showSettings(false); return; }
   if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target.isContentEditable) return;
   if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
     event.preventDefault(); if (!event.repeat) press(event.key === 'ArrowLeft' ? 'x' : 'y');
@@ -225,10 +236,10 @@ window.addEventListener('keyup', event => {
 });
 window.addEventListener('blur', () => releaseHeld());
 document.addEventListener('visibilitychange', () => {
-  releaseHeld(); worker?.postMessage({type: 'visibility', hidden: document.hidden}); sounds.setPaused(document.hidden || paused);
+  releaseHeld(); worker?.postMessage({type: 'visibility', hidden: editing || document.hidden}); sounds.setPaused(editing || document.hidden || paused);
 });
 window.addEventListener('pagehide', () => { releaseHeld(); worker?.postMessage({type: 'visibility', hidden: true}); sounds.stop(); });
-window.addEventListener('pageshow', () => worker?.postMessage({type: 'visibility', hidden: document.hidden}));
+window.addEventListener('pageshow', () => worker?.postMessage({type: 'visibility', hidden: editing || document.hidden}));
 
 $('start').addEventListener('click', () => {
   if (fatalError) { location.reload(); return; }
@@ -257,16 +268,24 @@ $('fullscreen').addEventListener('click', async () => {
   } catch { toast('전체 화면으로 전환하지 못했습니다.'); }
 });
 function showSettings(open) {
-  releaseHeld(); $('settings-panel').hidden = !open; $('settings-toggle').setAttribute('aria-expanded', open);
-  if (open) $('settings-panel').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start'});
+  if (daily || !studio) return;
+  releaseHeld(); editing = open;
+  $('settings-panel').hidden = !open;
+  document.body.classList.toggle('editing-machine', open);
+  $('settings-toggle').setAttribute('aria-expanded', open);
+  worker?.postMessage({type: 'visibility', hidden: open || document.hidden});
+  sounds.setPaused(open || paused || document.hidden);
+  studio.setOpen(open);
+  (open ? $('settings-close') : $('settings-toggle')).focus({preventScroll: true});
+  window.scrollTo(0, 0);
 }
 $('settings-toggle').addEventListener('click', () => showSettings($('settings-panel').hidden));
 $('settings-close').addEventListener('click', () => showSettings(false));
 $('sound').addEventListener('change', () => sounds.setEnabled($('sound').checked));
 $('volume').addEventListener('input', () => { sounds.setVolume($('volume').value); $('volume-value').value = `${sounds.volume}%`; });
-$('settings-form').addEventListener('submit', event => { event.preventDefault(); const v = collect(); if (v) configure(v); });
+$('settings-form').addEventListener('submit', event => { event.preventDefault(); const v = collect(); if (v) configure(v, false, true); });
 $('save-settings').addEventListener('click', () => { const v = collect(); if (v) configure(v, true); });
-$('restore-settings').addEventListener('click', () => { if (base) { populate(base); configure(clone(base)); } });
+$('restore-settings').addEventListener('click', () => { if (base) { populate(base); studio?.sync(); configure(clone(base)); } });
 $('export-settings').addEventListener('click', () => {
   const values = collect(); if (!values) return;
   const file = new Blob([JSON.stringify({version: 3, ...values}, null, 2)], {type: 'application/json'});
@@ -275,7 +294,7 @@ $('export-settings').addEventListener('click', () => {
 });
 $('import-settings').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file || !base) return;
-  try { const values = normalise(JSON.parse(await file.text())); populate(values); configure(values); }
+  try { const values = normalise(JSON.parse(await file.text())); populate(values); studio?.sync(); configure(values); }
   catch (e) { toast('설정을 가져오지 못했습니다. ' + e.message, true); }
   finally { event.target.value = ''; }
 });
@@ -290,14 +309,21 @@ async function boot() {
   try { const saved = !daily && localStorage.getItem(STORAGE); if (saved) values = normalise(JSON.parse(saved)); }
   catch { toast('저장된 설정을 읽지 못해 배포 기본값으로 시작합니다.'); }
   config = values.config; settings = values.cycle; currentAudio = values.audio;
-  setAudio(currentAudio); if (!daily) renderSettings();
+  setAudio(currentAudio);
+  if (!daily) {
+    const {MachineStudio} = await import('./machine-studio.js');
+    renderSettings();
+    studio = new MachineStudio(fields, hookMode);
+    $('settings-toggle').disabled = false;
+    if (new URL(location.href).searchParams.get('settings') === '1') showSettings(true);
+  }
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   if (daily) {
     const {art} = daily.prize;
     renderer.packageTextures = {package_front_tex: art.front, package_long_tex: art.long, package_short_tex: art.short};
     refreshDaily = watchDailyRound(daily, () => !held && !winning && (!started || latestFrame?.state === 'READY_X'));
   }
-  worker = new Worker(new URL('./physics.worker.js?v=20261127-tray' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
+  worker = new Worker(new URL('./physics.worker.js?v=studio1' + (hookMode ? '&mode=hook-ring' : ''), import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
   worker.addEventListener('message', async event => {
     const m = event.data;
@@ -323,7 +349,8 @@ async function boot() {
           } else toast('설정을 적용했습니다. 새 판을 시작합니다.');
           pending = null;
         }
-        populate({config, cycle: settings}); maybeReady(); break;
+        if (m.requestId) { populate({config, cycle: settings}); studio?.sync(); }
+        maybeReady(); break;
       case 'frame': {
         const previous = latestFrame;
         latestFrame = m; if (sceneReady) renderer.requestDraw(m);
@@ -361,6 +388,6 @@ async function boot() {
     }
   });
   worker.postMessage({type: 'boot', config, settings});
-  worker.postMessage({type: 'visibility', hidden: document.hidden});
+  worker.postMessage({type: 'visibility', hidden: editing || document.hidden});
 }
 boot().catch(e => error(e.message));

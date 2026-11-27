@@ -9,12 +9,13 @@
   <title>데일리 모드 · UFO캐쳐</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="stylesheet" href="./style.css?v=20261124-hook-settings">
+  <link rel="stylesheet" href="./machine-studio.css">
   <link rel="stylesheet" href="../daily/daily.css">
 </head>
 <body data-mode="daily">
   <header class="topbar">
     <strong class="brand">데일리 모드</strong>
-    <div class="top-right"><a class="quiet" href="../">← 게임 로비</a><button hidden id="settings-toggle" class="quiet" aria-controls="settings-panel" aria-expanded="false">설정</button></div>
+    <div class="top-right"><a class="quiet" href="../">← 게임 로비</a><button hidden id="settings-toggle" class="studio-trigger" disabled aria-controls="settings-panel" aria-expanded="false">기기 커스터마이즈</button></div>
   </header>
   <main>
     <div class="game-layout">
@@ -44,14 +45,28 @@
       </aside>
     </div>
     <section class="settings-panel" id="settings-panel" hidden aria-label="물리와 동작 설정">
-      <div class="settings-heading"><div><h2>기기 설정</h2><p>봉 탄성·치수·동작은 새 판에 적용됩니다. P게인과 마찰은 즉시 반영됩니다.</p></div><button id="settings-close" class="quiet">닫기</button></div>
-      <form id="settings-form"><div class="settings-grid" id="settings-fields"></div><div class="settings-actions"><button type="submit" class="primary" id="apply-settings">설정 적용 · 새 판</button><button type="button" id="save-settings" class="secondary">기본값으로 저장</button><button type="button" id="restore-settings" class="quiet">배포 기본값</button><button type="button" id="export-settings" class="quiet">JSON 내보내기</button><label class="quiet file-label">JSON 가져오기<input id="import-settings" type="file" accept="application/json,.json" hidden></label></div></form>
-      <p class="settings-note">이 버전의 기본값은 이 기기 브라우저에 따로 저장됩니다. 기기 외곽 크기는 설정에 따라 늘어나지 않습니다.</p>
+      <header class="studio-header"><div><p id="studio-mode"></p><h1>기기 커스터마이즈</h1></div><button id="settings-close" type="button" class="quiet">게임으로 돌아가기 ↗</button></header>
+      <div class="studio-layout">
+        <section class="studio-preview" aria-label="기기 미리보기">
+          <div class="preview-toolbar"><h2>기기 미리보기</h2><div id="studio-views" class="studio-segment" aria-label="미리보기 시점"></div></div>
+          <div class="studio-stage"><canvas id="studio-canvas" aria-label="기기 부품을 눌러 선택하고 치수 손잡이를 드래그하세요"></canvas><div class="studio-zoom"><button type="button" id="studio-zoom-in" aria-label="미리보기 확대">＋</button><button type="button" id="studio-zoom-out" aria-label="미리보기 축소">−</button></div></div>
+          <div class="preview-readout"><strong id="studio-readout"></strong><span id="studio-guidance"></span></div>
+        </section>
+        <form id="settings-form" class="studio-inspector" novalidate>
+          <div id="studio-parts" aria-label="설정할 부품" class="studio-parts"></div>
+          <div class="studio-inside"><h2 id="studio-title"></h2><p id="studio-description"></p>
+            <div id="studio-pose" class="studio-segment" aria-label="집게 자세"></div>
+            <div id="settings-fields"></div>
+          </div>
+          <div class="studio-actions"><button type="submit" class="primary" id="apply-settings" disabled>새 판에 적용</button><button type="button" id="save-settings" class="secondary" disabled>기본값으로 저장</button></div>
+          <details class="studio-files"><summary>기본값 복원 · 설정 파일</summary><div><button type="button" id="restore-settings" class="quiet">배포 기본값 복원</button><button type="button" id="export-settings" class="quiet">JSON 내보내기</button><label class="quiet file-label">JSON 가져오기<input id="import-settings" type="file" accept="application/json,.json"></label></div></details>
+        </form>
+      </div>
     </section>
     <footer><span>UFO캐쳐 · 정면 + 좌측면</span><a href="../collection/">경품 도감</a><a href="./credits.html" target="_blank" rel="noopener">치수·사운드 출처</a></footer>
   </main>
   <div id="toast" class="toast" hidden role="status"></div>
   <noscript>이 게임을 실행하려면 브라우저의 JavaScript를 켜주세요.</noscript>
-  <script type="module" src="./app.js?v=daily1"></script>
+  <script type="module" src="./app.js?v=studio1"></script>
 </body>
 </html>

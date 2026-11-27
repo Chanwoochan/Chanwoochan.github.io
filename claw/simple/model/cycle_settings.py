@@ -21,8 +21,11 @@ class CycleSettings:
 
     descent_yaw_deg: float = 5.0
 
+    left_limit_x: float = -.24
+    back_limit_y: float = .27
+
     def validate(self):
-        bounds = {'descent_yaw_deg': (-15, 15), 'start_x': (-0.24, 0.24), 'start_y': (-0.345, 0.27), 'home_height': (0.65, 0.95), 'lower_height': (0.2, 0.75), 'move_speed': (0.01, 0.14), 'z_load_threshold': (0.1, 30.0), 'contact_hold_time': (0.0, 0.2), 'open_duration': (0.0, 10.0), 'close_duration': (0.2, 5.0), 'release_duration': (0.0, 3.0), 'release_x': (-0.24, 0.24), 'release_y': (-0.345, 0.27), 'open_angle': (0.0, 0.8), 'closed_angle': (0.0, 0.8)}
+        bounds = {'left_limit_x': (-.24, self.start_x), 'back_limit_y': (self.start_y, .27), 'descent_yaw_deg': (-15, 15), 'start_x': (-0.24, 0.24), 'start_y': (-0.345, 0.27), 'home_height': (0.65, 0.95), 'lower_height': (0.2, 0.75), 'move_speed': (0.01, 0.14), 'z_load_threshold': (0.1, 30.0), 'contact_hold_time': (0.0, 0.2), 'open_duration': (0.0, 10.0), 'close_duration': (0.2, 5.0), 'release_duration': (0.0, 3.0), 'release_x': (-0.24, 0.24), 'release_y': (-0.345, 0.27), 'open_angle': (0.0, 0.8), 'closed_angle': (0.0, 0.8)}
         for name, (lo, hi) in bounds.items():
             value = getattr(self, name)
             if not math.isfinite(value) or not lo <= value <= hi:
