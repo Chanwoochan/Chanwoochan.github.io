@@ -1,5 +1,5 @@
 import {DualRenderer} from './outline-renderer.js?v=daily1';
-import {Sounds} from './audio.js?v=window-seat-1';
+import {Sounds} from './audio.js?v=coffee-jazz-1';
 import {labels as bridgeLabels} from './rod-recovery.js?v=studio1';
 import {applyHookDefaults, hookLabels, renderHookEquipment, setHookPage, showHookSetting, validateHookEquipment} from './hook-game.js?v=studio1';
 let studio, editing = false, leaveAfterApply = false;

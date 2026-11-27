@@ -1,11 +1,15 @@
 {
-  "production": "Original composition and synthesis for this game.",
+  "production": "Original synthesized game effects. Background music credited below.",
   "music": {
-    "title": "창가 오락실 (Window Seat)",
-    "file": "window-seat.mp3",
-    "bpm": 80,
-    "bars": 24,
-    "loop_seconds": 72
+    "title": "Coffee Jazz Lofi",
+    "artist": "Marcelo Fernández",
+    "artist_url": "http://www.marcelofernandezmusic.com",
+    "source": "https://opengameart.org/content/coffee-jazz-lofi",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "file": "coffee-jazz-lofi.mp3",
+    "gain_db": -6,
+    "changes": "Original MP3 as supplied by the artist. In-game playback gain reduced by 6 dB."
   },
   "clips": {
     "ready": {

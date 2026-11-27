@@ -5,7 +5,7 @@ const phases = {
   ROD_RELEASE: 'open', ROD_BLOCKED: 'stop', HOOK_DWELL: 'aim', HOOK_BLOCKED: 'stop', WIN: 'win',
 };
 const loops = new Set(['moveX','moveY','lower','lift']);
-const catalogUrl = new URL('../assets/sounds/manifest.json?v=window-seat-1', import.meta.url);
+const catalogUrl = new URL('../assets/sounds/manifest.json?v=coffee-jazz-1', import.meta.url);
 const percent = n => Math.max(0, Math.min(100, Number(n) || 0));
 
 function retire(voice, now, fade) {
@@ -57,7 +57,8 @@ export class Sounds {
     const item = key === 'music' ? catalog.music : catalog.clips[key];
     const response = await fetch(new URL(item.file, catalogUrl));
     if (!response.ok) throw new Error('음원을 불러오지 못했습니다.');
-    return {buffer: await this.context.decodeAudioData(await response.arrayBuffer()), duration: item.loop_seconds};
+    const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
+    return {buffer, duration: Math.min(item.loop_seconds ?? buffer.duration, buffer.duration), level: 10 ** ((item.gain_db ?? 0) / 20)};
   }
 
   load(key) {
@@ -69,14 +70,14 @@ export class Sounds {
     return this.buffers.get(key);
   }
 
-  voice(buffer, bus, loop, offset = 0, duration = buffer.duration) {
+  voice(buffer, bus, loop, offset = 0, duration = buffer.duration, level = 1) {
     const now = this.context.currentTime;
     const source = this.context.createBufferSource(), envelope = this.context.createGain();
     source.buffer = buffer; source.loop = loop;
     if (loop) source.loopEnd = duration;
     source.connect(envelope).connect(bus);
     envelope.gain.setValueAtTime(0, now);
-    envelope.gain.linearRampToValueAtTime(1, now + (bus === this.musicBus ? .22 : .012));
+    envelope.gain.linearRampToValueAtTime(level, now + (bus === this.musicBus ? .22 : .012));
     source.onended = () => {
       source.disconnect(); envelope.disconnect();
       if (this.effect?.source === source) this.effect = null;
@@ -145,9 +146,9 @@ export class Sounds {
     }
     if (this.music) return;
     try {
-      const {buffer, duration} = await this.load('music');
+      const {buffer, duration, level} = await this.load('music');
       if (version !== this.musicVersion) return;
-      this.music = this.voice(buffer, this.musicBus, true, this.musicOffset, Math.min(duration, buffer.duration));
+      this.music = this.voice(buffer, this.musicBus, true, this.musicOffset, duration, level);
     } catch (error) { if (version === this.musicVersion) this.notify(error.message); }
   }
 }
