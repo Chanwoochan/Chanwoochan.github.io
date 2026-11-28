@@ -7,43 +7,21 @@ export const games = {
   ...Object.fromEntries(dailyPrizes.map(prize => [prize.key, {name: '데일리 모드', url: '../daily/'}])),
 };
 
-function openCollection() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('ufo-catcher-prize-collection', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('wins', {keyPath: 'mode'});
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+export {readRecords} from '../account/records.js';
+import {note} from '../account/records.js';
+export function recordGame(mode, date, won) {
+  if (!Object.hasOwn(games,mode)) return Promise.reject(Error('알 수 없는 게임입니다.'));
+  return note(mode,date,won);
 }
 
-export async function recordWin(mode) {
-  if (!Object.hasOwn(games, mode)) throw new Error('알 수 없는 게임입니다.');
-  const db = await openCollection();
-  try {
-    await new Promise((resolve, reject) => {
-      // Read and increment in one transaction, also when two tabs win together.
-      const tx = db.transaction('wins', 'readwrite');
-      tx.oncomplete = resolve;
-      tx.onabort = () => reject(tx.error);
-      const wins = tx.objectStore('wins');
-      const current = wins.get(mode);
-      current.onsuccess = () => {
-        const row = current.result ?? {mode, count: 0, firstWon: Date.now()};
-        row.count++;
-        wins.put(row);
-      };
-    });
-  } finally { db.close(); }
-}
-
+export function recordWin(mode) { return recordGame(mode,'',true); }
 export async function readWins() {
-  const db = await openCollection();
-  try {
-    return await new Promise((resolve, reject) => {
-      const tx = db.transaction('wins');
-      const rows = tx.objectStore('wins').getAll();
-      tx.oncomplete = () => resolve(new Map(rows.result.map(row => [row.mode, row])));
-      tx.onabort = () => reject(tx.error);
-    });
-  } finally { db.close(); }
+  const {readRecords}=await import('../account/records.js');
+  const {rows}=await readRecords();
+  const wins=new Map();
+  for (const row of rows.filter(row=>row.count)) {
+    const old=wins.get(row.mode);
+    wins.set(row.mode,{mode:row.mode,count:(old?.count??0)+row.count,firstWon:Math.min(old?.firstWon??Infinity,row.firstWon)});
+  }
+  return wins;
 }

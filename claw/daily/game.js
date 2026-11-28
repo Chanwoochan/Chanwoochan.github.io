@@ -1,12 +1,11 @@
-import {boxSpecs, bridgeSetup, dailyAt} from './catalog.js';
+import {dailyAt} from './catalog.js';
 
 export function setDailyPage({prize, date}, config) {
-  Object.assign(config, bridgeSetup(prize, config.rod_radius));
   const card = document.querySelector('.prize-card');
   card.querySelector('img').src = prize.art.front;
   card.querySelector('img').alt = prize.name + ' 패키지';
   card.querySelector('h3').textContent = prize.name;
-  card.querySelector('p').textContent = boxSpecs(prize);
+  card.querySelector('p').textContent = [config.box_width,config.box_length,config.box_height].map(v=>Math.round(v*1000)).join(' × ')+' mm · '+Math.round(config.box_mass*1000)+' g';
   document.querySelector('#daily-date').textContent = date + ' · 한국 시간';
   document.querySelector('#daily-rods').textContent =
     '1–2번 ' + Math.round(config.gap_12 * 1000) + ' / 2–3번 ' + Math.round(config.gap * 1000) +

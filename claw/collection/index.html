@@ -8,21 +8,23 @@
   <link rel="icon" href="../simple/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../lobby.css?v=collection">
   <link rel="stylesheet" href="./collection.css">
+<link rel="stylesheet" href="../account/account.css">
 </head>
 <body>
   <header class="topbar"><nav class="wrap" aria-label="주 메뉴">
     <a class="brand" href="../"><span class="brand-mark" aria-hidden="true"></span>UFO캐쳐</a>
     <a class="classic" href="../">← 게임 로비</a>
-  </nav></header>
+  <div class="account-menu"><small role="status" aria-live="polite"></small><button type="button" data-login disabled title="로그인하면 이 기기의 게스트 기록을 계정에 합칩니다">Google로 로그인</button></div></nav></header>
   <main class="wrap">
     <header class="collection-head">
-      <div><h1>경품 도감</h1><p>뽑기에 성공하면 이 브라우저의 도감에 기록됩니다.</p></div>
+      <div><h1>경품 도감</h1><p>게스트 기록은 이 기기에 저장됩니다. Google로 로그인하면 게스트 기록을 계정에 합쳐 다른 기기에서도 볼 수 있습니다.</p></div>
       <div class="summary" aria-live="polite">
         <span>수집한 경품</span><strong id="total">불러오는 중…</strong>
         <progress id="progress" aria-label="경품 수집률"></progress>
       </div>
     </header>
     <p id="storage-error" role="status" hidden>이 브라우저에서 획득 기록을 불러올 수 없습니다.</p>
+    <details class="record-list"><summary>내 플레이 기록</summary><p id="record-status" role="status"></p><ul id="record-history"></ul></details>
     <section class="shelf" aria-label="경품 목록" id="shelf"></section>
     <noscript>획득 기록을 보려면 브라우저의 JavaScript를 켜주세요.</noscript>
   </main>
@@ -36,6 +38,7 @@
       </div>
     </article>
   </template>
-  <script type="module" src="./collection.js?v=daily1"></script>
+  <script type="module" src="./collection.js?v=accounts1"></script>
+<script type="module" src="../account/menu.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import {games, readWins} from './store.js?v=daily1';
+import {games, readRecords} from './store.js?v=accounts1';
 import {boxSpecs, dailyAt, prizes as dailyPrizes} from '../daily/catalog.js';
 
 const prizes = [
@@ -58,10 +58,40 @@ function render(wins) {
   progress.value = collected;
 }
 
+let generation=0;
 async function refresh() {
-  try { render(await readWins()); }
-  catch { render(null); }
+  const version=++generation;
+  try {
+    const {rows,owner,offline}=await readRecords();
+    if (version!==generation) return;
+    const wins=new Map(), history=new Map();
+    for (const row of rows) {
+      if (!games[row.mode]) continue;
+      if (row.count) {
+        const old=wins.get(row.mode);
+        wins.set(row.mode,{count:(old?.count??0)+row.count,firstWon:Math.min(old?.firstWon??Infinity,row.firstWon)});
+      }
+      const key=row.date+'_'+row.mode;
+      const group=history.get(key)??{mode:row.mode,date:row.date,plays:0,count:0};
+      group.plays+=row.plays; group.count+=row.count; history.set(key,group);
+    }
+    render(wins);
+    const list=document.getElementById('record-history');
+    const sorted=[...history.values()].sort((a,b)=>b.date.localeCompare(a.date)||a.mode.localeCompare(b.mode));
+    list.replaceChildren(...sorted.map(row=>{
+      const li=document.createElement('li'), tally=document.createElement('span');
+      li.append([row.date,games[row.mode].name].filter(Boolean).join(' · '));
+      tally.textContent='시도 '+row.plays+'회 · 획득 '+row.count+'개'; li.append(tally); return li;
+    }));
+    document.getElementById('record-status').textContent=offline?'오프라인 · 이 기기에서 확인되는 기록입니다.':owner==='guest'?'이 기기의 게스트 기록': 'Google 계정 기록';
+  } catch {
+    if (version!==generation) return;
+    render(null); document.getElementById('record-history').replaceChildren();
+    document.getElementById('record-status').textContent='기록을 불러오지 못했습니다.';
+  }
 }
+window.addEventListener('claw-account',refresh);
+window.addEventListener('online',refresh);
 
 window.addEventListener('pageshow', refresh);
 window.addEventListener('focus', refresh);

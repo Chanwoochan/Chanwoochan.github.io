@@ -8,16 +8,25 @@
   <title>게임 로비 · UFO캐쳐</title>
   <link rel="icon" href="./simple/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./lobby.css?v=daily1">
+<link rel="stylesheet" href="./account/account.css">
 </head>
 <body>
   <header class="topbar">
     <nav class="wrap" aria-label="주 메뉴">
       <a class="brand" href="./" aria-label="UFO캐쳐 게임 로비"><span class="brand-mark" aria-hidden="true"></span>UFO캐쳐</a>
       <a class="classic" href="./cygnus.html">시그너스 버전 <span aria-hidden="true">↗</span></a>
-    </nav>
+    <div class="account-menu"><small role="status" aria-live="polite"></small><button type="button" data-login disabled title="로그인하면 이 기기의 게스트 기록을 계정에 합칩니다">Google로 로그인</button></div></nav>
   </header>
   <main class="wrap">
     <h1>게임 로비</h1>
+    <section class="management" hidden aria-label="관리자 모드">
+      <h2>관리자 모드</h2><div class="targets">
+        <a href="./freegame/play/?mode=bridge&amp;manage=1">하시와타시 기본값</a>
+        <a href="./freegame/play/?mode=hook-ring&amp;manage=1">후크&amp;링 기본값</a>
+        <a href="./cygnus.html?manage=1">시그너스 기본값</a>
+        <a href="./daily/?manage=1">데일리 공통 설정</a></div>
+      <form><label>데일리 날짜 <input type="date" required></label><button>이 날짜의 기기 설정</button></form>
+    </section>
     <div class="mode-pair">
     <section class="feature daily-feature" aria-labelledby="daily-title">
       <div class="feature-copy">
@@ -46,5 +55,6 @@
     </section>
   </main>
   <script type="module" src="./daily/lobby.js"></script>
+<script type="module" src="./account/menu.js"></script>
 </body>
 </html>

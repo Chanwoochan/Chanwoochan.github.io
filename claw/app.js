@@ -1,11 +1,14 @@
 import {DualRenderer} from './renderer.js?v=pc-perf';
 import {Sounds} from './audio.js?v=jazz-shuffle-1';
 import {labels} from './cycle.js';
-import {recordWin} from './collection/store.js';
+import {recordGame} from './collection/store.js?v=accounts1';
+import {managing, gameDefaults} from './account/presets.js';
 
 const $ = id => document.getElementById(id);
 const STORAGE = 'cygnus-ufo-defaults-v1';
 const prizeMode = 'cygnus';
+const sessionDate = '';
+let published;
 const mixerStorage = STORAGE + '-mix';
 const clone = value => JSON.parse(JSON.stringify(value));
 let worker, renderer, latestFrame, base, config, settings, currentAudio;
@@ -283,12 +286,25 @@ async function boot() {
   const fetchJSON = async path => { const r = await fetch(path); if (!r.ok) throw new Error(`설정 불러오기 실패: ${r.status}`); return r.json(); };
   const [c, s, audio] = await Promise.all(['config.json', 'cycle_config.json', 'audio_config.json'].map(f => fetchJSON('./model/' + f)));
   Object.assign(audio, readMix(audio, currentMix()));
-  base = {config: c, cycle: s, audio}; let values = clone(base);
-  try { const saved = localStorage.getItem(STORAGE); if (saved) values = normalise(JSON.parse(saved)); }
+  base = {config: c, cycle: s, audio};
+  published = await gameDefaults(base, prizeMode, sessionDate);
+  base = published.values; let values = clone(base);
+  try { const saved = localStorage.getItem(STORAGE); if (!managing && saved) values = normalise(JSON.parse(saved)); }
   catch { toast('저장된 설정을 읽지 못해 배포 기본값으로 시작합니다.'); }
   try { values.audio = readMix(JSON.parse(localStorage.getItem(mixerStorage)), values.audio); } catch { /* Use the saved game or factory mix. */ }
   config = values.config; settings = values.cycle; currentAudio = values.audio;
   setAudio(currentAudio); renderSettings();
+  if (managing) {
+    $('save-settings').textContent = '모두의 기본값으로 게시';
+    $('save-settings').title = published.label+' · 다음에 여는 게임부터 적용';
+    $('settings-toggle').hidden = false;
+    $('settings-toggle').textContent = '관리자 · '+published.label;
+    const heading = $('studio-mode') ?? document.querySelector('.settings-heading h2');
+    if (heading) heading.textContent='관리자 · '+published.label;
+    $('restore-settings').textContent = '상위 기본값 불러오기';
+    base = clone(published.parent);
+    showSettings(true);
+  }
   renderer = new DualRenderer($('scene'), [$('front-pane'), $('left-pane')]);
   worker = new Worker(new URL('./physics.worker.js?v=pc-perf', import.meta.url), {type: 'module'});
   worker.addEventListener('error', event => error(event.message || '브라우저 물리 엔진 로딩 오류'));
@@ -308,7 +324,10 @@ async function boot() {
         config = m.config; settings = m.settings; configured = true;
         if (pending && pending.id === m.requestId) {
           setAudio(pending.audio); rememberMix(); currentAudio = pending.audio;
-          if (pending.save) {
+          if (pending.save && managing) {
+            published.publish(config,settings).then(() => toast(published.label+' 기본값을 게시했습니다.'))
+              .catch(e => toast('게시 실패 · '+e.message,true));
+          } else if (pending.save) {
             try {
               localStorage.setItem(STORAGE, JSON.stringify({version: 1, config, cycle: settings, audio: currentAudio}));
               toast('기본값으로 저장했습니다. 다음 접속에도 적용됩니다.');
@@ -339,13 +358,17 @@ async function boot() {
         $('step-x').classList.toggle('active', x); $('step-y').classList.toggle('active', y); $('step-auto').classList.toggle('active', !x && !y);
         updateControls(); break;
       }
-      case 'phase': if (started && !winning) sounds.play(m.state); break;
+      case 'phase':
+        if (started && !winning) sounds.play(m.state);
+        if (started && !managing && m.state==='MOVING_X')
+          recordGame(prizeMode,sessionDate,false).catch(() => toast('플레이 기록을 저장하지 못했습니다.',true));
+        break;
       case 'win':
         if (winning) break;
         winning = true;
         releaseHeld();
         $('win').hidden = false;
-        recordWin(prizeMode).catch(() => toast('경품을 획득했지만 이 브라우저에 도감을 저장할 수 없습니다.', true));
+        if (!managing) recordGame(prizeMode,sessionDate,true).catch(() => toast('경품을 획득했지만 이 브라우저에 도감을 저장할 수 없습니다.', true));
         sounds.play('WIN');
         break;
       case 'reset': winning = false; $('win').hidden = true; if (started) sounds.play('READY_X'); break;

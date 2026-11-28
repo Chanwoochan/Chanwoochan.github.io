@@ -1,0 +1,14 @@
+.account-menu { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end }
+.account-menu button, .management a, .management button { font:inherit; font-weight:700; cursor:pointer; border-radius:8px; padding:9px 14px; border:1px solid #c9c5d6; background:white; color:#41345d }
+.account-menu small { color:#555164; max-width:16em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.account-menu [hidden],.management[hidden],.management [hidden] { display:none }
+.management { border:1px solid #d8d4e1; background:white; padding:20px; margin:0 0 24px; border-radius:12px }
+.management h2 { margin-bottom:12px; font-size:20px }
+.management .targets { display:flex; flex-wrap:wrap; gap:10px; align-items:center }
+.management form { margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+.management input { padding:7px; border:1px solid #bdb6cd; border-radius:6px; font:inherit }
+.record-list { margin:18px 0 28px; padding:15px 20px; background:white; border:1px solid #ddd9d4; border-radius:12px }
+.record-list summary { font-weight:700; cursor:pointer }
+.record-list ul { margin-top:10px; list-style:none }
+.record-list li { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; padding:6px 0 }
+@media(max-width:650px){.account-menu{gap:5px}.account-menu small{max-width:8em}.account-menu button{padding:7px;font-size:13px}}
