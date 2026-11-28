@@ -1,11 +1,9 @@
-import {games, readRecords} from './store.js?v=accounts1';
+import {games, readRecords} from './store.js?v=ranks1';
 import {boxSpecs, dailyAt, prizes as dailyPrizes} from '../daily/catalog.js';
 
 const prizes = [
   {id: 'dummy', name: 'DUMMY 박스', description: '두 프리게임에서 만날 수 있는 흰색 경품 상자.',
     image: '../simple/assets/dummy_front.png', modes: ['bridge', 'hook-ring']},
-  {id: 'cygnus', name: '시그너스 피규어', description: '스완로보틱스의 휴머노이드 로봇 시그너스.',
-    image: '../assets/cygnus_box_front_v1.png', modes: ['cygnus']},
   ...dailyPrizes.map(p => ({id: p.key, name: p.name, description: boxSpecs(p), image: p.art.front, modes: [p.key]})),
 ];
 

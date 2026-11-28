@@ -12,3 +12,14 @@
 .record-list ul { margin-top:10px; list-style:none }
 .record-list li { display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; padding:6px 0 }
 @media(max-width:650px){.account-menu{gap:5px}.account-menu small{max-width:8em}.account-menu button{padding:7px;font-size:13px}}
+
+.nickname-dialog { width:min(390px,92vw); border:1px solid #c9c5d6; border-radius:14px; padding:24px; color:#302b3b; background:#fff; margin:auto }
+.nickname-dialog::backdrop { background:#24233555 }
+.nickname-dialog h2 { font-size:22px }.nickname-dialog p { font-size:14px; color:#625c68; line-height:1.6; margin:8px 0 16px }
+.nickname-dialog label { display:block; margin-bottom:6px; font-weight:700 }
+.nick-field,.nick-actions { display:flex; gap:8px; align-items:center }.nick-field strong { color:#675c75; font-variant-numeric:tabular-nums }
+.nick-field input { min-width:0; flex:1; padding:9px; border-radius:6px; border:1px solid #aaa2b5; font:inherit }
+.nickname-dialog small { display:block; min-height:1.5em; color:#685674; margin:6px 0 14px }
+.nick-actions { justify-content:flex-end }.nick-actions button { padding:8px 14px; font:inherit; cursor:pointer; background:white; color:#322d3e; border:1px solid #c8c0cc; border-radius:7px }
+.nick-actions [type=submit] { background:#494063; color:white }.nick-actions button:disabled { opacity:.6 }
+@media(max-width:550px){.topbar nav:has(.account-menu){flex-wrap:wrap;padding-block:6px}.account-menu{margin-left:auto}}

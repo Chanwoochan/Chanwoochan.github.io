@@ -1,13 +1,31 @@
 import {cloud} from './cloud.js';
+import {playerNumber, uploadRankWin} from './profile.js';
+import {dailyAt} from '../daily/catalog.js';
 
 const guest = 'guest';
 let database;
 function openDB() {
   if (database) return database;
   database = new Promise((resolve,reject) => {
-    const request = indexedDB.open('ufo-catcher-prize-collection', 2);
-    request.onupgradeneeded = () => {
+    const request = indexedDB.open('ufo-catcher-prize-collection', 3);
+    request.onupgradeneeded = event => {
       const db = request.result;
+      const queue = db.createObjectStore('rankQueue',{keyPath:'id'});
+      queue.createIndex('owner','owner');
+      const today = dailyAt();
+      function importGuest(row) {
+        if (row.count && (row.date === today.date || dailyAt(row.firstWon).day === today.day)) {
+          for (let i=0; i<row.count; i++) queue.put({id:crypto.randomUUID(),owner:guest,day:today.day});
+        }
+      }
+      if (event.oldVersion === 2) {
+        const guests = request.transaction.objectStore('runs').index('owner').openCursor(guest);
+        guests.onsuccess = () => {
+          const cursor = guests.result;
+          if (cursor) { importGuest(cursor.value); cursor.continue(); }
+        };
+        return;
+      }
       const runs = db.createObjectStore('runs', {keyPath:['owner','mode','date']});
       runs.createIndex('owner','owner');
       db.createObjectStore('meta').put(crypto.randomUUID(),'device');
@@ -18,6 +36,7 @@ function openDB() {
         if (!entry) return;
         const {mode,count,firstWon} = entry.value;
         runs.put({owner:guest,mode,date:'',plays:0,count,firstWon,dirty:true});
+        importGuest({count,firstWon});
         entry.continue();
       };
     };
@@ -47,7 +66,12 @@ export async function identity() {
 }
 async function claim(owner) {
   if (owner === guest) return;
-  await transaction(['runs'],'readwrite', tx => {
+  await transaction(['runs','rankQueue'],'readwrite', tx => {
+    const cursor = tx.objectStore('rankQueue').index('owner').openCursor(guest);
+    cursor.onsuccess = () => {
+      const win = cursor.result;
+      if (win) { win.update({...win.value,owner}); win.continue(); }
+    };
     const runs = tx.objectStore('runs');
     const all = runs.index('owner').getAll(guest);
     all.onsuccess = () => {
@@ -75,13 +99,15 @@ function merge(a,b) {
   return {...b,plays:Math.max(a?.plays??0,b.plays),count:Math.max(a?.count??0,b.count),firstWon:first(a?.firstWon,b.firstWon)};
 }
 export async function note(mode,date,won) {
+  const when = Date.now();
   const owner = await identity();
-  await transaction(['runs'],'readwrite',tx => {
+  await transaction(['runs','rankQueue'],'readwrite',tx => {
+    if (won) tx.objectStore('rankQueue').add({id:crypto.randomUUID(),owner,day:dailyAt(when).day});
     const runs = tx.objectStore('runs');
     const read = runs.get([owner,mode,date]);
     read.onsuccess = () => {
       const row = read.result ?? {owner,mode,date,plays:0,count:0,firstWon:0};
-      if (won) { row.count++; row.firstWon ||= Date.now(); } else row.plays++;
+      if (won) { row.count++; row.firstWon ||= when; } else row.plays++;
       runs.put({...row,dirty:true});
     };
   });
@@ -115,6 +141,20 @@ async function flush(owner) {
       };
     });
   }
+  const wins = await transaction(['rankQueue'],'readonly',(tx,done) => {
+    const get=tx.objectStore('rankQueue').index('owner').getAll(owner);
+    get.onsuccess=()=>done(get.result);
+  });
+  let scored=false;
+  for (const win of wins) {
+    if (auth.currentUser?.uid !== owner) return;
+    if (win.day === dailyAt().day) {
+      await uploadRankWin(owner,await playerNumber(owner),win);
+      scored=true;
+    }
+    await transaction(['rankQueue'],'readwrite',tx => tx.objectStore('rankQueue').delete(win.id));
+  }
+  if (scored) window.dispatchEvent(new Event('claw-rank-synced'));
 }
 export async function retrySync() {
   const owner=await identity();

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>오늘의 랭킹 · UFO캐쳐</title>
+  <link rel="icon" href="../simple/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../lobby.css">
+  <link rel="stylesheet" href="../account/account.css?v=ranks1">
+  <link rel="stylesheet" href="./ranking.css">
+</head>
+<body>
+  <header class="topbar"><nav class="wrap" aria-label="주 메뉴">
+    <a class="brand" href="../"><span class="brand-mark" aria-hidden="true"></span>UFO캐쳐</a>
+    <div class="account-menu"><small role="status" aria-live="polite"></small><button type="button" data-login disabled>Google로 로그인</button></div>
+  </nav></header>
+  <main class="wrap ranking">
+    <a class="classic" href="../">← 게임 로비</a>
+    <header class="rank-head"><div><h1>오늘의 랭킹</h1>
+      <p>한국 시간 자정부터 모든 게임에서 뽑은 경품 수를 합산합니다. 획득 수가 같으면 공동 순위입니다.</p></div>
+      <a class="classic" href="../collection/">내 경품 도감 ↗</a>
+    </header>
+    <section class="board" aria-label="오늘의 경품 획득 순위">
+      <header><strong id="rank-date"></strong><button type="button" id="refresh">새로고침</button></header>
+      <table hidden><thead><tr><th scope="col">순위</th><th scope="col">플레이어</th><th scope="col">획득 수</th></tr></thead><tbody></tbody></table>
+      <p id="rank-state" role="status">순위를 불러오는 중…</p>
+      <button type="button" id="more" hidden>다음 순위 보기</button>
+    </section>
+  </main>
+  <script type="module" src="../account/menu.js?v=ranks1"></script>
+  <script type="module" src="./ranking.js"></script>
+</body>
+</html>

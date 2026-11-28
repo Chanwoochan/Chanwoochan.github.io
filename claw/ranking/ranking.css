@@ -1,0 +1,16 @@
+.ranking { max-width:860px; padding-bottom:48px }
+.ranking>.classic { margin-top:12px }
+.rank-head,.board header { display:flex; justify-content:space-between; align-items:center; gap:16px }
+.rank-head { margin:12px 0 24px; flex-wrap:wrap }
+.rank-head h1 { margin:0 0 6px }.rank-head p { line-height:1.65; color:#625e69 }
+.board { background:white; border:1px solid #ddd9d1; border-radius:14px; overflow:hidden }
+.board header { background:#fbf5e9; padding:16px 20px; border-bottom:1px solid #e4ded3 }
+.board button { cursor:pointer; font:inherit; font-size:14px; padding:8px 14px; border:1px solid #ccc4b6; border-radius:7px; background:white; color:#3a3441 }
+.board button:disabled { opacity:.6 }
+.board table { width:100%; border-collapse:collapse; text-align:left; font-variant-numeric:tabular-nums }
+.board th,.board td { padding:12px 18px; border-bottom:1px solid #ebe9e4 }
+.board th { font-size:13px; color:#65616c }.board td:first-child { width:18%; font-weight:700 }.board :is(th,td):last-child { text-align:right; white-space:nowrap }
+.board small { display:inline-block; font-size:13px; color:#655c75; margin-left:7px }.board tr.mine { background:#f1edf9 }
+.board .own-label { font-weight:700; color:#674491 }
+#rank-state:not(:empty) { padding:24px 20px; color:#625e69 }#more { display:block; margin:14px auto }.board [hidden],#more[hidden] { display:none }
+@media(max-width:550px){.rank-head{gap:2px}.board :is(th,td){padding:10px}.board small { margin-left:4px }.board td:nth-child(2){overflow-wrap:anywhere}}

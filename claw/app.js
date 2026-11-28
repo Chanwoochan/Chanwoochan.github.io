@@ -1,7 +1,7 @@
 import {DualRenderer} from './renderer.js?v=pc-perf';
 import {Sounds} from './audio.js?v=jazz-shuffle-1';
 import {labels} from './cycle.js';
-import {recordGame} from './collection/store.js?v=accounts1';
+import {recordGame} from './collection/store.js?v=ranks1';
 import {managing, gameDefaults} from './account/presets.js';
 
 const $ = id => document.getElementById(id);

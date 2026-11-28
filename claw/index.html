@@ -8,13 +8,12 @@
   <title>게임 로비 · UFO캐쳐</title>
   <link rel="icon" href="./simple/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./lobby.css?v=daily1">
-<link rel="stylesheet" href="./account/account.css">
+<link rel="stylesheet" href="./account/account.css?v=ranks1">
 </head>
 <body>
   <header class="topbar">
     <nav class="wrap" aria-label="주 메뉴">
       <a class="brand" href="./" aria-label="UFO캐쳐 게임 로비"><span class="brand-mark" aria-hidden="true"></span>UFO캐쳐</a>
-      <a class="classic" href="./cygnus.html">시그너스 버전 <span aria-hidden="true">↗</span></a>
     <div class="account-menu"><small role="status" aria-live="polite"></small><button type="button" data-login disabled title="로그인하면 이 기기의 게스트 기록을 계정에 합칩니다">Google로 로그인</button></div></nav>
   </header>
   <main class="wrap">
@@ -23,7 +22,6 @@
       <h2>관리자 모드</h2><div class="targets">
         <a href="./freegame/play/?mode=bridge&amp;manage=1">하시와타시 기본값</a>
         <a href="./freegame/play/?mode=hook-ring&amp;manage=1">후크&amp;링 기본값</a>
-        <a href="./cygnus.html?manage=1">시그너스 기본값</a>
         <a href="./daily/?manage=1">데일리 공통 설정</a></div>
       <form><label>데일리 날짜 <input type="date" required></label><button>이 날짜의 기기 설정</button></form>
     </section>
@@ -49,12 +47,12 @@
       <h2 id="menu-title">게임 메뉴</h2>
       <ul class="cards">
         <li><div class="card-top"><span class="tile flag" aria-hidden="true"></span><span class="status">준비 중</span></div><h3>챌린지</h3><p>주어진 조건에 맞춰 경품 뽑기</p></li>
-        <li><div class="card-top"><span class="tile trophy" aria-hidden="true"></span><span class="status">준비 중</span></div><h3>랭킹</h3><p>플레이 기록과 순위 보기</p></li>
+        <li class="available"><div class="card-top"><span class="tile trophy" aria-hidden="true"></span><span class="status" aria-hidden="true">열기 →</span></div><h3><a href="./ranking/">오늘의 랭킹</a></h3><p>오늘 뽑은 경품 수로 순위 보기</p></li>
         <li class="available"><div class="card-top"><span class="tile parcel" aria-hidden="true"></span><span class="status" aria-hidden="true">열기 →</span></div><h3><a href="./collection/">경품 도감</a></h3><p>뽑은 경품을 한곳에서 모아보기</p></li>
       </ul>
     </section>
   </main>
   <script type="module" src="./daily/lobby.js"></script>
-<script type="module" src="./account/menu.js"></script>
+<script type="module" src="./account/menu.js?v=ranks1"></script>
 </body>
 </html>

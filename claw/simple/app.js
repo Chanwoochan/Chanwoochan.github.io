@@ -10,7 +10,7 @@ let refreshDaily;
 const hookMode = !daily && new URL(location.href).searchParams.get('mode') === 'hook-ring';
 const labels = hookMode ? hookLabels : bridgeLabels;
 if (hookMode) setHookPage();
-import {recordGame} from '../collection/store.js?v=accounts1';
+import {recordGame} from '../collection/store.js?v=ranks1';
 import {managing, gameDefaults, previewDate} from '../account/presets.js';
 
 const $ = id => document.getElementById(id);
